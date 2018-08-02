@@ -140,8 +140,8 @@ namespace AutoTag {
 						file.Tag.Genres = new string[] { "TVShows" };
 
 						if (imageFilename != "" && Properties.Settings.Default.addCoverArt == true) { // if there is an image available and cover art is enabled
-							string downloadPath = Path.GetTempPath() + "\\autotag\\";
-							string downloadFile = downloadPath + imageFilename;
+							string downloadPath = Path.Combine(Path.GetTempPath(), "autotag");
+							string downloadFile = Path.Combine(downloadPath, imageFilename);
 
 							if (!File.Exists(downloadFile)) { // only download file if it hasn't already been downloaded
 								if (!Directory.Exists(downloadPath)) {
@@ -179,7 +179,10 @@ namespace AutoTag {
 
 				#region Renaming
 				if (Properties.Settings.Default.renameFiles == true) {
-					string newPath = Path.GetDirectoryName(row.Cells[0].Value.ToString()) + "\\" + EscapeFilename(String.Format(Properties.Settings.Default.renamePattern, series.SeriesName, episodeData.Season, episodeData.Episode.ToString("00"), foundEpisode.EpisodeName) + Path.GetExtension(row.Cells[0].Value.ToString()));
+					string newPath = Path.Combine(
+						Path.GetDirectoryName(row.Cells[0].Value.ToString()),
+						EscapeFilename(String.Format(Properties.Settings.Default.renamePattern, series.SeriesName, episodeData.Season, episodeData.Episode.ToString("00"), foundEpisode.EpisodeName) + Path.GetExtension(row.Cells[0].Value.ToString()))
+						);
 
 					if (row.Cells[0].Value.ToString() != newPath) {
 						try {
