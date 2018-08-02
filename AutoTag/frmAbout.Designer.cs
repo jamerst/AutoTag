@@ -69,9 +69,9 @@
 			this.lblChangelog.Location = new System.Drawing.Point(12, 85);
 			this.lblChangelog.MaximumSize = new System.Drawing.Size(250, 0);
 			this.lblChangelog.Name = "lblChangelog";
-			this.lblChangelog.Size = new System.Drawing.Size(68, 26);
+			this.lblChangelog.Size = new System.Drawing.Size(166, 26);
 			this.lblChangelog.TabIndex = 35;
-			this.lblChangelog.Text = "Changelog:\r\nInitial release";
+			this.lblChangelog.Text = "Changelog:\r\nFix path manipulation under Mono";
 			// 
 			// lblVer
 			// 
@@ -81,7 +81,7 @@
 			this.lblVer.Name = "lblVer";
 			this.lblVer.Size = new System.Drawing.Size(132, 13);
 			this.lblVer.TabIndex = 34;
-			this.lblVer.Text = "Version 1.0.0 (2018-09-02)";
+			this.lblVer.Text = "Version 1.0.1 (2018-09-02)";
 			this.lblVer.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
 			// 
 			// lblTitle
