@@ -1,9 +1,11 @@
 ﻿using System;
-using System.Windows.Forms;
-using System.IO;
 using System.Drawing;
-using System.Threading.Tasks;
+using System.IO;
 using System.Linq;
+using System.Net;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows.Forms;
 
 using Microsoft.VisualBasic;
 using static Microsoft.VisualBasic.Interaction; // needed to use MsgBox, which is nicer than MessageBox.show as you can define the style using a single paramter, no idea why this isn't just in C# already
@@ -13,7 +15,7 @@ using TvDbSharper.Dto;
 
 using SubtitleFetcher.Common;
 using SubtitleFetcher.Common.Parsing;
-using System.Net;
+
 
 
 namespace AutoTag {
@@ -25,6 +27,10 @@ namespace AutoTag {
 				btnProcess_Click(this, new EventArgs());
 			}
         }
+
+		private bool taskRunning = false; // flag for if process started
+		private CancellationTokenSource cts = new CancellationTokenSource();
+		private bool errorsEncountered = false; // flag for if process encountered errors or not
 
 		#region Button click handlers
 		private void btnAddFile_Click(object sender, EventArgs e) {
@@ -48,22 +54,32 @@ namespace AutoTag {
 
 		private void btnProcess_Click(object sender, EventArgs e) {
 			if (tblFiles.RowCount > 0) {
-				pBarProcessed.Maximum = tblFiles.RowCount;
-				SetButtonState(false); // disable all buttons
-				pBarProcessed.Value = 0;
-				errorsEncountered = false;
 
-				Task processFiles = Task.Run(ProcessFilesAsync);
+				if (taskRunning == false) {
+					pBarProcessed.Maximum = tblFiles.RowCount;
+					SetButtonState(false); // disable all buttons
+					pBarProcessed.Value = 0;
+					errorsEncountered = false;
+					taskRunning = true;
+
+					Task processFiles = Task.Run(() => ProcessFilesAsync(cts.Token), cts.Token); // run task with cancellation token attached
+				} else {
+					cts.Cancel(); // request cancellation if requested
+					cts = new CancellationTokenSource(); // create new token source so process can be restarted
+				}
+
 			}
         }
 		#endregion
 
-		private bool errorsEncountered = false; // flag for if process encountered errors or not
-
-        private async Task ProcessFilesAsync() {
+        private async Task ProcessFilesAsync(CancellationToken ct) {
 			ITvDbClient tvdb = new TvDbClient();
 			await tvdb.Authentication.AuthenticateAsync("TQLC3N5YDI1AQVJF");
             foreach (DataGridViewRow row in tblFiles.Rows) {
+				if (ct.IsCancellationRequested) { // exit loop if cancellation requested
+					break;
+				}
+
                 IncrementPBarValue();
 
 				#region Filename parsing
@@ -200,6 +216,7 @@ namespace AutoTag {
 					SetRowStatus(row, "Success - tagged as " + String.Format(Properties.Settings.Default.renamePattern, series.SeriesName, episodeData.Season, episodeData.Episode.ToString("00"), foundEpisode.EpisodeName));
 				}
 				#endregion
+
 			}
 
 			if (errorsEncountered == false) {
@@ -209,6 +226,7 @@ namespace AutoTag {
             }
 
             Invoke(new MethodInvoker(() => SetButtonState(true)));
+			taskRunning = false; // reset flag
         }
 
 		#region Add to table
@@ -269,7 +287,7 @@ namespace AutoTag {
 			btnAddFile.Enabled = state;
 			btnRemove.Enabled = state;
 			btnClear.Enabled = state;
-			btnProcess.Enabled = state;
+			btnProcess.Text = (state) ?  "Process Files" : "Cancel"; // set button text
 			MenuStrip.Enabled = state;
 			AllowDrop = state;
 		}

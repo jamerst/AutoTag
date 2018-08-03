@@ -139,6 +139,7 @@
 			dataGridViewCellStyle2.WrapMode = System.Windows.Forms.DataGridViewTriState.True;
 			this.tblFiles.DefaultCellStyle = dataGridViewCellStyle2;
 			this.tblFiles.Location = new System.Drawing.Point(12, 57);
+			this.tblFiles.MultiSelect = false;
 			this.tblFiles.Name = "tblFiles";
 			dataGridViewCellStyle3.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
 			dataGridViewCellStyle3.BackColor = System.Drawing.SystemColors.Control;
