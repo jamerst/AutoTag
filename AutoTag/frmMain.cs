@@ -152,8 +152,6 @@ namespace AutoTag {
 									using (WebClient client = new WebClient()) {
 										client.DownloadFile("https://www.thetvdb.com/banners/seasons/" + imageFilename, downloadFile); // download image
 									}
-									file.Tag.Pictures = new TagLib.IPicture[0]; // remove current image
-									file.Save();
 									file.Tag.Pictures = new TagLib.Picture[] { new TagLib.Picture(downloadFile) };
 
 								}
@@ -162,8 +160,6 @@ namespace AutoTag {
 								}
 							}
 							else {
-								file.Tag.Pictures = new TagLib.IPicture[0];
-								file.Save();
 								file.Tag.Pictures = new TagLib.Picture[] { new TagLib.Picture(downloadFile) };
 							}
 						}
