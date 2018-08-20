@@ -69,9 +69,10 @@
 			this.lblChangelog.Location = new System.Drawing.Point(12, 85);
 			this.lblChangelog.MaximumSize = new System.Drawing.Size(250, 0);
 			this.lblChangelog.Name = "lblChangelog";
-			this.lblChangelog.Size = new System.Drawing.Size(142, 26);
+			this.lblChangelog.Size = new System.Drawing.Size(215, 39);
 			this.lblChangelog.TabIndex = 35;
-			this.lblChangelog.Text = "Changelog:\r\nAdd ability to cancel process";
+			this.lblChangelog.Text = "Changelog:\r\nFix displaying of error messages\r\nCurrent file now highlighted and ke" +
+    "pt in view";
 			// 
 			// lblVer
 			// 
@@ -81,7 +82,7 @@
 			this.lblVer.Name = "lblVer";
 			this.lblVer.Size = new System.Drawing.Size(132, 13);
 			this.lblVer.TabIndex = 34;
-			this.lblVer.Text = "Version 1.0.3 (2018-09-03)";
+			this.lblVer.Text = "Version 1.0.4 (2018-08-20)";
 			this.lblVer.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
 			// 
 			// lblTitle

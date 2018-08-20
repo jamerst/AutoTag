@@ -82,6 +82,8 @@ namespace AutoTag {
 
                 IncrementPBarValue();
 
+				tblFiles.Invoke(new MethodInvoker(() => tblFiles.CurrentCell = row.Cells[0]));
+
 				#region Filename parsing
 				EpisodeParser parser = new EpisodeParser();
 				TvReleaseIdentity episodeData;
@@ -250,7 +252,7 @@ namespace AutoTag {
 
 		#region UI Invokers
 		private void SetRowError(DataGridViewRow row, string errorMsg) {
-			if (errorsEncountered == true) {
+			if (row.Cells[1].Value.ToString().Contains("Error")) { // if error already encountered
 				SetCellValue(row.Cells[1], row.Cells[1].Value.ToString() + Environment.NewLine + errorMsg);
 			} else {
 				SetCellValue(row.Cells[1], errorMsg);
