@@ -195,7 +195,7 @@ namespace AutoTag {
 				if (Properties.Settings.Default.renameFiles == true) {
 					string newPath = Path.Combine(
 						Path.GetDirectoryName(row.Cells[0].Value.ToString()),
-						EscapeFilename(String.Format(Properties.Settings.Default.renamePattern, series.SeriesName, episodeData.Season, episodeData.Episode.ToString("00"), foundEpisode.EpisodeName) + Path.GetExtension(row.Cells[0].Value.ToString()))
+						EscapeFilename(String.Format(GetRenamePattern(), series.SeriesName, episodeData.Season, episodeData.Episode.ToString("00"), foundEpisode.EpisodeName) + Path.GetExtension(row.Cells[0].Value.ToString()))
 						);
 
 					if (row.Cells[0].Value.ToString() != newPath) {
@@ -215,7 +215,7 @@ namespace AutoTag {
 
 				if (errorsEncountered == false) {
 					SetRowColour(row, "#4CAF50");
-					SetRowStatus(row, "Success - tagged as " + String.Format(Properties.Settings.Default.renamePattern, series.SeriesName, episodeData.Season, episodeData.Episode.ToString("00"), foundEpisode.EpisodeName));
+					SetRowStatus(row, "Success - tagged as " + String.Format(GetRenamePattern(), series.SeriesName, episodeData.Season, episodeData.Episode.ToString("00"), foundEpisode.EpisodeName));
 				}
 				#endregion
 
@@ -235,7 +235,7 @@ namespace AutoTag {
 		private void AddToTable(string[] files) {
 			foreach (String file in files) {
 				if (File.GetAttributes(file).HasFlag(FileAttributes.Directory)) { // if file is actually a directory, add the all the files in the directory
-					AddToTable(Directory.GetFiles(file));
+					AddToTable(Directory.GetFileSystemEntries(file));
 				}
 				else {
 					AddSingleToTable(file);
@@ -292,6 +292,10 @@ namespace AutoTag {
 			btnProcess.Text = (state) ?  "Process Files" : "Cancel"; // set button text
 			MenuStrip.Enabled = state;
 			AllowDrop = state;
+		}
+
+		private string GetRenamePattern() { // Get usable renaming pattern
+			return Properties.Settings.Default.renamePattern.Replace("%1", "{0}").Replace("%2", "{1}").Replace("%3", "{2}").Replace("%4", "{3}");
 		}
 		#endregion
 

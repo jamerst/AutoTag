@@ -27,7 +27,7 @@ namespace AutoTag {
 
 		private void tBoxPattern_KeyPress(object sender, KeyPressEventArgs e) {
 			try {
-				lblPreview.Text = String.Format(tBoxPattern.Text, "Fringe", "2", "08", "August");
+				lblPreview.Text = String.Format(tBoxPattern.Text.Replace("%1", "{0}").Replace("%2", "{1}").Replace("%3", "{2}").Replace("%4", "{3}"), "Fringe", "2", "08", "August");
 			} catch {
 				// do nothing, this exception doesn't need to be handled, it can be ignored
 			}

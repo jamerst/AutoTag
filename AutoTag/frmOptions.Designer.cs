@@ -111,7 +111,7 @@
 			this.lblKey.Name = "lblKey";
 			this.lblKey.Size = new System.Drawing.Size(111, 52);
 			this.lblKey.TabIndex = 2;
-			this.lblKey.Text = "{0} = Series Name\r\n{1} = Season Number\r\n{2} = Episode Number\r\n{3} = Episode Name";
+			this.lblKey.Text = "%1 = Series Name\r\n%2 = Season Number\r\n%3 = Episode Number\r\n%4 = Episode Name";
 			// 
 			// tBoxPattern
 			// 

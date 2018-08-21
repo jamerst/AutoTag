@@ -12,7 +12,7 @@
       <Value Profile="(Default)">True</Value>
     </Setting>
     <Setting Name="renamePattern" Type="System.String" Scope="User">
-      <Value Profile="(Default)">{0} - {1}x{2} - {3}</Value>
+      <Value Profile="(Default)">%1 - %2x%3 - %4</Value>
     </Setting>
   </Settings>
 </SettingsFile>
