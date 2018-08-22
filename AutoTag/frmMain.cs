@@ -79,6 +79,7 @@ namespace AutoTag {
 				if (ct.IsCancellationRequested) { // exit loop if cancellation requested
 					break;
 				}
+				bool fileSuccess = true;
 
                 IncrementPBarValue();
 
@@ -187,6 +188,7 @@ namespace AutoTag {
 						SetRowStatus(row, "Successfully tagged file as " + episodeData + " (" + foundEpisode.EpisodeName + ")");
 					} catch (Exception ex) {
 						SetRowError(row, "Error: Could not tag file - " + ex.Message);
+						fileSuccess = false;
 					}
 				}
 				#endregion
@@ -209,11 +211,12 @@ namespace AutoTag {
 						}
 						catch (Exception ex) {
 							SetRowError(row, "Error: Could not rename file - " + ex.Message);
+							fileSuccess = false;
 						}
 					}
 				}
 
-				if (errorsEncountered == false) {
+				if (fileSuccess == true) {
 					SetRowColour(row, "#4CAF50");
 					SetRowStatus(row, "Success - tagged as " + String.Format(GetRenamePattern(), series.SeriesName, episodeData.Season, episodeData.Episode.ToString("00"), foundEpisode.EpisodeName));
 				}
@@ -262,9 +265,7 @@ namespace AutoTag {
 		}
 
 		private void SetRowStatus(DataGridViewRow row, string msg) {
-			if (errorsEncountered == false) {
-				SetCellValue(row.Cells[1], msg);
-			}
+			SetCellValue(row.Cells[1], msg);
 		}
 
         private void IncrementPBarValue() {
