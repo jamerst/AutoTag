@@ -69,9 +69,9 @@
 			this.lblChangelog.Location = new System.Drawing.Point(12, 85);
 			this.lblChangelog.MaximumSize = new System.Drawing.Size(250, 0);
 			this.lblChangelog.Name = "lblChangelog";
-			this.lblChangelog.Size = new System.Drawing.Size(243, 39);
+			this.lblChangelog.Size = new System.Drawing.Size(206, 26);
 			this.lblChangelog.TabIndex = 35;
-			this.lblChangelog.Text = "Changelog:\r\nFix messages of other files after an error has been encountered";
+			this.lblChangelog.Text = "Changelog:\r\nFix some error messages being overwritten";
 			// 
 			// lblVer
 			// 
@@ -81,7 +81,7 @@
 			this.lblVer.Name = "lblVer";
 			this.lblVer.Size = new System.Drawing.Size(132, 13);
 			this.lblVer.TabIndex = 34;
-			this.lblVer.Text = "Version 1.0.6 (2018-08-22)";
+			this.lblVer.Text = "Version 1.0.7 (2018-09-17)";
 			this.lblVer.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
 			// 
 			// lblTitle

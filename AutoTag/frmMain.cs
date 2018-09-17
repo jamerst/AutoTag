@@ -138,6 +138,7 @@ namespace AutoTag {
 						imagesResponse = await tvdb.Series.GetImagesAsync(series.Id, coverImageQuery);
 					} catch (TvDbServerException ex) {
 						SetRowError(row, "Error: Failed to find episode cover - " + ex.Message);
+						fileSuccess = false;
 					}
 				}
 
@@ -176,16 +177,22 @@ namespace AutoTag {
 								}
 								catch (WebException ex) {
 									SetRowError(row, "Error: Failed to download cover art - " + ex.Message);
+									fileSuccess = false;
 								}
 							}
 							else {
 								file.Tag.Pictures = new TagLib.Picture[] { new TagLib.Picture(downloadFile) };
 							}
+						} else if (imageFilename == "") {
+							fileSuccess = false;
 						}
 					
 						file.Save();
 
-						SetRowStatus(row, "Successfully tagged file as " + episodeData + " (" + foundEpisode.EpisodeName + ")");
+						if (fileSuccess == true) {
+							SetRowStatus(row, "Successfully tagged file as " + episodeData + " (" + foundEpisode.EpisodeName + ")");
+						}
+						
 					} catch (Exception ex) {
 						SetRowError(row, "Error: Could not tag file - " + ex.Message);
 						fileSuccess = false;
