@@ -11,10 +11,10 @@ AutoTag interprets the file name to find the specific series, season and episode
 - Configurable renaming and full metadata tagging, including cover art
 - Command-line argument support (`AutoTag.exe file1 file2 folder1 etc`)
 - Tested to work under Mono (woo, Linux support!)
-- Supports mp4, m4v and mkv\* extensions (I can add more, but should you really be using other formats at this point?)
+- Supports mp4, m4v and mkv extensions (I can add more, but should you really be using other formats at this point?)
 
 ## Known Issues
-- Matroska files cannot be tagged. taglib-sharp *supposedly* supports Matroska files, but for some reason I can't get tags to write. The renaming feature works fine however.
+- None! Matroska thumbnails don't show up, but this is a problem with Windows (as per usual).
 
 ## Download
 Downloads can be found [here](https://github.com/jamerst/AutoTag/releases)
