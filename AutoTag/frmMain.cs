@@ -115,7 +115,7 @@ namespace AutoTag {
 				episodeQuery.AiredSeason = episodeData.Season;
 				episodeQuery.AiredEpisode = episodeData.Episode; // Define query parameters
 
-				TvDbResponse<BasicEpisode[]> episodeResponse;
+				TvDbResponse<EpisodeRecord[]> episodeResponse;
 				try {
 					episodeResponse = await tvdb.Series.GetEpisodesAsync(series.Id, 1, episodeQuery);
 				} catch (TvDbServerException ex) {
@@ -123,7 +123,7 @@ namespace AutoTag {
 					continue;
 				}
 
-				BasicEpisode foundEpisode = episodeResponse.Data.First();
+				EpisodeRecord foundEpisode = episodeResponse.Data.First();
 
 				SetRowStatus(row, "Found " + episodeData + " (" + foundEpisode.EpisodeName + ") on TheTVDB");
 
