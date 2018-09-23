@@ -174,7 +174,7 @@ namespace AutoTag {
 									using (WebClient client = new WebClient()) {
 										client.DownloadFile("https://www.thetvdb.com/banners/seasons/" + imageFilename, downloadFile); // download image
 									}
-									file.Tag.Pictures = new TagLib.Picture[] { new TagLib.Picture(downloadFile) };
+									file.Tag.Pictures = new TagLib.Picture[] { new TagLib.Picture(downloadFile) { Filename = "cover.jpg" } };
 
 								}
 								catch (WebException ex) {
@@ -183,10 +183,7 @@ namespace AutoTag {
 								}
 							}
 							else {
-								TagLib.Picture cover = new TagLib.Picture(downloadFile) {
-									Filename = "cover.jpg"
-								}; // overwrite default file name - allows software such as Icaros to display cover art thumbnails - default isn't compliant with Matroska guidelines
-								file.Tag.Pictures = new TagLib.Picture[] { cover };
+								file.Tag.Pictures = new TagLib.Picture[] { new TagLib.Picture(downloadFile) { Filename = "cover.jpg" } }; // overwrite default file name - allows software such as Icaros to display cover art thumbnails - default isn't compliant with Matroska guidelines
 							}
 						} else if (imageFilename == "") {
 							fileSuccess = false;
