@@ -14,7 +14,9 @@ AutoTag interprets the file name to find the specific series, season and episode
 - Supports mp4, m4v and mkv extensions (I can add more, but should you really be using other formats at this point?)
 
 ## Known Issues
-- None! Matroska thumbnails don't show up, but this is a problem with Windows (as per usual).
+- None! Matroska artwork thumbnails don't show up, but this is a problem with Windows (as per usual). <sup>1</sup>
+
+<sup>1</sup> A 3rd party shell extension, [Icaros](http://shark007.net/tools.html), is available which allows the artwork to be shown in Windows Explorer (along with other useful file information).
 
 ## Download
 Downloads can be found [here](https://github.com/jamerst/AutoTag/releases)
