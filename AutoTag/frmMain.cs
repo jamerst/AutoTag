@@ -111,9 +111,10 @@ namespace AutoTag {
 
                 var series = seriesIdResponse.Data[0];
 
-				EpisodeQuery episodeQuery = new EpisodeQuery();
-				episodeQuery.AiredSeason = episodeData.Season;
-				episodeQuery.AiredEpisode = episodeData.Episode; // Define query parameters
+				EpisodeQuery episodeQuery = new EpisodeQuery {
+					AiredSeason = episodeData.Season,
+					AiredEpisode = episodeData.Episode // Define query parameters
+				};
 
 				TvDbResponse<EpisodeRecord[]> episodeResponse;
 				try {
@@ -127,9 +128,10 @@ namespace AutoTag {
 
 				SetRowStatus(row, "Found " + episodeData + " (" + foundEpisode.EpisodeName + ") on TheTVDB");
 
-				ImagesQuery coverImageQuery = new ImagesQuery();
-				coverImageQuery.KeyType = KeyType.Season;
-				coverImageQuery.SubKey = episodeData.Season.ToString();
+				ImagesQuery coverImageQuery = new ImagesQuery {
+					KeyType = KeyType.Season,
+					SubKey = episodeData.Season.ToString()
+				};
 
 				TvDbResponse<TvDbSharper.Dto.Image[]> imagesResponse = null;
 
@@ -181,7 +183,10 @@ namespace AutoTag {
 								}
 							}
 							else {
-								file.Tag.Pictures = new TagLib.Picture[] { new TagLib.Picture(downloadFile) };
+								TagLib.Picture cover = new TagLib.Picture(downloadFile) {
+									Filename = "cover.jpg"
+								}; // overwrite default file name - allows software such as Icaros to display cover art thumbnails - default isn't compliant with Matroska guidelines
+								file.Tag.Pictures = new TagLib.Picture[] { cover };
 							}
 						} else if (imageFilename == "") {
 							fileSuccess = false;

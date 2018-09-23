@@ -69,10 +69,9 @@
 			this.lblChangelog.Location = new System.Drawing.Point(12, 85);
 			this.lblChangelog.MaximumSize = new System.Drawing.Size(250, 0);
 			this.lblChangelog.Name = "lblChangelog";
-			this.lblChangelog.Size = new System.Drawing.Size(250, 39);
+			this.lblChangelog.Size = new System.Drawing.Size(221, 39);
 			this.lblChangelog.TabIndex = 35;
-			this.lblChangelog.Text = "Changelog:\r\nUpdate libraries - fix Matroska files not being tagged\r\nFix some erro" +
-    "r messages being overwritten";
+			this.lblChangelog.Text = "Changelog:\r\nFix Matroska artwork not being read by some programs (e.g. Icaros)";
 			// 
 			// lblVer
 			// 
@@ -82,7 +81,7 @@
 			this.lblVer.Name = "lblVer";
 			this.lblVer.Size = new System.Drawing.Size(132, 13);
 			this.lblVer.TabIndex = 34;
-			this.lblVer.Text = "Version 1.0.7 (2018-09-17)";
+			this.lblVer.Text = "Version 1.0.8 (2018-09-23)";
 			this.lblVer.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
 			// 
 			// lblTitle
