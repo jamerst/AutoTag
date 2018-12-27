@@ -11,12 +11,7 @@ using Microsoft.VisualBasic;
 using static Microsoft.VisualBasic.Interaction; // needed to use MsgBox, which is nicer than MessageBox.show as you can define the style using a single paramter, no idea why this isn't just in C# already
 
 using TvDbSharper;
-using TvDbSharper.Dto;
-
-using SubtitleFetcher.Common;
-using SubtitleFetcher.Common.Parsing;
-
-
+using TMDbLib.Client;
 
 namespace AutoTag {
     public partial class frmMain : Form {
@@ -26,67 +21,35 @@ namespace AutoTag {
 				AddToTable(args.Skip(1).ToArray()); // add all except first argument to table (first argument is executing file name)
 				btnProcess_Click(this, new EventArgs());
 			}
+			cBoxMode.SelectedIndex = Properties.Settings.Default.defaultTaggingMode; // set mode
         }
 
 		private bool taskRunning = false; // flag for if process started
 		private CancellationTokenSource cts = new CancellationTokenSource();
 		private bool errorsEncountered = false; // flag for if process encountered errors or not
-
-		#region Button click handlers
-		private void btnAddFile_Click(object sender, EventArgs e) {
-            if (dlgAddFile.ShowDialog() == DialogResult.OK) {
-				AddToTable(dlgAddFile.FileNames);
-            }
-			pBarProcessed.Value = 0;
-        }
-	
-		private void btnRemove_Click(object sender, EventArgs e) {
-			if (tblFiles.CurrentRow != null) {
-				tblFiles.Rows.Remove(tblFiles.CurrentRow);
-			}
-			pBarProcessed.Value = 0;
-		}
-
-		private void btnClear_Click(object sender, EventArgs e) {
-			tblFiles.Rows.Clear();
-			pBarProcessed.Value = 0;
-		}
-
-		private void btnProcess_Click(object sender, EventArgs e) {
-			if (tblFiles.RowCount > 0) {
-
-				if (taskRunning == false) {
-					pBarProcessed.Maximum = tblFiles.RowCount;
-					SetButtonState(false); // disable all buttons
-					pBarProcessed.Value = 0;
-					errorsEncountered = false;
-					taskRunning = true;
-
-					Task processFiles = Task.Run(() => ProcessFilesAsync(cts.Token), cts.Token); // run task with cancellation token attached
-				} else {
-					cts.Cancel(); // request cancellation if requested
-					cts = new CancellationTokenSource(); // create new token source so process can be restarted
-				}
-
-			}
-        }
-		#endregion
+		private int mode;
 
         private async Task ProcessFilesAsync(CancellationToken ct) {
 			ITvDbClient tvdb = new TvDbClient();
 			await tvdb.Authentication.AuthenticateAsync("TQLC3N5YDI1AQVJF");
+
+			TMDbClient tmdb = new TMDbClient("b342b6005f86daf016533bf0b72535bc");
+
             foreach (DataGridViewRow row in tblFiles.Rows) {
 				if (ct.IsCancellationRequested) { // exit loop if cancellation requested
 					break;
 				}
 				bool fileSuccess = true;
 
-                IncrementPBarValue();
+				SetRowStatus(row, "Unprocessed"); // reset row status and colour
+				SetRowColour(row, "#FFFFFF");
+
+				IncrementPBarValue();
 
 				tblFiles.Invoke(new MethodInvoker(() => tblFiles.CurrentCell = row.Cells[0]));
 
 				#region Filename parsing
-				EpisodeParser parser = new EpisodeParser();
+				/*EpisodeParser parser = new EpisodeParser();
 				TvReleaseIdentity episodeData;
 
 				try {
@@ -97,11 +60,11 @@ namespace AutoTag {
 					continue;
 				}
 
-				SetRowStatus(row, "Parsed file as " + episodeData);
+				SetRowStatus(row, "Parsed file as " + episodeData);*/
 				#endregion
 
 				#region TVDB API searching
-				TvDbResponse<SeriesSearchResult[]> seriesIdResponse;
+				/*TvDbResponse<SeriesSearchResult[]> seriesIdResponse;
                 try {
                     seriesIdResponse = await tvdb.Search.SearchSeriesByNameAsync(episodeData.SeriesName);
                 } catch (TvDbServerException ex) {
@@ -147,23 +110,47 @@ namespace AutoTag {
 				string imageFilename = "";
 				if (imagesResponse != null) {
 					imageFilename = imagesResponse.Data.OrderByDescending(obj => obj.RatingsInfo.Average).First().FileName.Split('/').Last(); // Find highest rated image
-				}
+				}*/
 				#endregion
+
+				FileMetadata metadata;
+
+				if (mode == 0) {
+					TVProcessor processor = new TVProcessor(tblFiles, row, tvdb); // if in TV mode, use TVProcessor to parse filename and fetch information
+					metadata = await processor.process();
+				} else {
+					MovieProcessor processor = new MovieProcessor(tblFiles, row, tmdb); // if not, use MovieProcessor
+					metadata = await processor.process();
+				}
+
+				if (metadata.Success == false) {
+					errorsEncountered = true;
+					continue;
+				} else if (metadata.Complete == false) {
+					errorsEncountered = true;
+					fileSuccess = false;
+				}
 
 				#region Tag Writing
 				if (Properties.Settings.Default.tagFiles == true) {
 					try {
 						TagLib.File file = TagLib.File.Create(row.Cells[0].Value.ToString());
-						file.Tag.Album = series.SeriesName;
-						file.Tag.Disc = (uint)episodeData.Season;
-						file.Tag.Track = (uint)episodeData.Episode;
-						file.Tag.Title = foundEpisode.EpisodeName;
-						file.Tag.Comment = foundEpisode.Overview;
-						file.Tag.Genres = new string[] { "TVShows" };
 
-						if (imageFilename != "" && Properties.Settings.Default.addCoverArt == true) { // if there is an image available and cover art is enabled
+						file.Tag.Title = metadata.Title;
+						file.Tag.Comment = metadata.Overview;
+						file.Tag.Genres = new string[] { (metadata.FileType == FileMetadata.Types.TV) ? "TVShows" : "Movie" };
+
+						if (metadata.FileType == FileMetadata.Types.TV) {
+							file.Tag.Album = metadata.SeriesName;
+							file.Tag.Disc = (uint) metadata.Season;
+							file.Tag.Track = (uint) metadata.Episode;
+						} else {
+							file.Tag.Year = (uint) metadata.Date.Year;
+						}
+
+						if (metadata.CoverFilename != "" && Properties.Settings.Default.addCoverArt == true) { // if there is an image available and cover art is enabled
 							string downloadPath = Path.Combine(Path.GetTempPath(), "autotag");
-							string downloadFile = Path.Combine(downloadPath, imageFilename);
+							string downloadFile = Path.Combine(downloadPath, metadata.CoverFilename);
 
 							if (!File.Exists(downloadFile)) { // only download file if it hasn't already been downloaded
 								if (!Directory.Exists(downloadPath)) {
@@ -172,7 +159,7 @@ namespace AutoTag {
 
 								try {
 									using (WebClient client = new WebClient()) {
-										client.DownloadFile("https://www.thetvdb.com/banners/seasons/" + imageFilename, downloadFile); // download image
+										client.DownloadFile(metadata.CoverURL, downloadFile); // download image
 									}
 									file.Tag.Pictures = new TagLib.Picture[] { new TagLib.Picture(downloadFile) { Filename = "cover.jpg" } };
 
@@ -185,14 +172,14 @@ namespace AutoTag {
 							else {
 								file.Tag.Pictures = new TagLib.Picture[] { new TagLib.Picture(downloadFile) { Filename = "cover.jpg" } }; // overwrite default file name - allows software such as Icaros to display cover art thumbnails - default isn't compliant with Matroska guidelines
 							}
-						} else if (imageFilename == "") {
+						} else if (String.IsNullOrEmpty(metadata.CoverFilename)) {
 							fileSuccess = false;
 						}
 					
 						file.Save();
 
 						if (fileSuccess == true) {
-							SetRowStatus(row, "Successfully tagged file as " + episodeData + " (" + foundEpisode.EpisodeName + ")");
+							SetRowStatus(row, "Successfully tagged file as " + metadata);
 						}
 						
 					} catch (Exception ex) {
@@ -204,10 +191,17 @@ namespace AutoTag {
 
 				#region Renaming
 				if (Properties.Settings.Default.renameFiles == true) {
-					string newPath = Path.Combine(
-						Path.GetDirectoryName(row.Cells[0].Value.ToString()),
-						EscapeFilename(String.Format(GetRenamePattern(), series.SeriesName, episodeData.Season, episodeData.Episode.ToString("00"), foundEpisode.EpisodeName) + Path.GetExtension(row.Cells[0].Value.ToString()))
-						);
+					string newPath;
+					if (mode == 0) {
+						newPath = Path.Combine(
+							Path.GetDirectoryName(row.Cells[0].Value.ToString()),
+							EscapeFilename(String.Format(GetTVRenamePattern(), metadata.SeriesName, metadata.Season, metadata.Episode.ToString("00"), metadata.Title) + Path.GetExtension(row.Cells[0].Value.ToString()))
+							);
+					} else {
+						newPath = Path.Combine(
+							Path.GetDirectoryName(row.Cells[0].Value.ToString()),
+							EscapeFilename(String.Format(GetMovieRenamePattern(), metadata.Title, metadata.Date.Year)) + Path.GetExtension(row.Cells[0].Value.ToString()));
+					}
 
 					if (row.Cells[0].Value.ToString() != newPath) {
 						try {
@@ -227,7 +221,11 @@ namespace AutoTag {
 
 				if (fileSuccess == true) {
 					SetRowColour(row, "#4CAF50");
-					SetRowStatus(row, "Success - tagged as " + String.Format(GetRenamePattern(), series.SeriesName, episodeData.Season, episodeData.Episode.ToString("00"), foundEpisode.EpisodeName));
+					if (mode == 0) {
+						SetRowStatus(row, "Success - tagged as " + String.Format(GetTVRenamePattern(), metadata.SeriesName, metadata.Season, metadata.Episode.ToString("00"), metadata.Title));
+					} else {
+						SetRowStatus(row, "Success - tagged as " + String.Format(GetMovieRenamePattern(), metadata.Title, metadata.Date.Year));
+					}
 				}
 				#endregion
 
@@ -242,6 +240,54 @@ namespace AutoTag {
             Invoke(new MethodInvoker(() => SetButtonState(true)));
 			taskRunning = false; // reset flag
         }
+
+		#region Button click handlers
+		private void btnAddFile_Click(object sender, EventArgs e) {
+			if (dlgAddFile.ShowDialog() == DialogResult.OK) {
+				AddToTable(dlgAddFile.FileNames);
+			}
+			pBarProcessed.Value = 0;
+		}
+
+		private void btnAddFolder_Click(object sender, EventArgs e) {
+			if (dlgAddFolder.ShowDialog() == DialogResult.OK) {
+				AddToTable(new string[] { dlgAddFolder.SelectedPath });
+			}
+			pBarProcessed.Value = 0;
+		}
+
+		private void btnRemove_Click(object sender, EventArgs e) {
+			if (tblFiles.CurrentRow != null) {
+				tblFiles.Rows.Remove(tblFiles.CurrentRow);
+			}
+			pBarProcessed.Value = 0;
+		}
+
+		private void btnClear_Click(object sender, EventArgs e) {
+			tblFiles.Rows.Clear();
+			pBarProcessed.Value = 0;
+		}
+
+		private void btnProcess_Click(object sender, EventArgs e) {
+			if (tblFiles.RowCount > 0) {
+
+				if (taskRunning == false) {
+					pBarProcessed.Maximum = tblFiles.RowCount;
+					SetButtonState(false); // disable all buttons
+					pBarProcessed.Value = 0;
+					errorsEncountered = false;
+					taskRunning = true;
+					mode = cBoxMode.SelectedIndex;
+
+					Task processFiles = Task.Run(() => ProcessFilesAsync(cts.Token), cts.Token); // run task with cancellation token attached
+				} else {
+					cts.Cancel(); // request cancellation if requested
+					cts = new CancellationTokenSource(); // create new token source so process can be restarted
+				}
+
+			}
+		}
+		#endregion
 
 		#region Add to table
 		private void AddToTable(string[] files) {
@@ -304,17 +350,16 @@ namespace AutoTag {
 			AllowDrop = state;
 		}
 
-		private string GetRenamePattern() { // Get usable renaming pattern
-			return Properties.Settings.Default.renamePattern.Replace("%1", "{0}").Replace("%2", "{1}").Replace("%3", "{2}").Replace("%4", "{3}");
+		private string GetTVRenamePattern() { // Get usable renaming pattern
+			return Properties.Settings.Default.renamePatternTV.Replace("%1", "{0}").Replace("%2", "{1}").Replace("%3", "{2}").Replace("%4", "{3}");
+		}
+
+		private string GetMovieRenamePattern() { // Get usable renaming pattern
+			return Properties.Settings.Default.renamePatternMovie.Replace("%1", "{0}").Replace("%2", "{1}");
 		}
 		#endregion
 
 		#region ToolStrip
-		private void addToolStripMenuItem_Click(object sender, EventArgs e) {
-			btnAddFile.PerformClick();
-		}
-
-
 		private void exitToolStripMenuItem_Click(object sender, EventArgs e) {
 			Environment.Exit(0);
 		}

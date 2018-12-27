@@ -62,12 +62,36 @@ namespace AutoTag.Properties {
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("%1 - %2x%3 - %4")]
-        public string renamePattern {
+        public string renamePatternTV {
             get {
-                return ((string)(this["renamePattern"]));
+                return ((string)(this["renamePatternTV"]));
             }
             set {
-                this["renamePattern"] = value;
+                this["renamePatternTV"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("%1")]
+        public string renamePatternMovie {
+            get {
+                return ((string)(this["renamePatternMovie"]));
+            }
+            set {
+                this["renamePatternMovie"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        public int defaultTaggingMode {
+            get {
+                return ((int)(this["defaultTaggingMode"]));
+            }
+            set {
+                this["defaultTaggingMode"] = value;
             }
         }
     }

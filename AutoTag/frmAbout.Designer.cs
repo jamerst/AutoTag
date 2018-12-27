@@ -38,13 +38,16 @@
 			this.lnkLblSource = new System.Windows.Forms.LinkLabel();
 			this.lnkLblWebsite = new System.Windows.Forms.LinkLabel();
 			this.lblThanks = new System.Windows.Forms.Label();
+			this.lblTMDbLib = new System.Windows.Forms.Label();
+			this.lnkLblTMDbLib = new System.Windows.Forms.LinkLabel();
+			this.lblDataSource = new System.Windows.Forms.Label();
 			((System.ComponentModel.ISupportInitialize)(this.pBoxLogo)).BeginInit();
 			this.SuspendLayout();
 			// 
 			// lblSources
 			// 
 			this.lblSources.AutoSize = true;
-			this.lblSources.Location = new System.Drawing.Point(12, 139);
+			this.lblSources.Location = new System.Drawing.Point(12, 164);
 			this.lblSources.Margin = new System.Windows.Forms.Padding(3, 0, 3, 5);
 			this.lblSources.Name = "lblSources";
 			this.lblSources.Size = new System.Drawing.Size(309, 13);
@@ -69,9 +72,9 @@
 			this.lblChangelog.Location = new System.Drawing.Point(12, 85);
 			this.lblChangelog.MaximumSize = new System.Drawing.Size(250, 0);
 			this.lblChangelog.Name = "lblChangelog";
-			this.lblChangelog.Size = new System.Drawing.Size(221, 39);
+			this.lblChangelog.Size = new System.Drawing.Size(199, 26);
 			this.lblChangelog.TabIndex = 35;
-			this.lblChangelog.Text = "Changelog:\r\nFix Matroska artwork not being read by some programs (e.g. Icaros)";
+			this.lblChangelog.Text = "Changelog:\r\nAllow tagging of movies in addtion to TV!";
 			// 
 			// lblVer
 			// 
@@ -81,7 +84,7 @@
 			this.lblVer.Name = "lblVer";
 			this.lblVer.Size = new System.Drawing.Size(132, 13);
 			this.lblVer.TabIndex = 34;
-			this.lblVer.Text = "Version 1.0.8 (2018-09-23)";
+			this.lblVer.Text = "Version 2.0.0 (2018-12-27)";
 			this.lblVer.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
 			// 
 			// lblTitle
@@ -99,7 +102,7 @@
 			// lnkLblTvDbSharper
 			// 
 			this.lnkLblTvDbSharper.AutoSize = true;
-			this.lnkLblTvDbSharper.Location = new System.Drawing.Point(12, 189);
+			this.lnkLblTvDbSharper.Location = new System.Drawing.Point(12, 214);
 			this.lnkLblTvDbSharper.Margin = new System.Windows.Forms.Padding(3, 3, 0, 0);
 			this.lnkLblTvDbSharper.Name = "lnkLblTvDbSharper";
 			this.lnkLblTvDbSharper.Size = new System.Drawing.Size(71, 13);
@@ -111,7 +114,7 @@
 			// lnkLblSubtitleFetcher
 			// 
 			this.lnkLblSubtitleFetcher.AutoSize = true;
-			this.lnkLblSubtitleFetcher.Location = new System.Drawing.Point(12, 157);
+			this.lnkLblSubtitleFetcher.Location = new System.Drawing.Point(12, 182);
 			this.lnkLblSubtitleFetcher.Margin = new System.Windows.Forms.Padding(3, 0, 0, 0);
 			this.lnkLblSubtitleFetcher.Name = "lnkLblSubtitleFetcher";
 			this.lnkLblSubtitleFetcher.Size = new System.Drawing.Size(78, 13);
@@ -123,7 +126,7 @@
 			// lnkLblTaglib
 			// 
 			this.lnkLblTaglib.AutoSize = true;
-			this.lnkLblTaglib.Location = new System.Drawing.Point(12, 173);
+			this.lnkLblTaglib.Location = new System.Drawing.Point(12, 198);
 			this.lnkLblTaglib.Margin = new System.Windows.Forms.Padding(3, 3, 0, 0);
 			this.lnkLblTaglib.Name = "lnkLblTaglib";
 			this.lnkLblTaglib.Size = new System.Drawing.Size(61, 13);
@@ -135,7 +138,7 @@
 			// lblSubtitleFetcher
 			// 
 			this.lblSubtitleFetcher.AutoSize = true;
-			this.lblSubtitleFetcher.Location = new System.Drawing.Point(90, 157);
+			this.lblSubtitleFetcher.Location = new System.Drawing.Point(90, 182);
 			this.lblSubtitleFetcher.Margin = new System.Windows.Forms.Padding(0, 0, 3, 0);
 			this.lblSubtitleFetcher.Name = "lblSubtitleFetcher";
 			this.lblSubtitleFetcher.Size = new System.Drawing.Size(216, 13);
@@ -145,7 +148,7 @@
 			// lblTaglib
 			// 
 			this.lblTaglib.AutoSize = true;
-			this.lblTaglib.Location = new System.Drawing.Point(73, 173);
+			this.lblTaglib.Location = new System.Drawing.Point(73, 198);
 			this.lblTaglib.Margin = new System.Windows.Forms.Padding(0, 0, 3, 0);
 			this.lblTaglib.Name = "lblTaglib";
 			this.lblTaglib.Size = new System.Drawing.Size(185, 13);
@@ -155,7 +158,7 @@
 			// lblTvDbSharper
 			// 
 			this.lblTvDbSharper.AutoSize = true;
-			this.lblTvDbSharper.Location = new System.Drawing.Point(83, 189);
+			this.lblTvDbSharper.Location = new System.Drawing.Point(83, 214);
 			this.lblTvDbSharper.Margin = new System.Windows.Forms.Padding(0, 0, 3, 0);
 			this.lblTvDbSharper.Name = "lblTvDbSharper";
 			this.lblTvDbSharper.Size = new System.Drawing.Size(260, 13);
@@ -189,17 +192,52 @@
 			// lblThanks
 			// 
 			this.lblThanks.AutoSize = true;
-			this.lblThanks.Location = new System.Drawing.Point(12, 213);
+			this.lblThanks.Location = new System.Drawing.Point(12, 254);
 			this.lblThanks.Name = "lblThanks";
 			this.lblThanks.Size = new System.Drawing.Size(315, 13);
 			this.lblThanks.TabIndex = 47;
 			this.lblThanks.Text = "Thank you to the authors of above projects for their contributions.";
 			// 
+			// lblTMDbLib
+			// 
+			this.lblTMDbLib.AutoSize = true;
+			this.lblTMDbLib.Location = new System.Drawing.Point(61, 231);
+			this.lblTMDbLib.Margin = new System.Windows.Forms.Padding(0, 0, 3, 0);
+			this.lblTMDbLib.Name = "lblTMDbLib";
+			this.lblTMDbLib.Size = new System.Drawing.Size(294, 13);
+			this.lblTMDbLib.TabIndex = 49;
+			this.lblTMDbLib.Text = "© Michael Bisbjerg - Provides themoviedb.org API integration";
+			// 
+			// lnkLblTMDbLib
+			// 
+			this.lnkLblTMDbLib.AutoSize = true;
+			this.lnkLblTMDbLib.Location = new System.Drawing.Point(12, 231);
+			this.lnkLblTMDbLib.Margin = new System.Windows.Forms.Padding(3, 3, 0, 0);
+			this.lnkLblTMDbLib.Name = "lnkLblTMDbLib";
+			this.lnkLblTMDbLib.Size = new System.Drawing.Size(51, 13);
+			this.lnkLblTMDbLib.TabIndex = 48;
+			this.lnkLblTMDbLib.TabStop = true;
+			this.lnkLblTMDbLib.Text = "TMDbLib";
+			this.lnkLblTMDbLib.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.lnkLblTMDbLib_LinkClicked);
+			// 
+			// lblDataSource
+			// 
+			this.lblDataSource.AutoSize = true;
+			this.lblDataSource.Location = new System.Drawing.Point(12, 127);
+			this.lblDataSource.Name = "lblDataSource";
+			this.lblDataSource.Size = new System.Drawing.Size(308, 26);
+			this.lblDataSource.TabIndex = 50;
+			this.lblDataSource.Text = "Data provided by thetvdb.com and themoviedb.org\'s free APIs.\r\nThank you to the ma" +
+    "intainers of these sites for their contribution.";
+			// 
 			// frmAbout
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-			this.ClientSize = new System.Drawing.Size(392, 235);
+			this.ClientSize = new System.Drawing.Size(392, 276);
+			this.Controls.Add(this.lblDataSource);
+			this.Controls.Add(this.lblTMDbLib);
+			this.Controls.Add(this.lnkLblTMDbLib);
 			this.Controls.Add(this.lblThanks);
 			this.Controls.Add(this.lnkLblWebsite);
 			this.Controls.Add(this.lnkLblSource);
@@ -243,5 +281,8 @@
 		private System.Windows.Forms.LinkLabel lnkLblSource;
 		private System.Windows.Forms.LinkLabel lnkLblWebsite;
 		private System.Windows.Forms.Label lblThanks;
+		private System.Windows.Forms.Label lblTMDbLib;
+		private System.Windows.Forms.LinkLabel lnkLblTMDbLib;
+		private System.Windows.Forms.Label lblDataSource;
 	}
 }

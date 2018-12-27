@@ -130,16 +130,26 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\lib\taglib-sharp.dll</HintPath>
     </Reference>
+    <Reference Include="TMDbLib, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\TMDbLib.1.0.0\lib\net46\TMDbLib.dll</HintPath>
+    </Reference>
     <Reference Include="TvDbSharper, Version=2.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\TvDbSharper.2.0.0\lib\netstandard1.1\TvDbSharper.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="FileMetadata.cs" />
     <Compile Include="frmAbout.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="frmAbout.Designer.cs">
       <DependentUpon>frmAbout.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmChoose.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmChoose.Designer.cs">
+      <DependentUpon>frmChoose.cs</DependentUpon>
     </Compile>
     <Compile Include="frmMain.cs">
       <SubType>Form</SubType>
@@ -153,10 +163,16 @@
     <Compile Include="frmOptions.Designer.cs">
       <DependentUpon>frmOptions.cs</DependentUpon>
     </Compile>
+    <Compile Include="MovieProcessor.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="TableUtils.cs" />
+    <Compile Include="TVProcessor.cs" />
     <EmbeddedResource Include="frmAbout.resx">
       <DependentUpon>frmAbout.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmChoose.resx">
+      <DependentUpon>frmChoose.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="frmMain.resx">
       <DependentUpon>frmMain.cs</DependentUpon>

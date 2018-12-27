@@ -36,6 +36,7 @@
 			this.MenuStrip = new System.Windows.Forms.MenuStrip();
 			this.fileToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
 			this.addToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+			this.addFolderToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
 			this.exitToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
 			this.helpToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
 			this.optionsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -49,6 +50,10 @@
 			this.btnClear = new System.Windows.Forms.Button();
 			this.btnRemove = new System.Windows.Forms.Button();
 			this.pBarProcessed = new System.Windows.Forms.ProgressBar();
+			this.cBoxMode = new System.Windows.Forms.ComboBox();
+			this.dlgAddFolder = new System.Windows.Forms.FolderBrowserDialog();
+			this.btnAddFolder = new System.Windows.Forms.Button();
+			this.lblMode = new System.Windows.Forms.Label();
 			this.MenuStrip.SuspendLayout();
 			((System.ComponentModel.ISupportInitialize)(this.tblFiles)).BeginInit();
 			this.SuspendLayout();
@@ -60,29 +65,37 @@
             this.helpToolStripMenuItem});
 			this.MenuStrip.Location = new System.Drawing.Point(0, 0);
 			this.MenuStrip.Name = "MenuStrip";
-			this.MenuStrip.Size = new System.Drawing.Size(792, 25);
-			this.MenuStrip.TabIndex = 0;
+			this.MenuStrip.Size = new System.Drawing.Size(792, 24);
+			this.MenuStrip.TabIndex = 8;
 			// 
 			// fileToolStripMenuItem
 			// 
 			this.fileToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.addToolStripMenuItem,
+            this.addFolderToolStripMenuItem,
             this.exitToolStripMenuItem});
 			this.fileToolStripMenuItem.Name = "fileToolStripMenuItem";
-			this.fileToolStripMenuItem.Size = new System.Drawing.Size(39, 21);
+			this.fileToolStripMenuItem.Size = new System.Drawing.Size(37, 20);
 			this.fileToolStripMenuItem.Text = "File";
 			// 
 			// addToolStripMenuItem
 			// 
 			this.addToolStripMenuItem.Name = "addToolStripMenuItem";
-			this.addToolStripMenuItem.Size = new System.Drawing.Size(98, 22);
-			this.addToolStripMenuItem.Text = "Add";
-			this.addToolStripMenuItem.Click += new System.EventHandler(this.addToolStripMenuItem_Click);
+			this.addToolStripMenuItem.Size = new System.Drawing.Size(132, 22);
+			this.addToolStripMenuItem.Text = "Add Files";
+			this.addToolStripMenuItem.Click += new System.EventHandler(this.btnAddFile_Click);
+			// 
+			// addFolderToolStripMenuItem
+			// 
+			this.addFolderToolStripMenuItem.Name = "addFolderToolStripMenuItem";
+			this.addFolderToolStripMenuItem.Size = new System.Drawing.Size(132, 22);
+			this.addFolderToolStripMenuItem.Text = "Add Folder";
+			this.addFolderToolStripMenuItem.Click += new System.EventHandler(this.btnAddFolder_Click);
 			// 
 			// exitToolStripMenuItem
 			// 
 			this.exitToolStripMenuItem.Name = "exitToolStripMenuItem";
-			this.exitToolStripMenuItem.Size = new System.Drawing.Size(98, 22);
+			this.exitToolStripMenuItem.Size = new System.Drawing.Size(132, 22);
 			this.exitToolStripMenuItem.Text = "Exit";
 			this.exitToolStripMenuItem.Click += new System.EventHandler(this.exitToolStripMenuItem_Click);
 			// 
@@ -92,20 +105,20 @@
             this.optionsToolStripMenuItem,
             this.aboutToolStripMenuItem});
 			this.helpToolStripMenuItem.Name = "helpToolStripMenuItem";
-			this.helpToolStripMenuItem.Size = new System.Drawing.Size(50, 21);
+			this.helpToolStripMenuItem.Size = new System.Drawing.Size(47, 20);
 			this.helpToolStripMenuItem.Text = "Tools";
 			// 
 			// optionsToolStripMenuItem
 			// 
 			this.optionsToolStripMenuItem.Name = "optionsToolStripMenuItem";
-			this.optionsToolStripMenuItem.Size = new System.Drawing.Size(119, 22);
+			this.optionsToolStripMenuItem.Size = new System.Drawing.Size(116, 22);
 			this.optionsToolStripMenuItem.Text = "Options";
 			this.optionsToolStripMenuItem.Click += new System.EventHandler(this.optionsToolStripMenuItem_Click);
 			// 
 			// aboutToolStripMenuItem
 			// 
 			this.aboutToolStripMenuItem.Name = "aboutToolStripMenuItem";
-			this.aboutToolStripMenuItem.Size = new System.Drawing.Size(119, 22);
+			this.aboutToolStripMenuItem.Size = new System.Drawing.Size(116, 22);
 			this.aboutToolStripMenuItem.Text = "About";
 			this.aboutToolStripMenuItem.Click += new System.EventHandler(this.aboutToolStripMenuItem_Click);
 			// 
@@ -155,7 +168,7 @@
 			this.tblFiles.RowsDefaultCellStyle = dataGridViewCellStyle4;
 			this.tblFiles.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
 			this.tblFiles.Size = new System.Drawing.Size(768, 471);
-			this.tblFiles.TabIndex = 1;
+			this.tblFiles.TabIndex = 7;
 			// 
 			// path
 			// 
@@ -176,8 +189,8 @@
 			this.btnAddFile.Location = new System.Drawing.Point(12, 28);
 			this.btnAddFile.Name = "btnAddFile";
 			this.btnAddFile.Size = new System.Drawing.Size(75, 23);
-			this.btnAddFile.TabIndex = 2;
-			this.btnAddFile.Text = "Add File(s)";
+			this.btnAddFile.TabIndex = 1;
+			this.btnAddFile.Text = "Add Files";
 			this.btnAddFile.UseVisualStyleBackColor = true;
 			this.btnAddFile.Click += new System.EventHandler(this.btnAddFile_Click);
 			// 
@@ -187,7 +200,7 @@
 			this.btnProcess.Location = new System.Drawing.Point(690, 534);
 			this.btnProcess.Name = "btnProcess";
 			this.btnProcess.Size = new System.Drawing.Size(90, 23);
-			this.btnProcess.TabIndex = 3;
+			this.btnProcess.TabIndex = 6;
 			this.btnProcess.Text = "Process Files";
 			this.btnProcess.UseVisualStyleBackColor = true;
 			this.btnProcess.Click += new System.EventHandler(this.btnProcess_Click);
@@ -204,17 +217,17 @@
 			this.btnClear.Location = new System.Drawing.Point(609, 534);
 			this.btnClear.Name = "btnClear";
 			this.btnClear.Size = new System.Drawing.Size(75, 23);
-			this.btnClear.TabIndex = 4;
+			this.btnClear.TabIndex = 5;
 			this.btnClear.Text = "Clear";
 			this.btnClear.UseVisualStyleBackColor = true;
 			this.btnClear.Click += new System.EventHandler(this.btnClear_Click);
 			// 
 			// btnRemove
 			// 
-			this.btnRemove.Location = new System.Drawing.Point(93, 28);
+			this.btnRemove.Location = new System.Drawing.Point(174, 28);
 			this.btnRemove.Name = "btnRemove";
 			this.btnRemove.Size = new System.Drawing.Size(75, 23);
-			this.btnRemove.TabIndex = 5;
+			this.btnRemove.TabIndex = 3;
 			this.btnRemove.Text = "Remove File";
 			this.btnRemove.UseVisualStyleBackColor = true;
 			this.btnRemove.Click += new System.EventHandler(this.btnRemove_Click);
@@ -228,12 +241,52 @@
 			this.pBarProcessed.Size = new System.Drawing.Size(591, 23);
 			this.pBarProcessed.TabIndex = 6;
 			// 
+			// cBoxMode
+			// 
+			this.cBoxMode.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+			this.cBoxMode.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+			this.cBoxMode.FormattingEnabled = true;
+			this.cBoxMode.Items.AddRange(new object[] {
+            "TV",
+            "Movie"});
+			this.cBoxMode.Location = new System.Drawing.Point(714, 30);
+			this.cBoxMode.Name = "cBoxMode";
+			this.cBoxMode.Size = new System.Drawing.Size(66, 21);
+			this.cBoxMode.TabIndex = 4;
+			// 
+			// dlgAddFolder
+			// 
+			this.dlgAddFolder.Description = "Select a folder containing files to be processed";
+			// 
+			// btnAddFolder
+			// 
+			this.btnAddFolder.Location = new System.Drawing.Point(93, 28);
+			this.btnAddFolder.Name = "btnAddFolder";
+			this.btnAddFolder.Size = new System.Drawing.Size(75, 23);
+			this.btnAddFolder.TabIndex = 2;
+			this.btnAddFolder.Text = "Add Folder";
+			this.btnAddFolder.UseVisualStyleBackColor = true;
+			this.btnAddFolder.Click += new System.EventHandler(this.btnAddFolder_Click);
+			// 
+			// lblMode
+			// 
+			this.lblMode.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+			this.lblMode.AutoSize = true;
+			this.lblMode.Location = new System.Drawing.Point(632, 33);
+			this.lblMode.Name = "lblMode";
+			this.lblMode.Size = new System.Drawing.Size(76, 13);
+			this.lblMode.TabIndex = 9;
+			this.lblMode.Text = "Tagging Mode";
+			// 
 			// frmMain
 			// 
 			this.AllowDrop = true;
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			this.ClientSize = new System.Drawing.Size(792, 569);
+			this.Controls.Add(this.lblMode);
+			this.Controls.Add(this.btnAddFolder);
+			this.Controls.Add(this.cBoxMode);
 			this.Controls.Add(this.pBarProcessed);
 			this.Controls.Add(this.btnRemove);
 			this.Controls.Add(this.btnClear);
@@ -273,6 +326,11 @@
         private System.Windows.Forms.Button btnClear;
         private System.Windows.Forms.Button btnRemove;
         private System.Windows.Forms.ProgressBar pBarProcessed;
-    }
+		private System.Windows.Forms.ComboBox cBoxMode;
+		private System.Windows.Forms.FolderBrowserDialog dlgAddFolder;
+		private System.Windows.Forms.ToolStripMenuItem addFolderToolStripMenuItem;
+		private System.Windows.Forms.Button btnAddFolder;
+		private System.Windows.Forms.Label lblMode;
+	}
 }
 

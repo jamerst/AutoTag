@@ -6,10 +6,10 @@ using System.Runtime.InteropServices;
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
 [assembly: AssemblyTitle("AutoTag")]
-[assembly: AssemblyDescription("Automatic tagging and renaming of TV episodes")]
+[assembly: AssemblyDescription("Automatic tagging and renaming of TV episodes and movies")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("James Tattersall")]
-[assembly: AssemblyProduct("AutoTag 1.0.8")]
+[assembly: AssemblyProduct("AutoTag 2.0.0")]
 [assembly: AssemblyCopyright("Copyright © James Tattersall 2018")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
@@ -32,5 +32,5 @@ using System.Runtime.InteropServices;
 // You can specify all the values or you can default the Build and Revision Numbers
 // by using the '*' as shown below:
 // [assembly: AssemblyVersion("1.0.*")]
-[assembly: AssemblyVersion("1.0.8.0")]
-[assembly: AssemblyFileVersion("1.0.8.0")]
+[assembly: AssemblyVersion("2.0.0.0")]
+[assembly: AssemblyFileVersion("2.0.0.0")]

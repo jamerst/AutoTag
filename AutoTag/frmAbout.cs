@@ -21,6 +21,10 @@ namespace AutoTag {
 			lnkLblTvDbSharper.LinkVisited = true;
 			Process.Start("https://github.com/HristoKolev/TvDbSharper");
 		}
+		private void lnkLblTMDbLib_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e) {
+			lnkLblTMDbLib.LinkVisited = true;
+			Process.Start("https://github.com/LordMike/TMDbLib");
+		}
 
 		private void lnkLblWebsite_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e) {
 			lnkLblWebsite.LinkVisited = true;
