@@ -84,7 +84,7 @@
 			this.lblVer.Name = "lblVer";
 			this.lblVer.Size = new System.Drawing.Size(132, 13);
 			this.lblVer.TabIndex = 34;
-			this.lblVer.Text = "Version 2.0.0 (2018-12-27)";
+			this.lblVer.Text = "Version 2.0.0 (2018-12-28)";
 			this.lblVer.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
 			// 
 			// lblTitle

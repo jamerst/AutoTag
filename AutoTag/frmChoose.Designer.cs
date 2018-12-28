@@ -27,9 +27,9 @@
 			System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle2 = new System.Windows.Forms.DataGridViewCellStyle();
 			this.lblMsg = new System.Windows.Forms.Label();
 			this.tblResults = new System.Windows.Forms.DataGridView();
-			this.btnContinue = new System.Windows.Forms.Button();
 			this.title = new System.Windows.Forms.DataGridViewTextBoxColumn();
 			this.year = new System.Windows.Forms.DataGridViewTextBoxColumn();
+			this.btnContinue = new System.Windows.Forms.Button();
 			((System.ComponentModel.ISupportInitialize)(this.tblResults)).BeginInit();
 			this.SuspendLayout();
 			// 
@@ -41,7 +41,7 @@
 			this.lblMsg.Name = "lblMsg";
 			this.lblMsg.Size = new System.Drawing.Size(364, 26);
 			this.lblMsg.TabIndex = 0;
-			this.lblMsg.Text = "Multiple results were returned, Please choose the correct movie from the list bel" +
+			this.lblMsg.Text = "Multiple results were returned. Please choose the correct movie from the list bel" +
     "ow.";
 			// 
 			// tblResults
@@ -74,16 +74,7 @@
 			this.tblResults.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
 			this.tblResults.Size = new System.Drawing.Size(360, 173);
 			this.tblResults.TabIndex = 1;
-			// 
-			// btnContinue
-			// 
-			this.btnContinue.Location = new System.Drawing.Point(12, 226);
-			this.btnContinue.Name = "btnContinue";
-			this.btnContinue.Size = new System.Drawing.Size(75, 23);
-			this.btnContinue.TabIndex = 2;
-			this.btnContinue.Text = "Continue";
-			this.btnContinue.UseVisualStyleBackColor = true;
-			this.btnContinue.Click += new System.EventHandler(this.btnContinue_Click);
+			this.tblResults.CellDoubleClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.tblResults_CellDoubleClick);
 			// 
 			// title
 			// 
@@ -102,6 +93,16 @@
 			this.year.Name = "year";
 			this.year.ReadOnly = true;
 			this.year.Resizable = System.Windows.Forms.DataGridViewTriState.False;
+			// 
+			// btnContinue
+			// 
+			this.btnContinue.Location = new System.Drawing.Point(12, 226);
+			this.btnContinue.Name = "btnContinue";
+			this.btnContinue.Size = new System.Drawing.Size(75, 23);
+			this.btnContinue.TabIndex = 2;
+			this.btnContinue.Text = "Continue";
+			this.btnContinue.UseVisualStyleBackColor = true;
+			this.btnContinue.Click += new System.EventHandler(this.btnContinue_Click);
 			// 
 			// frmChoose
 			// 

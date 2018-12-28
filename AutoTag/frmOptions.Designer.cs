@@ -28,22 +28,24 @@
 			this.cBoxCoverArt = new System.Windows.Forms.CheckBox();
 			this.cBoxMetadata = new System.Windows.Forms.CheckBox();
 			this.gBoxRenaming = new System.Windows.Forms.GroupBox();
+			this.gBoxMovieRenaming = new System.Windows.Forms.GroupBox();
 			this.lblMoviePreview = new System.Windows.Forms.Label();
-			this.lblMoviePreviewLabel = new System.Windows.Forms.Label();
-			this.lblTVPreview = new System.Windows.Forms.Label();
-			this.lblTVPreviewLabel = new System.Windows.Forms.Label();
-			this.lblMovieKey = new System.Windows.Forms.Label();
 			this.tBoxMoviePattern = new System.Windows.Forms.TextBox();
-			this.lblTVKey = new System.Windows.Forms.Label();
+			this.lblMovieKey = new System.Windows.Forms.Label();
+			this.lblMoviePreviewLabel = new System.Windows.Forms.Label();
+			this.gBoxTVRenaming = new System.Windows.Forms.GroupBox();
 			this.tBoxTVPattern = new System.Windows.Forms.TextBox();
-			this.lblMoviePattern = new System.Windows.Forms.Label();
-			this.lblTVPattern = new System.Windows.Forms.Label();
+			this.lblTVPreview = new System.Windows.Forms.Label();
+			this.lblTVKey = new System.Windows.Forms.Label();
+			this.lblTVPreviewLabel = new System.Windows.Forms.Label();
 			this.cBoxRenaming = new System.Windows.Forms.CheckBox();
 			this.btnSave = new System.Windows.Forms.Button();
 			this.lblDefaultMode = new System.Windows.Forms.Label();
 			this.cBoxDefaultMode = new System.Windows.Forms.ComboBox();
 			this.gBoxMetadata.SuspendLayout();
 			this.gBoxRenaming.SuspendLayout();
+			this.gBoxMovieRenaming.SuspendLayout();
+			this.gBoxTVRenaming.SuspendLayout();
 			this.SuspendLayout();
 			// 
 			// gBoxMetadata
@@ -80,116 +82,116 @@
 			// 
 			// gBoxRenaming
 			// 
-			this.gBoxRenaming.Controls.Add(this.lblMoviePreview);
-			this.gBoxRenaming.Controls.Add(this.lblMoviePreviewLabel);
-			this.gBoxRenaming.Controls.Add(this.lblTVPreview);
-			this.gBoxRenaming.Controls.Add(this.lblTVPreviewLabel);
-			this.gBoxRenaming.Controls.Add(this.lblMovieKey);
-			this.gBoxRenaming.Controls.Add(this.tBoxMoviePattern);
-			this.gBoxRenaming.Controls.Add(this.lblTVKey);
-			this.gBoxRenaming.Controls.Add(this.tBoxTVPattern);
-			this.gBoxRenaming.Controls.Add(this.lblMoviePattern);
-			this.gBoxRenaming.Controls.Add(this.lblTVPattern);
+			this.gBoxRenaming.Controls.Add(this.gBoxMovieRenaming);
+			this.gBoxRenaming.Controls.Add(this.gBoxTVRenaming);
 			this.gBoxRenaming.Location = new System.Drawing.Point(12, 12);
 			this.gBoxRenaming.Name = "gBoxRenaming";
 			this.gBoxRenaming.Padding = new System.Windows.Forms.Padding(10, 3, 3, 3);
-			this.gBoxRenaming.Size = new System.Drawing.Size(270, 249);
+			this.gBoxRenaming.Size = new System.Drawing.Size(270, 252);
 			this.gBoxRenaming.TabIndex = 5;
 			this.gBoxRenaming.TabStop = false;
+			// 
+			// gBoxMovieRenaming
+			// 
+			this.gBoxMovieRenaming.Controls.Add(this.lblMoviePreview);
+			this.gBoxMovieRenaming.Controls.Add(this.tBoxMoviePattern);
+			this.gBoxMovieRenaming.Controls.Add(this.lblMovieKey);
+			this.gBoxMovieRenaming.Controls.Add(this.lblMoviePreviewLabel);
+			this.gBoxMovieRenaming.Location = new System.Drawing.Point(5, 150);
+			this.gBoxMovieRenaming.Name = "gBoxMovieRenaming";
+			this.gBoxMovieRenaming.Size = new System.Drawing.Size(259, 95);
+			this.gBoxMovieRenaming.TabIndex = 11;
+			this.gBoxMovieRenaming.TabStop = false;
+			this.gBoxMovieRenaming.Text = "Movie Renaming Pattern";
 			// 
 			// lblMoviePreview
 			// 
 			this.lblMoviePreview.AutoSize = true;
-			this.lblMoviePreview.Location = new System.Drawing.Point(67, 227);
+			this.lblMoviePreview.Location = new System.Drawing.Point(63, 78);
 			this.lblMoviePreview.Margin = new System.Windows.Forms.Padding(3, 10, 3, 0);
 			this.lblMoviePreview.Name = "lblMoviePreview";
 			this.lblMoviePreview.Size = new System.Drawing.Size(0, 13);
 			this.lblMoviePreview.TabIndex = 9;
 			// 
+			// tBoxMoviePattern
+			// 
+			this.tBoxMoviePattern.Location = new System.Drawing.Point(9, 19);
+			this.tBoxMoviePattern.Name = "tBoxMoviePattern";
+			this.tBoxMoviePattern.Size = new System.Drawing.Size(244, 20);
+			this.tBoxMoviePattern.TabIndex = 3;
+			this.tBoxMoviePattern.TextChanged += new System.EventHandler(this.SetMoviePatternSetting);
+			this.tBoxMoviePattern.KeyUp += new System.Windows.Forms.KeyEventHandler(this.tBoxMoviePattern_KeyUp);
+			this.tBoxMoviePattern.Leave += new System.EventHandler(this.SetMoviePatternSetting);
+			// 
+			// lblMovieKey
+			// 
+			this.lblMovieKey.AutoSize = true;
+			this.lblMovieKey.Location = new System.Drawing.Point(9, 42);
+			this.lblMovieKey.Name = "lblMovieKey";
+			this.lblMovieKey.Size = new System.Drawing.Size(97, 26);
+			this.lblMovieKey.TabIndex = 7;
+			this.lblMovieKey.Text = "%1 = Title\r\n%2 = Release Year";
+			// 
 			// lblMoviePreviewLabel
 			// 
 			this.lblMoviePreviewLabel.AutoSize = true;
-			this.lblMoviePreviewLabel.Location = new System.Drawing.Point(13, 227);
+			this.lblMoviePreviewLabel.Location = new System.Drawing.Point(9, 78);
 			this.lblMoviePreviewLabel.Margin = new System.Windows.Forms.Padding(3, 10, 3, 0);
 			this.lblMoviePreviewLabel.Name = "lblMoviePreviewLabel";
 			this.lblMoviePreviewLabel.Size = new System.Drawing.Size(48, 13);
 			this.lblMoviePreviewLabel.TabIndex = 8;
 			this.lblMoviePreviewLabel.Text = "Preview:";
 			// 
-			// lblTVPreview
+			// gBoxTVRenaming
 			// 
-			this.lblTVPreview.AutoSize = true;
-			this.lblTVPreview.Location = new System.Drawing.Point(67, 120);
-			this.lblTVPreview.Margin = new System.Windows.Forms.Padding(3, 10, 3, 0);
-			this.lblTVPreview.Name = "lblTVPreview";
-			this.lblTVPreview.Size = new System.Drawing.Size(0, 13);
-			this.lblTVPreview.TabIndex = 4;
-			// 
-			// lblTVPreviewLabel
-			// 
-			this.lblTVPreviewLabel.AutoSize = true;
-			this.lblTVPreviewLabel.Location = new System.Drawing.Point(13, 120);
-			this.lblTVPreviewLabel.Margin = new System.Windows.Forms.Padding(3, 10, 3, 0);
-			this.lblTVPreviewLabel.Name = "lblTVPreviewLabel";
-			this.lblTVPreviewLabel.Size = new System.Drawing.Size(48, 13);
-			this.lblTVPreviewLabel.TabIndex = 3;
-			this.lblTVPreviewLabel.Text = "Preview:";
-			// 
-			// lblMovieKey
-			// 
-			this.lblMovieKey.AutoSize = true;
-			this.lblMovieKey.Location = new System.Drawing.Point(13, 191);
-			this.lblMovieKey.Name = "lblMovieKey";
-			this.lblMovieKey.Size = new System.Drawing.Size(97, 26);
-			this.lblMovieKey.TabIndex = 7;
-			this.lblMovieKey.Text = "%1 = Title\r\n%2 = Release Year";
-			// 
-			// tBoxMoviePattern
-			// 
-			this.tBoxMoviePattern.Location = new System.Drawing.Point(13, 168);
-			this.tBoxMoviePattern.Name = "tBoxMoviePattern";
-			this.tBoxMoviePattern.Size = new System.Drawing.Size(251, 20);
-			this.tBoxMoviePattern.TabIndex = 3;
-			this.tBoxMoviePattern.TextChanged += new System.EventHandler(this.SetMoviePatternSetting);
-			this.tBoxMoviePattern.KeyUp += new System.Windows.Forms.KeyEventHandler(this.tBoxMoviePattern_KeyUp);
-			this.tBoxMoviePattern.Leave += new System.EventHandler(this.SetMoviePatternSetting);
-			// 
-			// lblTVKey
-			// 
-			this.lblTVKey.AutoSize = true;
-			this.lblTVKey.Location = new System.Drawing.Point(13, 58);
-			this.lblTVKey.Name = "lblTVKey";
-			this.lblTVKey.Size = new System.Drawing.Size(111, 52);
-			this.lblTVKey.TabIndex = 2;
-			this.lblTVKey.Text = "%1 = Series Name\r\n%2 = Season Number\r\n%3 = Episode Number\r\n%4 = Episode Name";
+			this.gBoxTVRenaming.Controls.Add(this.tBoxTVPattern);
+			this.gBoxTVRenaming.Controls.Add(this.lblTVPreview);
+			this.gBoxTVRenaming.Controls.Add(this.lblTVKey);
+			this.gBoxTVRenaming.Controls.Add(this.lblTVPreviewLabel);
+			this.gBoxTVRenaming.Location = new System.Drawing.Point(5, 19);
+			this.gBoxTVRenaming.Name = "gBoxTVRenaming";
+			this.gBoxTVRenaming.Size = new System.Drawing.Size(259, 125);
+			this.gBoxTVRenaming.TabIndex = 10;
+			this.gBoxTVRenaming.TabStop = false;
+			this.gBoxTVRenaming.Text = "TV Renaming Pattern";
 			// 
 			// tBoxTVPattern
 			// 
-			this.tBoxTVPattern.Location = new System.Drawing.Point(13, 35);
+			this.tBoxTVPattern.Location = new System.Drawing.Point(6, 19);
 			this.tBoxTVPattern.Name = "tBoxTVPattern";
-			this.tBoxTVPattern.Size = new System.Drawing.Size(251, 20);
+			this.tBoxTVPattern.Size = new System.Drawing.Size(247, 20);
 			this.tBoxTVPattern.TabIndex = 2;
 			this.tBoxTVPattern.TextChanged += new System.EventHandler(this.SetTVPatternSetting);
 			this.tBoxTVPattern.KeyUp += new System.Windows.Forms.KeyEventHandler(this.tBoxTVPattern_KeyUp);
 			this.tBoxTVPattern.Leave += new System.EventHandler(this.SetTVPatternSetting);
 			// 
-			// lblMoviePattern
+			// lblTVPreview
 			// 
-			this.lblMoviePattern.AutoSize = true;
-			this.lblMoviePattern.Location = new System.Drawing.Point(13, 152);
-			this.lblMoviePattern.Name = "lblMoviePattern";
-			this.lblMoviePattern.Size = new System.Drawing.Size(124, 13);
-			this.lblMoviePattern.TabIndex = 5;
-			this.lblMoviePattern.Text = "Movie Renaming Pattern";
+			this.lblTVPreview.AutoSize = true;
+			this.lblTVPreview.Location = new System.Drawing.Point(60, 104);
+			this.lblTVPreview.Margin = new System.Windows.Forms.Padding(3, 10, 3, 0);
+			this.lblTVPreview.Name = "lblTVPreview";
+			this.lblTVPreview.Size = new System.Drawing.Size(0, 13);
+			this.lblTVPreview.TabIndex = 4;
 			// 
-			// lblTVPattern
+			// lblTVKey
 			// 
-			this.lblTVPattern.AutoSize = true;
-			this.lblTVPattern.Location = new System.Drawing.Point(13, 19);
-			this.lblTVPattern.Name = "lblTVPattern";
-			this.lblTVPattern.Size = new System.Drawing.Size(109, 13);
-			this.lblTVPattern.TabIndex = 0;
-			this.lblTVPattern.Text = "TV Renaming Pattern";
+			this.lblTVKey.AutoSize = true;
+			this.lblTVKey.Location = new System.Drawing.Point(6, 42);
+			this.lblTVKey.Name = "lblTVKey";
+			this.lblTVKey.Size = new System.Drawing.Size(111, 52);
+			this.lblTVKey.TabIndex = 2;
+			this.lblTVKey.Text = "%1 = Series Name\r\n%2 = Season Number\r\n%3 = Episode Number\r\n%4 = Episode Name";
+			// 
+			// lblTVPreviewLabel
+			// 
+			this.lblTVPreviewLabel.AutoSize = true;
+			this.lblTVPreviewLabel.Location = new System.Drawing.Point(6, 104);
+			this.lblTVPreviewLabel.Margin = new System.Windows.Forms.Padding(3, 10, 3, 0);
+			this.lblTVPreviewLabel.Name = "lblTVPreviewLabel";
+			this.lblTVPreviewLabel.Size = new System.Drawing.Size(48, 13);
+			this.lblTVPreviewLabel.TabIndex = 3;
+			this.lblTVPreviewLabel.Text = "Preview:";
 			// 
 			// cBoxRenaming
 			// 
@@ -204,7 +206,7 @@
 			// 
 			// btnSave
 			// 
-			this.btnSave.Location = new System.Drawing.Point(483, 239);
+			this.btnSave.Location = new System.Drawing.Point(483, 241);
 			this.btnSave.Name = "btnSave";
 			this.btnSave.Size = new System.Drawing.Size(75, 23);
 			this.btnSave.TabIndex = 7;
@@ -238,7 +240,7 @@
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-			this.ClientSize = new System.Drawing.Size(570, 271);
+			this.ClientSize = new System.Drawing.Size(570, 276);
 			this.Controls.Add(this.cBoxDefaultMode);
 			this.Controls.Add(this.lblDefaultMode);
 			this.Controls.Add(this.btnSave);
@@ -257,7 +259,10 @@
 			this.gBoxMetadata.ResumeLayout(false);
 			this.gBoxMetadata.PerformLayout();
 			this.gBoxRenaming.ResumeLayout(false);
-			this.gBoxRenaming.PerformLayout();
+			this.gBoxMovieRenaming.ResumeLayout(false);
+			this.gBoxMovieRenaming.PerformLayout();
+			this.gBoxTVRenaming.ResumeLayout(false);
+			this.gBoxTVRenaming.PerformLayout();
 			this.ResumeLayout(false);
 			this.PerformLayout();
 
@@ -271,7 +276,6 @@
 		private System.Windows.Forms.GroupBox gBoxRenaming;
 		private System.Windows.Forms.Label lblTVKey;
 		private System.Windows.Forms.TextBox tBoxTVPattern;
-		private System.Windows.Forms.Label lblTVPattern;
 		private System.Windows.Forms.CheckBox cBoxRenaming;
 		private System.Windows.Forms.Button btnSave;
 		private System.Windows.Forms.Label lblTVPreview;
@@ -279,9 +283,10 @@
 		private System.Windows.Forms.Label lblMoviePreviewLabel;
 		private System.Windows.Forms.Label lblMovieKey;
 		private System.Windows.Forms.TextBox tBoxMoviePattern;
-		private System.Windows.Forms.Label lblMoviePattern;
 		private System.Windows.Forms.Label lblMoviePreview;
 		private System.Windows.Forms.Label lblDefaultMode;
 		private System.Windows.Forms.ComboBox cBoxDefaultMode;
+		private System.Windows.Forms.GroupBox gBoxTVRenaming;
+		private System.Windows.Forms.GroupBox gBoxMovieRenaming;
 	}
 }

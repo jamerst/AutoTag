@@ -48,71 +48,6 @@ namespace AutoTag {
 
 				tblFiles.Invoke(new MethodInvoker(() => tblFiles.CurrentCell = row.Cells[0]));
 
-				#region Filename parsing
-				/*EpisodeParser parser = new EpisodeParser();
-				TvReleaseIdentity episodeData;
-
-				try {
-					episodeData = parser.ParseEpisodeInfo(Path.GetFileName(row.Cells[0].Value.ToString())); // Parse info from filename
-				} catch (FormatException ex) {
-					errorsEncountered = true;
-					SetRowError(row, "Error: " + ex.Message);
-					continue;
-				}
-
-				SetRowStatus(row, "Parsed file as " + episodeData);*/
-				#endregion
-
-				#region TVDB API searching
-				/*TvDbResponse<SeriesSearchResult[]> seriesIdResponse;
-                try {
-                    seriesIdResponse = await tvdb.Search.SearchSeriesByNameAsync(episodeData.SeriesName);
-                } catch (TvDbServerException ex) {
-                    SetRowError(row, "Error: Cannot find series " + episodeData.SeriesName + Environment.NewLine + "(" + ex.Message + ")");
-                    continue;
-                }
-
-                var series = seriesIdResponse.Data[0];
-
-				EpisodeQuery episodeQuery = new EpisodeQuery {
-					AiredSeason = episodeData.Season,
-					AiredEpisode = episodeData.Episode // Define query parameters
-				};
-
-				TvDbResponse<EpisodeRecord[]> episodeResponse;
-				try {
-					episodeResponse = await tvdb.Series.GetEpisodesAsync(series.Id, 1, episodeQuery);
-				} catch (TvDbServerException ex) {
-					SetRowError(row, "Error: Cannot find " + episodeData + Environment.NewLine + "(" + ex.Message + ")");
-					continue;
-				}
-
-				EpisodeRecord foundEpisode = episodeResponse.Data.First();
-
-				SetRowStatus(row, "Found " + episodeData + " (" + foundEpisode.EpisodeName + ") on TheTVDB");
-
-				ImagesQuery coverImageQuery = new ImagesQuery {
-					KeyType = KeyType.Season,
-					SubKey = episodeData.Season.ToString()
-				};
-
-				TvDbResponse<TvDbSharper.Dto.Image[]> imagesResponse = null;
-
-				if (Properties.Settings.Default.addCoverArt == true) {
-					try {
-						imagesResponse = await tvdb.Series.GetImagesAsync(series.Id, coverImageQuery);
-					} catch (TvDbServerException ex) {
-						SetRowError(row, "Error: Failed to find episode cover - " + ex.Message);
-						fileSuccess = false;
-					}
-				}
-
-				string imageFilename = "";
-				if (imagesResponse != null) {
-					imageFilename = imagesResponse.Data.OrderByDescending(obj => obj.RatingsInfo.Average).First().FileName.Split('/').Last(); // Find highest rated image
-				}*/
-				#endregion
-
 				FileMetadata metadata;
 
 				if (mode == 0) {
@@ -120,7 +55,7 @@ namespace AutoTag {
 					metadata = await processor.process();
 				} else {
 					MovieProcessor processor = new MovieProcessor(tblFiles, row, tmdb); // if not, use MovieProcessor
-					metadata = await processor.process();
+					metadata = await processor.process(this); // need to pass object reference for main form to invoke on it
 				}
 
 				if (metadata.Success == false) {
@@ -205,10 +140,6 @@ namespace AutoTag {
 
 					if (row.Cells[0].Value.ToString() != newPath) {
 						try {
-							if (File.Exists(newPath)) {
-								throw new IOException("File already exists");
-							}
-
 							File.Move(row.Cells[0].Value.ToString(), newPath);
 							SetCellValue(row.Cells[0], newPath);
 						}
@@ -234,7 +165,7 @@ namespace AutoTag {
 			if (errorsEncountered == false) {
                 Invoke(new MethodInvoker(() => MsgBox("Files successfully processed.", MsgBoxStyle.Information, "Process Complete")));
             } else {
-                Invoke(new MethodInvoker(() => MsgBox("Files processed with some error(s). See the highlighted files for details.", MsgBoxStyle.Critical, "Process Complete")));
+                Invoke(new MethodInvoker(() => MsgBox("Errors were encountered during processing. See the highlighted files for details.", MsgBoxStyle.Critical, "Process Complete")));
             }
 
             Invoke(new MethodInvoker(() => SetButtonState(true)));
@@ -343,7 +274,10 @@ namespace AutoTag {
 
 		private void SetButtonState(bool state) {
 			btnAddFile.Enabled = state;
+			btnAddFolder.Enabled = state;
 			btnRemove.Enabled = state;
+			lblMode.Enabled = state;
+			cBoxMode.Enabled = state;
 			btnClear.Enabled = state;
 			btnProcess.Text = (state) ?  "Process Files" : "Cancel"; // set button text
 			MenuStrip.Enabled = state;
