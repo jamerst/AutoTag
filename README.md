@@ -14,7 +14,7 @@ AutoTag interprets the file name to find the specific series, season and episode
 - Supports mp4 and mkv containers
 
 ## Known Issues
-- Movie tagging is still in beta, so filename parsing is incomplete and sometimes removes more than it should, or misses some parts. If some parts are kept in, you may have to rename the file to remove all the tags in the filename so it just contains the title. **Please create an issue if you encounter problems, this will help to improve the parsing.**
+- Some movie filenames may not parse correctly. To fix this you may have to remove extra information from the filename, keeping just the title and year should allow the name to successfully parse. **Please create an issue if you encounter problems, this will help to improve the parsing.**
 - Matroska artwork thumbnails don't show up, but this is a problem with Windows (as per usual). <sup>1</sup>
 
 <sup>1</sup> A 3rd party shell extension, [Icaros](http://shark007.net/tools.html), is available which allows the artwork to be shown in Windows Explorer (along with other useful file information).
