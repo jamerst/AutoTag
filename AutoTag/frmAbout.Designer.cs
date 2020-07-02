@@ -43,9 +43,9 @@
 			this.lblDataSource = new System.Windows.Forms.Label();
 			((System.ComponentModel.ISupportInitialize)(this.pBoxLogo)).BeginInit();
 			this.SuspendLayout();
-			// 
+			//
 			// lblSources
-			// 
+			//
 			this.lblSources.AutoSize = true;
 			this.lblSources.Location = new System.Drawing.Point(12, 164);
 			this.lblSources.Margin = new System.Windows.Forms.Padding(3, 0, 3, 5);
@@ -53,9 +53,9 @@
 			this.lblSources.Size = new System.Drawing.Size(309, 13);
 			this.lblSources.TabIndex = 38;
 			this.lblSources.Text = "AutoTag utilises the following open-source projects in part or full:\r\n";
-			// 
+			//
 			// pBoxLogo
-			// 
+			//
 			this.pBoxLogo.Cursor = System.Windows.Forms.Cursors.Default;
 			this.pBoxLogo.Image = ((System.Drawing.Image)(resources.GetObject("pBoxLogo.Image")));
 			this.pBoxLogo.InitialImage = null;
@@ -65,30 +65,30 @@
 			this.pBoxLogo.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
 			this.pBoxLogo.TabIndex = 36;
 			this.pBoxLogo.TabStop = false;
-			// 
+			//
 			// lblChangelog
-			// 
+			//
 			this.lblChangelog.AutoSize = true;
 			this.lblChangelog.Location = new System.Drawing.Point(12, 85);
 			this.lblChangelog.MaximumSize = new System.Drawing.Size(250, 0);
 			this.lblChangelog.Name = "lblChangelog";
 			this.lblChangelog.Size = new System.Drawing.Size(199, 26);
 			this.lblChangelog.TabIndex = 35;
-			this.lblChangelog.Text = "Changelog:\r\nAllow tagging of movies in addtion to TV!";
-			// 
+			this.lblChangelog.Text = "Changelog:\r\nImprove TV tagging accuracy - fix #1";
+			//
 			// lblVer
-			// 
+			//
 			this.lblVer.AutoSize = true;
 			this.lblVer.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
 			this.lblVer.Location = new System.Drawing.Point(12, 54);
 			this.lblVer.Name = "lblVer";
 			this.lblVer.Size = new System.Drawing.Size(132, 13);
 			this.lblVer.TabIndex = 34;
-			this.lblVer.Text = "Version 2.0.0 (2018-12-28)";
+			this.lblVer.Text = "Version 2.1.0 (2020-07-02)";
 			this.lblVer.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-			// 
+			//
 			// lblTitle
-			// 
+			//
 			this.lblTitle.AutoSize = true;
 			this.lblTitle.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
 			this.lblTitle.Location = new System.Drawing.Point(12, 13);
@@ -96,11 +96,11 @@
 			this.lblTitle.Name = "lblTitle";
 			this.lblTitle.Size = new System.Drawing.Size(166, 13);
 			this.lblTitle.TabIndex = 33;
-			this.lblTitle.Text = "AutoTag © James Tattersall 2018";
+			this.lblTitle.Text = "AutoTag © James Tattersall 2020";
 			this.lblTitle.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-			// 
+			//
 			// lnkLblTvDbSharper
-			// 
+			//
 			this.lnkLblTvDbSharper.AutoSize = true;
 			this.lnkLblTvDbSharper.Location = new System.Drawing.Point(12, 214);
 			this.lnkLblTvDbSharper.Margin = new System.Windows.Forms.Padding(3, 3, 0, 0);
@@ -110,9 +110,9 @@
 			this.lnkLblTvDbSharper.TabStop = true;
 			this.lnkLblTvDbSharper.Text = "TvDbSharper";
 			this.lnkLblTvDbSharper.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.lnkLblTvDbSharper_LinkClicked);
-			// 
+			//
 			// lnkLblSubtitleFetcher
-			// 
+			//
 			this.lnkLblSubtitleFetcher.AutoSize = true;
 			this.lnkLblSubtitleFetcher.Location = new System.Drawing.Point(12, 182);
 			this.lnkLblSubtitleFetcher.Margin = new System.Windows.Forms.Padding(3, 0, 0, 0);
@@ -122,9 +122,9 @@
 			this.lnkLblSubtitleFetcher.TabStop = true;
 			this.lnkLblSubtitleFetcher.Text = "SubtitleFetcher";
 			this.lnkLblSubtitleFetcher.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.lnkLblSubtitleFetcher_LinkClicked);
-			// 
+			//
 			// lnkLblTaglib
-			// 
+			//
 			this.lnkLblTaglib.AutoSize = true;
 			this.lnkLblTaglib.Location = new System.Drawing.Point(12, 198);
 			this.lnkLblTaglib.Margin = new System.Windows.Forms.Padding(3, 3, 0, 0);
@@ -134,9 +134,9 @@
 			this.lnkLblTaglib.TabStop = true;
 			this.lnkLblTaglib.Text = "taglib-sharp";
 			this.lnkLblTaglib.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.lnkLblTaglib_LinkClicked);
-			// 
+			//
 			// lblSubtitleFetcher
-			// 
+			//
 			this.lblSubtitleFetcher.AutoSize = true;
 			this.lblSubtitleFetcher.Location = new System.Drawing.Point(90, 182);
 			this.lblSubtitleFetcher.Margin = new System.Windows.Forms.Padding(0, 0, 3, 0);
@@ -144,9 +144,9 @@
 			this.lblSubtitleFetcher.Size = new System.Drawing.Size(216, 13);
 			this.lblSubtitleFetcher.TabIndex = 42;
 			this.lblSubtitleFetcher.Text = "© Peter Heiberg - Provides file name parsing";
-			// 
+			//
 			// lblTaglib
-			// 
+			//
 			this.lblTaglib.AutoSize = true;
 			this.lblTaglib.Location = new System.Drawing.Point(73, 198);
 			this.lblTaglib.Margin = new System.Windows.Forms.Padding(0, 0, 3, 0);
@@ -154,9 +154,9 @@
 			this.lblTaglib.Size = new System.Drawing.Size(185, 13);
 			this.lblTaglib.TabIndex = 43;
 			this.lblTaglib.Text = "© mono Project - Provides file tagging";
-			// 
+			//
 			// lblTvDbSharper
-			// 
+			//
 			this.lblTvDbSharper.AutoSize = true;
 			this.lblTvDbSharper.Location = new System.Drawing.Point(83, 214);
 			this.lblTvDbSharper.Margin = new System.Windows.Forms.Padding(0, 0, 3, 0);
@@ -164,9 +164,9 @@
 			this.lblTvDbSharper.Size = new System.Drawing.Size(260, 13);
 			this.lblTvDbSharper.TabIndex = 44;
 			this.lblTvDbSharper.Text = "© Hristo Kolev - Provides thetvdb.com API integration";
-			// 
+			//
 			// lnkLblSource
-			// 
+			//
 			this.lnkLblSource.AutoSize = true;
 			this.lnkLblSource.Location = new System.Drawing.Point(12, 67);
 			this.lnkLblSource.Margin = new System.Windows.Forms.Padding(3, 0, 3, 5);
@@ -176,9 +176,9 @@
 			this.lnkLblSource.TabStop = true;
 			this.lnkLblSource.Text = "Source Code";
 			this.lnkLblSource.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.lnkLblSource_LinkClicked);
-			// 
+			//
 			// lnkLblWebsite
-			// 
+			//
 			this.lnkLblWebsite.AutoSize = true;
 			this.lnkLblWebsite.Location = new System.Drawing.Point(12, 31);
 			this.lnkLblWebsite.Margin = new System.Windows.Forms.Padding(3, 0, 3, 10);
@@ -188,18 +188,18 @@
 			this.lnkLblWebsite.TabStop = true;
 			this.lnkLblWebsite.Text = "jtattersall.net";
 			this.lnkLblWebsite.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.lnkLblWebsite_LinkClicked);
-			// 
+			//
 			// lblThanks
-			// 
+			//
 			this.lblThanks.AutoSize = true;
 			this.lblThanks.Location = new System.Drawing.Point(12, 254);
 			this.lblThanks.Name = "lblThanks";
 			this.lblThanks.Size = new System.Drawing.Size(315, 13);
 			this.lblThanks.TabIndex = 47;
 			this.lblThanks.Text = "Thank you to the authors of above projects for their contributions.";
-			// 
+			//
 			// lblTMDbLib
-			// 
+			//
 			this.lblTMDbLib.AutoSize = true;
 			this.lblTMDbLib.Location = new System.Drawing.Point(61, 231);
 			this.lblTMDbLib.Margin = new System.Windows.Forms.Padding(0, 0, 3, 0);
@@ -207,9 +207,9 @@
 			this.lblTMDbLib.Size = new System.Drawing.Size(294, 13);
 			this.lblTMDbLib.TabIndex = 49;
 			this.lblTMDbLib.Text = "© Michael Bisbjerg - Provides themoviedb.org API integration";
-			// 
+			//
 			// lnkLblTMDbLib
-			// 
+			//
 			this.lnkLblTMDbLib.AutoSize = true;
 			this.lnkLblTMDbLib.Location = new System.Drawing.Point(12, 231);
 			this.lnkLblTMDbLib.Margin = new System.Windows.Forms.Padding(3, 3, 0, 0);
@@ -219,9 +219,9 @@
 			this.lnkLblTMDbLib.TabStop = true;
 			this.lnkLblTMDbLib.Text = "TMDbLib";
 			this.lnkLblTMDbLib.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.lnkLblTMDbLib_LinkClicked);
-			// 
+			//
 			// lblDataSource
-			// 
+			//
 			this.lblDataSource.AutoSize = true;
 			this.lblDataSource.Location = new System.Drawing.Point(12, 127);
 			this.lblDataSource.Name = "lblDataSource";
@@ -229,9 +229,9 @@
 			this.lblDataSource.TabIndex = 50;
 			this.lblDataSource.Text = "Data provided by thetvdb.com and themoviedb.org\'s free APIs.\r\nThank you to the ma" +
     "intainers of these sites for their contribution.";
-			// 
+			//
 			// frmAbout
-			// 
+			//
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			this.ClientSize = new System.Drawing.Size(392, 276);
