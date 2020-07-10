@@ -1,10 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace AutoTag {
+namespace autotag.Core {
     public class FileMetadata {
         public enum Types { TV, Movie };
 
@@ -34,9 +30,9 @@ namespace AutoTag {
 
         public override String ToString() {
             if (FileType == Types.TV) {
-                return SeriesName + "S" + Season.ToString("00") + "E" + Episode.ToString("00") + " (" + Title + ")";
+                return $"{SeriesName} S{Season.ToString("00")}E{Episode.ToString("00")} ({Title})";
             } else {
-                return Title + "(" + Date.Year + ")";
+                return $"{Title} ({Date.Year})";
             }
         }
     }

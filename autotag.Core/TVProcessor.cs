@@ -3,15 +3,11 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Windows.Forms;
 
 using TvDbSharper;
 using TvDbSharper.Dto;
 
-using SubtitleFetcher.Common;
-using SubtitleFetcher.Common.Parsing;
-
-namespace AutoTag {
+namespace autotag.Core {
     public class TVProcessor : IProcessor {
 
         private ITvDbClient tvdb;
@@ -21,25 +17,23 @@ namespace AutoTag {
             this.tvdb = tvdb;
         }
 
-        public async Task<FileMetadata> process(TableUtils utils, DataGridViewRow row, frmMain mainForm) {
+        public async Task<bool> process(String filePath, Action<String> setPath, Action<String> setStatus, Func<List<Tuple<String, int>>, int> selectResult, AutoTagConfig config) {
             FileMetadata result = new FileMetadata(FileMetadata.Types.TV);
 
             #region Filename parsing
-            EpisodeParser parser = new EpisodeParser();
-            TvReleaseIdentity episodeData;
+            FileMetadata episodeData;
 
             try {
-                episodeData = parser.ParseEpisodeInfo(Path.GetFileName(row.Cells[0].Value.ToString())); // Parse info from filename
+                episodeData = EpisodeParser.ParseEpisodeInfo(Path.GetFileName(filePath)); // Parse info from filename
             } catch (FormatException ex) {
-                utils.SetRowError(row, "Error: " + ex.Message);
-                result.Success = false;
-                return result;
+                setStatus($"Error: {ex.Message}");
+                return false;
             }
 
             result.Season = episodeData.Season;
             result.Episode = episodeData.Episode;
 
-            utils.SetRowStatus(row, "Parsed file as " + episodeData);
+            setStatus($"Parsed file as {episodeData}");
             #endregion
 
             #region TVDB API searching
@@ -48,9 +42,8 @@ namespace AutoTag {
                 try {
                     seriesIdResponse = await tvdb.Search.SearchSeriesByNameAsync(episodeData.SeriesName);
                 } catch (TvDbServerException ex) {
-                    utils.SetRowError(row, "Error: Cannot find series " + episodeData.SeriesName + Environment.NewLine + "(" + ex.Message + ")");
-                    result.Success = false;
-                    return result;
+                    setStatus($"Error: Cannot find series {episodeData.SeriesName} ({ex.Message})");
+                    return false;
                 }
 
                 // sort results by similarity to parsed series name
@@ -81,14 +74,13 @@ namespace AutoTag {
                     break;
                 } catch (TvDbServerException ex) {
                     if (series.Id == seriesResultCache[episodeData.SeriesName].Last().Id) {
-                        utils.SetRowError(row, "Error: Cannot find " + episodeData + Environment.NewLine + "(" + ex.Message + ")");
-                        result.Success = false;
-                        return result;
+                        setStatus($"Error: Cannot find {episodeData} ({ex.Message})");
+                        return false;
                     }
                 }
             }
 
-            utils.SetRowStatus(row, "Found " + episodeData + " (" + result.Title + ") on TheTVDB");
+            setStatus($"Found {episodeData} ({result.Title}) on TheTVDB");
 
             ImagesQuery coverImageQuery = new ImagesQuery {
                 KeyType = KeyType.Season,
@@ -97,18 +89,20 @@ namespace AutoTag {
 
             TvDbResponse<TvDbSharper.Dto.Image[]> imagesResponse = null;
 
-            if (Properties.Settings.Default.addCoverArt == true) {
+            if (config.addCoverArt) {
                 try {
                     imagesResponse = await tvdb.Series.GetImagesAsync(result.Id, coverImageQuery);
                 } catch (TvDbServerException ex) {
-                    utils.SetRowError(row, "Error: Failed to find episode cover - " + ex.Message);
+                    setStatus($"Error: Failed to find episode cover - {ex.Message}");
                     result.Complete = false;
                 }
             }
 
             string imageFilename = "";
             if (imagesResponse != null) {
-                imageFilename = imagesResponse.Data.OrderByDescending(img => img.RatingsInfo.Average).First().FileName; // Find highest rated image
+                imageFilename = imagesResponse.Data
+                    .OrderByDescending(img => img.RatingsInfo.Average)
+                    .First().FileName; // Find highest rated image
             }
             #endregion
 
@@ -116,7 +110,9 @@ namespace AutoTag {
 
             result.CoverFilename = imageFilename.Split('/').Last();
 
-            return result;
+            bool taggingSuccess = FileWriter.write(filePath, setPath, setStatus, result, config);
+
+            return taggingSuccess && result.Success && result.Complete;
         }
 
         private double SeriesNameSimilarity(string parsedName, string seriesName) {
