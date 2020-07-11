@@ -7,15 +7,15 @@ namespace autotag.Core {
         // Common fields
         public Types FileType;
         public int Id;
-        public String Title;
-        public String Overview;
-        public String CoverURL;
-        public String CoverFilename;
+        public string Title;
+        public string Overview;
+        public string CoverURL;
+        public string CoverFilename;
         public bool Success;
         public bool Complete;
 
         // TV specific fields
-        public String SeriesName;
+        public string SeriesName;
         public int Season;
         public int Episode;
 
@@ -28,9 +28,13 @@ namespace autotag.Core {
             Complete = true;
         }
 
-        public override String ToString() {
+        public override string ToString() {
             if (FileType == Types.TV) {
-                return $"{SeriesName} S{Season.ToString("00")}E{Episode.ToString("00")} ({Title})";
+                if (!String.IsNullOrEmpty(Title)) {
+                    return $"{SeriesName} S{Season.ToString("00")}E{Episode.ToString("00")} ({Title})";
+                } else {
+                    return $"{SeriesName} S{Season.ToString("00")}E{Episode.ToString("00")}";
+                }
             } else {
                 return $"{Title} ({Date.Year})";
             }

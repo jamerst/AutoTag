@@ -11,13 +11,26 @@ namespace autotag.Core {
     public class TVProcessor : IProcessor {
 
         private ITvDbClient tvdb;
-        private Dictionary<String, List<SeriesSearchResult>> seriesResultCache = new Dictionary<String, List<SeriesSearchResult>>(StringComparer.OrdinalIgnoreCase);
+        private Dictionary<string, List<SeriesSearchResult>> seriesResultCache =
+            new Dictionary<string, List<SeriesSearchResult>>(StringComparer.OrdinalIgnoreCase);
+        private string apiKey;
 
-        public TVProcessor(ITvDbClient tvdb) {
-            this.tvdb = tvdb;
+        public TVProcessor(string apiKey) {
+            this.tvdb = new TvDbClient();
+            this.apiKey = apiKey;
         }
 
-        public async Task<bool> process(String filePath, Action<String> setPath, Action<String> setStatus, Func<List<Tuple<String, int>>, int> selectResult, AutoTagConfig config) {
+        public async Task<bool> process(
+                string filePath,
+                Action<string> setPath,
+                Action<string, bool> setStatus,
+                Func<List<Tuple<string, string>>, int> selectResult,
+                AutoTagConfig config) {
+
+            if (tvdb.Authentication.Token == null) {
+                await tvdb.Authentication.AuthenticateAsync("TQLC3N5YDI1AQVJF");
+            }
+
             FileMetadata result = new FileMetadata(FileMetadata.Types.TV);
 
             #region Filename parsing
@@ -26,14 +39,14 @@ namespace autotag.Core {
             try {
                 episodeData = EpisodeParser.ParseEpisodeInfo(Path.GetFileName(filePath)); // Parse info from filename
             } catch (FormatException ex) {
-                setStatus($"Error: {ex.Message}");
+                setStatus($"Error: {ex.Message}", true);
                 return false;
             }
 
             result.Season = episodeData.Season;
             result.Episode = episodeData.Episode;
 
-            setStatus($"Parsed file as {episodeData}");
+            setStatus($"Parsed file as {episodeData}", false);
             #endregion
 
             #region TVDB API searching
@@ -42,17 +55,26 @@ namespace autotag.Core {
                 try {
                     seriesIdResponse = await tvdb.Search.SearchSeriesByNameAsync(episodeData.SeriesName);
                 } catch (TvDbServerException ex) {
-                    setStatus($"Error: Cannot find series {episodeData.SeriesName} ({ex.Message})");
+                    setStatus($"Error: Cannot find series {episodeData.SeriesName} ({ex.Message})", true);
                     return false;
                 }
 
                 // sort results by similarity to parsed series name
                 List<SeriesSearchResult> seriesResults = seriesIdResponse.Data
-                    .OrderByDescending(
-                        seriesResult => SeriesNameSimilarity(episodeData.SeriesName, seriesResult.SeriesName))
+                    .OrderByDescending(seriesResult => SeriesNameSimilarity(episodeData.SeriesName, seriesResult.SeriesName))
                     .ToList();
 
-                seriesResultCache.Add(episodeData.SeriesName, seriesResults);
+                if (config.manualMode && seriesResults.Count > 1) {
+                    int chosen = selectResult(seriesResults.Select(
+                        r => new Tuple<string, string>(r.SeriesName, r.FirstAired ?? "Unknown")
+                        ).ToList()
+                    );
+
+                    // add only the chosen series to cache if in manual mode
+                    seriesResultCache.Add(episodeData.SeriesName, new List<SeriesSearchResult> { seriesResults[chosen] });
+                } else {
+                    seriesResultCache.Add(episodeData.SeriesName, seriesResults);
+                }
             }
 
             // try searching for each series search result
@@ -74,27 +96,32 @@ namespace autotag.Core {
                     break;
                 } catch (TvDbServerException ex) {
                     if (series.Id == seriesResultCache[episodeData.SeriesName].Last().Id) {
-                        setStatus($"Error: Cannot find {episodeData} ({ex.Message})");
+                        setStatus($"Error: Cannot find {episodeData} ({ex.Message})", true);
                         return false;
                     }
                 }
             }
 
-            setStatus($"Found {episodeData} ({result.Title}) on TheTVDB");
-
-            ImagesQuery coverImageQuery = new ImagesQuery {
-                KeyType = KeyType.Season,
-                SubKey = episodeData.Season.ToString()
-            };
+            setStatus($"Found {episodeData} ({result.Title}) on TheTVDB", false);
 
             TvDbResponse<TvDbSharper.Dto.Image[]> imagesResponse = null;
 
             if (config.addCoverArt) {
                 try {
-                    imagesResponse = await tvdb.Series.GetImagesAsync(result.Id, coverImageQuery);
-                } catch (TvDbServerException ex) {
-                    setStatus($"Error: Failed to find episode cover - {ex.Message}");
-                    result.Complete = false;
+                    imagesResponse = await tvdb.Series.GetImagesAsync(result.Id, new ImagesQuery {
+                            KeyType = KeyType.Season,
+                            SubKey = episodeData.Season.ToString()
+                        });
+                } catch (TvDbServerException) {
+                    try {
+                        // use a series image if a season-specific image is not available
+                        imagesResponse = await tvdb.Series.GetImagesAsync(result.Id, new ImagesQuery {
+                            KeyType = KeyType.Series
+                        });
+                    } catch (TvDbServerException ex) {
+                        setStatus($"Error: Failed to find episode cover - {ex.Message}", true);
+                        result.Complete = false;
+                    }
                 }
             }
 
@@ -110,7 +137,7 @@ namespace autotag.Core {
 
             result.CoverFilename = imageFilename.Split('/').Last();
 
-            bool taggingSuccess = FileWriter.write(filePath, setPath, setStatus, result, config);
+            bool taggingSuccess = FileWriter.write(filePath, result, setPath, setStatus, config);
 
             return taggingSuccess && result.Success && result.Complete;
         }

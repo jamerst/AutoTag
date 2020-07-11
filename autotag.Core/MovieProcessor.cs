@@ -14,15 +14,15 @@ namespace autotag.Core {
     public class MovieProcessor : IProcessor {
         private TMDbClient tmdb;
 
-        public MovieProcessor(TMDbClient tmdb) {
-            this.tmdb = tmdb;
+        public MovieProcessor(string apiKey) {
+            this.tmdb = new TMDbClient(apiKey);
         }
 
-        public async Task<bool> process(String filePath, Action<String> setPath, Action<String> setStatus, Func<List<Tuple<String, int>>, int> selectResult, AutoTagConfig config) {
+        public async Task<bool> process(string filePath, Action<string> setPath, Action<string, bool> setStatus, Func<List<Tuple<string, string>>, int> selectResult, AutoTagConfig config) {
             FileMetadata result = new FileMetadata(FileMetadata.Types.Movie);
 
             #region "Filename parsing"
-            String pattern =
+            string pattern =
                 "^((?<Title>.+?)[\\. _-]?)" + // get title by reading from start to a field (whichever field comes first)
                 "?(" +
                     "([\\(]?(?<Year>(19|20)[0-9]{2})[\\)]?)|" + // year - extract for use in searching
@@ -35,23 +35,23 @@ namespace autotag.Core {
                 ")";
 
             Match match = Regex.Match(Path.GetFileName(filePath), pattern);
-            String title, year;
+            string title, year;
             if (match.Success) {
                 title = match.Groups["Title"].ToString();
                 year = match.Groups["Year"].ToString();
             } else {
-                setStatus("Error: Failed to parse required information from filename");
+                setStatus("Error: Failed to parse required information from filename", true);
                 return false;
             }
 
             title = title.Replace('.', ' '); // change dots to spaces
 
             if (String.IsNullOrWhiteSpace(title)) {
-                setStatus("Error: Failed to parse required information from filename");
+                setStatus("Error: Failed to parse required information from filename", true);
                 return false;
             }
 
-            setStatus($"Parsed file as {title}");
+            setStatus($"Parsed file as {title}", false);
             #endregion
 
             #region "TMDB API Searching"
@@ -64,21 +64,23 @@ namespace autotag.Core {
 
             int selected = 0;
 
-            if (searchResults.Results.Count > 1 && searchResults.Results[0].Title != title) {
+            if (searchResults.Results.Count > 1 && (searchResults.Results[0].Title != title || config.manualMode)) {
                 selected = selectResult(
                     searchResults.Results
-                        .Select(m => new Tuple<string, int>(m.Title, m.ReleaseDate.Value.Year))
-                        .ToList()
+                        .Select(m => new Tuple<string, string>(
+                            m.Title,
+                            m.ReleaseDate == null ? "Unknown" : m.ReleaseDate.Value.Year.ToString()
+                        )).ToList()
                 );
             } else if (searchResults.Results.Count == 0) {
-                setStatus($"Error: failed to find title {title} on TheMovieDB");
+                setStatus($"Error: failed to find title {title} on TheMovieDB", true);
                 result.Success = false;
                 return false;
             }
 
             SearchMovie selectedResult = searchResults.Results[selected];
 
-            setStatus($"Found {selectedResult.Title} ({selectedResult.ReleaseDate.Value.Year}) on TheMovieDB");
+            setStatus($"Found {selectedResult.Title} ({selectedResult.ReleaseDate.Value.Year}) on TheMovieDB", false);
             #endregion
 
             result.Title = selectedResult.Title;
@@ -88,11 +90,11 @@ namespace autotag.Core {
             result.Date = selectedResult.ReleaseDate.Value;
 
             if (String.IsNullOrEmpty(result.CoverURL)) {
-                setStatus("Error: failed to fetch movie cover");
+                setStatus("Error: failed to fetch movie cover", true);
                 result.Complete = false;
             }
 
-            bool taggingSuccess = FileWriter.write(filePath, setPath, setStatus, result, config);
+            bool taggingSuccess = FileWriter.write(filePath, result, setPath, setStatus, config);
 
             return taggingSuccess && result.Success && result.Complete;
         }

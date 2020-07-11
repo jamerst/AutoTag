@@ -4,7 +4,7 @@ using System.Net;
 
 namespace autotag.Core {
     public class FileWriter {
-        public static bool write(String filePath, Action<String> setPath, Action<String> setStatus, FileMetadata metadata, AutoTagConfig config) {
+        public static bool write(string filePath, FileMetadata metadata, Action<string> setPath, Action<string, bool> setStatus, AutoTagConfig config) {
             bool fileSuccess = true;
             if (config.tagFiles) {
                 try {
@@ -38,7 +38,7 @@ namespace autotag.Core {
                                 file.Tag.Pictures = new TagLib.Picture[] { new TagLib.Picture(downloadFile) { Filename = "cover.jpg" } };
 
                             } catch (WebException ex) {
-                                setStatus($"Error: Failed to download cover art - {ex.Message}");
+                                setStatus($"Error: Failed to download cover art - {ex.Message}", true);
                                 fileSuccess = false;
                             }
                         } else {
@@ -52,11 +52,11 @@ namespace autotag.Core {
                     file.Save();
 
                     if (fileSuccess == true) {
-                        setStatus($"Successfully tagged file as {metadata}");
+                        setStatus($"Successfully tagged file as {metadata}", false);
                     }
 
                 } catch (Exception ex) {
-                    setStatus($"Error: Could not tag file - {ex.Message}");
+                    setStatus($"Error: Could not tag file - {ex.Message}", true);
                     fileSuccess = false;
                 }
             }
@@ -79,7 +79,7 @@ namespace autotag.Core {
                         File.Move(filePath, newPath);
                         setPath(newPath);
                     } catch (Exception ex) {
-                        setStatus($"Error: Could not rename file - {ex.Message}");
+                        setStatus($"Error: Could not rename file - {ex.Message}", true);
                         fileSuccess = false;
                     }
                 }
@@ -87,9 +87,9 @@ namespace autotag.Core {
 
             if (fileSuccess == true) {
                 if (config.mode == 0) {
-                    setStatus($"Success - tagged as {String.Format(GetTVRenamePattern(config), metadata.SeriesName, metadata.Season, metadata.Episode.ToString("00"), metadata.Title)}");
+                    setStatus($"Success - tagged as {String.Format(GetTVRenamePattern(config), metadata.SeriesName, metadata.Season, metadata.Episode.ToString("00"), metadata.Title)}", false);
                 } else {
-                    setStatus($"Success - tagged as {String.Format(GetMovieRenamePattern(config), metadata.Title, metadata.Date.Year)}");
+                    setStatus($"Success - tagged as {String.Format(GetMovieRenamePattern(config), metadata.Title, metadata.Date.Year)}", false);
                 }
             }
 
@@ -97,7 +97,7 @@ namespace autotag.Core {
         }
 
         private static string EscapeFilename(string filename) {
-            return string.Join("", filename.Split(Path.GetInvalidFileNameChars()));
+            return String.Join("", filename.Split(Path.GetInvalidFileNameChars()));
         }
 
         private static string GetTVRenamePattern(AutoTagConfig config) { // Get usable renaming pattern

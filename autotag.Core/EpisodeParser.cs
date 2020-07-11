@@ -1,7 +1,5 @@
-using System.Collections.Generic;
-using System.Linq;
-using System.Text.RegularExpressions;
 using System;
+using System.Text.RegularExpressions;
 
 namespace autotag.Core {
     public class EpisodeParser {
@@ -45,7 +43,7 @@ namespace autotag.Core {
         }
 
         private static int ExtractEndEpisode(Capture endEpisodeGroup, int episode) {
-            return !string.IsNullOrEmpty(endEpisodeGroup.Value) ? int.Parse(endEpisodeGroup.Value) : episode;
+            return !String.IsNullOrEmpty(endEpisodeGroup.Value) ? int.Parse(endEpisodeGroup.Value) : episode;
         }
     }
 }
