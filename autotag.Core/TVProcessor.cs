@@ -55,7 +55,11 @@ namespace autotag.Core {
                 try {
                     seriesIdResponse = await tvdb.Search.SearchSeriesByNameAsync(episodeData.SeriesName);
                 } catch (TvDbServerException ex) {
-                    setStatus($"Error: Cannot find series {episodeData.SeriesName} ({ex.Message})", true);
+                    if (config.verbose) {
+                        setStatus($"Error: Cannot find series {episodeData.SeriesName} ({ex.Message})", true);
+                    } else {
+                        setStatus($"Error: Cannot find series {episodeData.SeriesName} on TheTVDB", true);
+                    }
                     return false;
                 }
 
@@ -96,7 +100,11 @@ namespace autotag.Core {
                     break;
                 } catch (TvDbServerException ex) {
                     if (series.Id == seriesResultCache[episodeData.SeriesName].Last().Id) {
-                        setStatus($"Error: Cannot find {episodeData} ({ex.Message})", true);
+                        if (config.verbose) {
+                            setStatus($"Error: Cannot find {episodeData} ({ex.Message})", true);
+                        } else {
+                            setStatus($"Error: Cannot find {episodeData} on TheTVDB", true);
+                        }
                         return false;
                     }
                 }
@@ -119,7 +127,11 @@ namespace autotag.Core {
                             KeyType = KeyType.Series
                         });
                     } catch (TvDbServerException ex) {
-                        setStatus($"Error: Failed to find episode cover - {ex.Message}", true);
+                        if (config.verbose) {
+                            setStatus($"Error: Failed to find episode cover - {ex.Message}", true);
+                        } else {
+                            setStatus("Error: Failed to find episode cover", true);
+                        }
                         result.Complete = false;
                     }
                 }

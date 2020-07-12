@@ -38,7 +38,11 @@ namespace autotag.Core {
                                 file.Tag.Pictures = new TagLib.Picture[] { new TagLib.Picture(downloadFile) { Filename = "cover.jpg" } };
 
                             } catch (WebException ex) {
-                                setStatus($"Error: Failed to download cover art - {ex.Message}", true);
+                                if (config.verbose) {
+                                    setStatus($"Error: Failed to download cover art - {ex.Message}", true);
+                                } else {
+                                    setStatus("Error: Failed to download cover art", true);
+                                }
                                 fileSuccess = false;
                             }
                         } else {
@@ -56,7 +60,11 @@ namespace autotag.Core {
                     }
 
                 } catch (Exception ex) {
-                    setStatus($"Error: Could not tag file - {ex.Message}", true);
+                    if (config.verbose) {
+                        setStatus($"Error: Failed to write tags to file - {ex.Message}", true);
+                    } else {
+                        setStatus("Error: Failed to write tags to file", true);
+                    }
                     fileSuccess = false;
                 }
             }
@@ -78,18 +86,15 @@ namespace autotag.Core {
                     try {
                         File.Move(filePath, newPath);
                         setPath(newPath);
+                        setStatus($"Successfully renamed file to '{newPath}'", false);
                     } catch (Exception ex) {
-                        setStatus($"Error: Could not rename file - {ex.Message}", true);
+                        if (config.verbose) {
+                            setStatus($"Error: Failed to rename file - {ex.Message}", true);
+                        } else {
+                            setStatus("Error: Failed to rename file", true);
+                        }
                         fileSuccess = false;
                     }
-                }
-            }
-
-            if (fileSuccess == true) {
-                if (config.mode == 0) {
-                    setStatus($"Success - tagged as {String.Format(GetTVRenamePattern(config), metadata.SeriesName, metadata.Season, metadata.Episode.ToString("00"), metadata.Title)}", false);
-                } else {
-                    setStatus($"Success - tagged as {String.Format(GetMovieRenamePattern(config), metadata.Title, metadata.Date.Year)}", false);
                 }
             }
 

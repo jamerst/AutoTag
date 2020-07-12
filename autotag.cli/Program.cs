@@ -14,7 +14,7 @@ namespace autotag.cli {
     class Program {
         private List<TaggingFile> files { get; set; } = new List<TaggingFile>();
         private int index;
-        private int lastIndex = 0;
+        private int lastIndex = -1;
         private bool success = true;
 
         private AutoTagSettings settings;
@@ -65,8 +65,9 @@ namespace autotag.cli {
             }
 
             AddFiles(RemainingArguments);
+            files.Sort((x,y) => x.Path.CompareTo(y.Path));
 
-            Action<string> setPath = p => SetPath(p);
+            Action<string> setPath = p => { return; };
             Action<string, bool> setStatus = (s, e) => SetStatus(s, e);
 
             Func<List<Tuple<string, string>>, int> choose = (results) => ChooseResult(results);
@@ -86,21 +87,13 @@ namespace autotag.cli {
                 Console.ForegroundColor = ConsoleColor.DarkRed;
                 Console.Error.WriteLine("\n\nErrors encountered for some files:");
                 foreach (TaggingFile file in files.Where(f => !f.Success)) {
-                    Console.Error.WriteLine($"{file.Path}:\n{file.Status}\n");
+                    Console.ForegroundColor = ConsoleColor.Magenta;
+                    Console.Error.WriteLine($"{file.Path}:");
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.Error.WriteLine($"    {file.Status}\n");
                 }
                 Console.ResetColor();
                 Environment.Exit(1);
-            }
-        }
-
-        private void SetPath(string path) {
-            files[index].Path = path;
-
-            if (index > lastIndex) {
-                lastIndex++;
-                Console.Write($"\n{files[index]}");
-            } else {
-                Console.Write($"\r{new string(' ', Console.WindowWidth) }\r{files[index]}");
             }
         }
 
@@ -110,7 +103,7 @@ namespace autotag.cli {
             } else if (error) {
                 success = false;
                 files[index].Success = false;
-                Console.ForegroundColor = ConsoleColor.DarkRed;
+                Console.ForegroundColor = ConsoleColor.Red;
                 files[index].Status = status;
             } else if (files[index].Success) {
                 files[index].Status = status;
@@ -118,21 +111,22 @@ namespace autotag.cli {
 
             if (index > lastIndex) {
                 lastIndex++;
+                Console.ForegroundColor = ConsoleColor.Magenta;
+                Console.WriteLine($"\n{files[index].Path}:");
                 Console.ResetColor();
-                Console.Write($"\n{files[index]}");
             } else {
-                Console.Write($"\r{new string(' ', Console.WindowWidth) }\r{files[index]}");
+                Console.WriteLine($"    {files[index].Status}");
             }
 
         }
 
         private int ChooseResult(List<Tuple<string, string>> results) {
             Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine("\n\nPlease choose a series:");
+            Console.WriteLine("    Please choose a series:");
             Console.ResetColor();
             for (int i = 0; i < results.Count; i++) {
                 Console.ForegroundColor = ConsoleColor.Cyan;
-                Console.WriteLine($"    {i}: {results[i].Item1} ({results[i].Item2})");
+                Console.WriteLine($"        {i}: {results[i].Item1} ({results[i].Item2})");
             }
             Console.ResetColor();
 
@@ -140,12 +134,11 @@ namespace autotag.cli {
         }
 
         private int InputResult(int count) {
-            Console.Write($"Choose an option [0-{count - 1}]: ");
+            Console.Write($"    Choose an option [0-{count - 1}]: ");
             string choice = Console.ReadLine();
 
             int chosen;
             if (int.TryParse(choice, out chosen) && chosen >= 0 && chosen < count) {
-                Console.Write("\n");
                 return chosen;
             } else {
                 return InputResult(count);
