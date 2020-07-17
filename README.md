@@ -10,6 +10,13 @@ AutoTag v3 is a rewrite of v2 in .NET Core. This means that binaries can now be 
 
 This is because building cross-platform user interfaces with .NET Core is still quite difficult, and the documentation of current frameworks for this leave *a lot* to be desired. I personally use AutoTag over SSH to my server, so I have little motivation to develop a GUI that I will never use.
 
+## Features
+- Information fetched from [thetvdb.com](https://www.thetvdb.com/) and [themoviedb.org](https://www.themoviedb.org/)
+- Configurable renaming and full metadata tagging, including cover art
+- Manual tagging mode
+- Full Linux support (and presumably macOS?)
+- Supports mp4 and mkv containers
+
 ## Usage
 ```
 Usage: autotag [options] [paths]
@@ -28,13 +35,6 @@ Options:
   -?|-h|--help                    Show help information
 
 ```
-
-## Features
-- Information fetched from [thetvdb.com](https://www.thetvdb.com/) and [themoviedb.org](https://www.themoviedb.org/)
-- Configurable renaming and full metadata tagging, including cover art
-- Manual tagging mode
-- Full Linux support (and presumably macOS?)
-- Supports mp4 and mkv containers
 
 ## Config
 AutoTag creates a config file to store default preferences at `~/.config/autotag/conf.json` or `%APPDATA%\Roaming\autotag\conf.json`. A different config file can be specified using the `-c` option. If the file does not exist, a file will be created with the default settings:
@@ -57,7 +57,9 @@ AutoTag creates a config file to store default preferences at `~/.config/autotag
 <sup>1</sup> A 3rd party shell extension, [Icaros](http://shark007.net/tools.html), is available which allows the artwork to be shown in Windows Explorer (along with other useful file information).
 
 ## Download
-Downloads can be found [here](https://github.com/jamerst/AutoTag/releases)
+Downloads can be found [here](https://github.com/jamerst/AutoTag/releases).
+
+Build file sizes are quite large due to bundled .NET runtimes.
 
 ## Attributions
 - TV filename parsing based on [SubtitleFetcher](https://github.com/pheiberg/SubtitleFetcher)
