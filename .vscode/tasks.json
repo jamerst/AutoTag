@@ -3,10 +3,38 @@
     "tasks": [
         {
             "label": "build",
-            "command": "xbuild",
+            "command": "dotnet",
             "type": "process",
             "args": [
-                "${workspaceFolder}/AutoTag/AutoTag.csproj",
+                "build",
+                "${workspaceFolder}/autotag.cli/autotag.cli.csproj",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary"
+            ],
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "publish",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "publish",
+                "${workspaceFolder}/autotag.cli/autotag.cli.csproj",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary"
+            ],
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "watch",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "watch",
+                "run",
+                "${workspaceFolder}/autotag.cli/autotag.cli.csproj",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary"
             ],
             "problemMatcher": "$msCompile"
         }

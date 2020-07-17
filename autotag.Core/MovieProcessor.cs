@@ -1,28 +1,28 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
-using System.Media;
+using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using System.Windows.Forms;
 
 using TMDbLib.Client;
 using TMDbLib.Objects.General;
 using TMDbLib.Objects.Search;
 
 
-namespace AutoTag {
+namespace autotag.Core {
     public class MovieProcessor : IProcessor {
         private TMDbClient tmdb;
 
-        public MovieProcessor(TMDbClient tmdb) {
-            this.tmdb = tmdb;
+        public MovieProcessor(string apiKey) {
+            this.tmdb = new TMDbClient(apiKey);
         }
 
-        public async Task<FileMetadata> process(TableUtils utils, DataGridViewRow row, frmMain mainForm) {
+        public async Task<bool> process(string filePath, Action<string> setPath, Action<string, bool> setStatus, Func<List<Tuple<string, string>>, int> selectResult, AutoTagConfig config) {
             FileMetadata result = new FileMetadata(FileMetadata.Types.Movie);
 
             #region "Filename parsing"
-            String pattern =
+            string pattern =
                 "^((?<Title>.+?)[\\. _-]?)" + // get title by reading from start to a field (whichever field comes first)
                 "?(" +
                     "([\\(]?(?<Year>(19|20)[0-9]{2})[\\)]?)|" + // year - extract for use in searching
@@ -34,26 +34,24 @@ namespace AutoTag {
                     "\\.(mp4|m4v|mkv)$" + // file extensions
                 ")";
 
-            Match match = Regex.Match(Path.GetFileName(row.Cells[0].Value.ToString()), pattern);
-            String title, year;
+            Match match = Regex.Match(Path.GetFileName(filePath), pattern);
+            string title, year;
             if (match.Success) {
                 title = match.Groups["Title"].ToString();
                 year = match.Groups["Year"].ToString();
             } else {
-                utils.SetRowError(row, "Error: Failed to parse required information from filename");
-                result.Success = false;
-                return result;
+                setStatus("Error: Failed to parse required information from filename", true);
+                return false;
             }
 
             title = title.Replace('.', ' '); // change dots to spaces
 
             if (String.IsNullOrWhiteSpace(title)) {
-                utils.SetRowError(row, "Error: Failed to parse required information from filename");
-                result.Success = false;
-                return result;
+                setStatus("Error: Failed to parse required information from filename", true);
+                return false;
             }
 
-            utils.SetRowStatus(row, "Parsed file as " + title);
+            setStatus($"Parsed file as {title}", false);
             #endregion
 
             #region "TMDB API Searching"
@@ -66,35 +64,39 @@ namespace AutoTag {
 
             int selected = 0;
 
-            // TMDb's search is not very sensitive, so it's very common for many results to be returned, so show a window to let the user select the correct movie if more than one is returned, but only if the first result doesn't match the parsed title
-            if (searchResults.Results.Count > 1 && searchResults.Results[0].Title != title) {
-                SystemSounds.Asterisk.Play();
-                frmChoose chooseDialog = new frmChoose(title, searchResults);
-                mainForm.Invoke(new MethodInvoker(() => chooseDialog.ShowDialog()));
-                selected = chooseDialog.selectedIndex;
+            if (searchResults.Results.Count > 1 && (searchResults.Results[0].Title != title || config.manualMode)) {
+                selected = selectResult(
+                    searchResults.Results
+                        .Select(m => new Tuple<string, string>(
+                            m.Title,
+                            m.ReleaseDate == null ? "Unknown" : m.ReleaseDate.Value.Year.ToString()
+                        )).ToList()
+                );
             } else if (searchResults.Results.Count == 0) {
-                utils.SetRowError(row, "Error: failed to find title " + title + "on TheMovieDB");
+                setStatus($"Error: failed to find title {title} on TheMovieDB", true);
                 result.Success = false;
-                return result;
+                return false;
             }
 
             SearchMovie selectedResult = searchResults.Results[selected];
 
-            utils.SetRowStatus(row, "Found " + selectedResult.Title + " (" + selectedResult.ReleaseDate.Value.Year + ")" + " on TheMovieDB");
+            setStatus($"Found {selectedResult.Title} ({selectedResult.ReleaseDate.Value.Year}) on TheMovieDB", false);
             #endregion
 
             result.Title = selectedResult.Title;
             result.Overview = selectedResult.Overview;
-            result.CoverURL = (String.IsNullOrEmpty(selectedResult.PosterPath)) ? null : "https://image.tmdb.org/t/p/original" + selectedResult.PosterPath;
+            result.CoverURL = (String.IsNullOrEmpty(selectedResult.PosterPath)) ? null : $"https://image.tmdb.org/t/p/original{selectedResult.PosterPath}";
             result.CoverFilename = selectedResult.PosterPath.Replace("/", "");
             result.Date = selectedResult.ReleaseDate.Value;
 
             if (String.IsNullOrEmpty(result.CoverURL)) {
-                utils.SetRowError(row, "Error: failed to fetch movie cover");
+                setStatus("Error: failed to fetch movie cover", true);
                 result.Complete = false;
             }
 
-            return result;
+            bool taggingSuccess = FileWriter.write(filePath, result, setPath, setStatus, config);
+
+            return taggingSuccess && result.Success && result.Complete;
         }
     }
 }
