@@ -25,7 +25,8 @@ namespace autotag.cli {
                 Environment.Exit(0);
             }
 
-            Console.WriteLine($"AutoTag v{Assembly.GetEntryAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>().InformationalVersion}\n");
+            Console.WriteLine($"AutoTag v{Assembly.GetEntryAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>().InformationalVersion}");
+            Console.WriteLine("https://jtattersall.net");
             settings = new AutoTagSettings(configPath);
 
             if (tv) {
@@ -80,18 +81,28 @@ namespace autotag.cli {
 
             if (success) {
                 Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine("\n\nAll files successfully processed.");
+                Console.WriteLine($"\n\nAll {files.Count()} files successfully processed.");
                 Console.ResetColor();
                 Environment.Exit(0);
             } else {
-                Console.ForegroundColor = ConsoleColor.DarkRed;
-                Console.Error.WriteLine("\n\nErrors encountered for some files:");
+                int failedFiles = files.Where(f => !f.Success).Count();
+
+                if (failedFiles < files.Count()) {
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    Console.WriteLine($"\n\n{files.Count() - failedFiles} files successfully processed.");
+                    Console.ForegroundColor = ConsoleColor.DarkRed;
+                    Console.Error.WriteLine($"Errors encountered for {failedFiles} files:");
+                } else {
+                    Console.Error.WriteLine("\n\nErrors encountered for all files:");
+                }
+
                 foreach (TaggingFile file in files.Where(f => !f.Success)) {
                     Console.ForegroundColor = ConsoleColor.Magenta;
                     Console.Error.WriteLine($"{file.Path}:");
                     Console.ForegroundColor = ConsoleColor.Red;
                     Console.Error.WriteLine($"    {file.Status}\n");
                 }
+
                 Console.ResetColor();
                 Environment.Exit(1);
             }
@@ -202,7 +213,6 @@ namespace autotag.cli {
         [Option("--version", "Print version number and exit", CommandOptionType.NoValue)]
         private bool version { get; set; }
         private string[] RemainingArguments { get; }
-
         private static readonly string[] supportedExtensions = new string[] { ".mp4", ".m4v", ".mkv" };
     }
 }

@@ -4,8 +4,8 @@
     <AssemblyName>autotag</AssemblyName>
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp3.1</TargetFramework>
-    <AssemblyVersion>3.0.0.0</AssemblyVersion>
-    <Version>3.0.0-alpha1</Version>
+    <AssemblyVersion>3.0.0.1</AssemblyVersion>
+    <Version>3.0.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
