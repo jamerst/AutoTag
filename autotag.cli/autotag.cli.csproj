@@ -3,9 +3,14 @@
   <PropertyGroup>
     <AssemblyName>autotag</AssemblyName>
     <OutputType>Exe</OutputType>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
-    <AssemblyVersion>3.0.0.1</AssemblyVersion>
-    <Version>3.0.0</Version>
+    <TargetFramework>net5.0</TargetFramework>
+    <AssemblyVersion>3.0.1.0</AssemblyVersion>
+    <Version>3.0.1</Version>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <SelfContained>true</SelfContained>
+    <PublishTrimmed>true</PublishTrimmed>
+    <TrimMode>Link</TrimMode>
   </PropertyGroup>
 
   <ItemGroup>
