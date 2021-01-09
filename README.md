@@ -57,7 +57,9 @@ AutoTag creates a config file to store default preferences at `~/.config/autotag
 <sup>1</sup> A 3rd party shell extension, [Icaros](http://shark007.net/tools.html), is available which allows the artwork to be shown in Windows Explorer (along with other useful file information).
 
 ## Download
-Downloads can be found [here](https://github.com/jamerst/AutoTag/releases).
+Downloads for Linux, macOS and Windows can be found [here](https://github.com/jamerst/AutoTag/releases).
+
+The macOS build is untested, I don't own any Apple devices so I can't easily test it. Please report any issues and I'll try to investigate them.
 
 Build file sizes are quite large due to bundled .NET runtimes.
 
