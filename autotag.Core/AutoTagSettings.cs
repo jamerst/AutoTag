@@ -22,6 +22,12 @@ namespace autotag.Core {
                 } catch (Exception e) {
                     Console.Error.WriteLine($"Error reading config file '{configPath}': {e.Message}");
                 }
+
+                if (config.configVer != AutoTagConfig.currentVer) {
+                    // if config file outdated, update it with new options
+                    config.configVer = AutoTagConfig.currentVer;
+                    Save();
+                }
             } else {
                 Console.WriteLine($"Generating new config file with default options '{configPath}'");
                 FileInfo configFile = new FileInfo(configPath);

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 using TvDbSharper;
@@ -28,7 +29,7 @@ namespace autotag.Core {
                 AutoTagConfig config) {
 
             if (tvdb.Authentication.Token == null) {
-                await tvdb.Authentication.AuthenticateAsync("TQLC3N5YDI1AQVJF");
+                await tvdb.Authentication.AuthenticateAsync(apiKey);
             }
 
             FileMetadata result = new FileMetadata(FileMetadata.Types.TV);
@@ -36,11 +37,29 @@ namespace autotag.Core {
             #region Filename parsing
             FileMetadata episodeData;
 
-            try {
-                episodeData = EpisodeParser.ParseEpisodeInfo(Path.GetFileName(filePath)); // Parse info from filename
-            } catch (FormatException ex) {
-                setStatus($"Error: {ex.Message}", true);
-                return false;
+            if (string.IsNullOrEmpty(config.parsePattern)) {
+                try {
+                    episodeData = EpisodeParser.ParseEpisodeInfo(Path.GetFileName(filePath)); // Parse info from filename
+                } catch (FormatException ex) {
+                    setStatus($"Error: {ex.Message}", true);
+                    return false;
+                }
+            } else {
+                try {
+                    var match = Regex.Match(filePath, config.parsePattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
+                    episodeData = new FileMetadata(FileMetadata.Types.TV);
+                    episodeData.SeriesName = match.Groups["SeriesName"].Value;
+                    episodeData.Season = int.Parse(match.Groups["Season"].Value);
+                    episodeData.Episode = int.Parse(match.Groups["Episode"].Value);
+                } catch (FormatException ex) {
+                    if (config.verbose) {
+                        setStatus($"Error: {ex.Message}", true);
+                    } else {
+                        setStatus($"Error: Unable to parse required information from filename", true);
+                    }
+                    return false;
+                }
             }
 
             result.Season = episodeData.Season;

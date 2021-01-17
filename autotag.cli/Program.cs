@@ -46,6 +46,9 @@ namespace autotag.cli {
             if (manualMode) {
                 settings.config.manualMode = true;
             }
+            if (!string.IsNullOrEmpty(pattern)) {
+                settings.config.parsePattern = pattern;
+            }
             if (verbose) {
                 settings.config.verbose = true;
             }
@@ -201,8 +204,11 @@ namespace autotag.cli {
         [Option("--no-cover", "Disable cover art tagging", CommandOptionType.NoValue)]
         private bool noCoverArt { get; set; }
 
-        [Option("--manual", "Manually choose the series to tag", CommandOptionType.NoValue)]
+        [Option("--manual", "Manually choose the series to tag from search results", CommandOptionType.NoValue)]
         private bool manualMode { get; set; }
+
+        [Option(Description = "Custom regex to parse TV episode information")]
+        private string pattern { get; set; } = "";
 
         [Option(Description = "Enable verbose output mode")]
         private bool verbose { get; set; }

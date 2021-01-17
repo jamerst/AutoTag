@@ -28,13 +28,18 @@ Options:
   --no-rename                     Disable file renaming
   --no-tag                        Disable file tagging
   --no-cover                      Disable cover art tagging
-  --manual                        Manually choose the series to tag
+  --manual                        Manually choose the series to tag from search results
+  -p|--pattern <PATTERN>          Custom regex to parse TV episode information
   -v|--verbose                    Enable verbose output mode
   --set-default                   Set the current arguments as the default
   --version                       Print version number and exit
   -?|-h|--help                    Show help information
 
 ```
+
+The custom regex pattern is used on the full file path, not just the file name. This allows AutoTag to tag file structures where the series name is not in the file name, e.g. for the structure `Series/Season 1/S01E01 Title.mkv`.
+
+The regex pattern should have 3 named capturing groups: `SeriesName`, `Season` and `Episode`. For the example given above, a pattern could be `.*/(?<SeriesName>.+)/Season (?<Season>\d+)/S\d+E(?<Episode>\d+)`.
 
 ## Config
 AutoTag creates a config file to store default preferences at `~/.config/autotag/conf.json` or `%APPDATA%\Roaming\autotag\conf.json`. A different config file can be specified using the `-c` option. If the file does not exist, a file will be created with the default settings:
@@ -48,6 +53,7 @@ AutoTag creates a config file to store default preferences at `~/.config/autotag
 "renameFiles": true,                    // Rename files
 "tvRenamePattern": "%1 - %2x%3 - %4",   // Pattern to rename TV files, %1 = Series Name, %2 = Season, %3 = Episode, %4 = Episode Title
 "movieRenamePattern": "%1 (%2)"         // Pattern to rename movie files, %1 = Title, %2 = Year
+"parsePattern": ""                      // Custom regex to parse TV episode information
 ```
 
 ## Known Issues
