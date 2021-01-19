@@ -46,7 +46,7 @@ namespace autotag.Core {
                 }
             } else {
                 try {
-                    var match = Regex.Match(filePath, config.parsePattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+                    var match = Regex.Match(Path.GetFullPath(filePath), config.parsePattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
                     episodeData = new FileMetadata(FileMetadata.Types.TV);
                     episodeData.SeriesName = match.Groups["SeriesName"].Value;

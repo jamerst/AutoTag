@@ -49,7 +49,7 @@ namespace autotag.Core {
                             // overwrite default file name - allows software such as Icaros to display cover art thumbnails - default isn't compliant with Matroska guidelines
                             file.Tag.Pictures = new TagLib.Picture[] { new TagLib.Picture(downloadFile) { Filename = "cover.jpg" } };
                         }
-                    } else if (String.IsNullOrEmpty(metadata.CoverFilename)) {
+                    } else if (String.IsNullOrEmpty(metadata.CoverFilename) && config.addCoverArt == true) {
                         fileSuccess = false;
                     }
 
@@ -74,19 +74,30 @@ namespace autotag.Core {
                 if (config.mode == 0) {
                     newPath = Path.Combine(
                         Path.GetDirectoryName(filePath),
-                        EscapeFilename(String.Format(GetTVRenamePattern(config), metadata.SeriesName, metadata.Season, metadata.Episode.ToString("00"), metadata.Title) + Path.GetExtension(filePath))
-                        );
+                        EscapeFilename(String.Format(
+                            GetTVRenamePattern(config),
+                            metadata.SeriesName,
+                            metadata.Season,
+                            metadata.Episode.ToString("00"),
+                            metadata.Title) + Path.GetExtension(filePath)
+                        )
+                    );
                 } else {
                     newPath = Path.Combine(
                         Path.GetDirectoryName(filePath),
-                        EscapeFilename(String.Format(GetMovieRenamePattern(config), metadata.Title, metadata.Date.Year)) + Path.GetExtension(filePath));
+                        EscapeFilename(String.Format(
+                            GetMovieRenamePattern(config),
+                            metadata.Title,
+                            metadata.Date.Year) + Path.GetExtension(filePath)
+                        )
+                    );
                 }
 
                 if (filePath != newPath) {
                     try {
                         File.Move(filePath, newPath);
                         setPath(newPath);
-                        setStatus($"Successfully renamed file to '{newPath}'", false);
+                        setStatus($"Successfully renamed file to '{Path.GetFileName(newPath)}'", false);
                     } catch (Exception ex) {
                         if (config.verbose) {
                             setStatus($"Error: Failed to rename file - {ex.Message}", true);
