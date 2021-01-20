@@ -29,7 +29,10 @@ Options:
   --no-tag                        Disable file tagging
   --no-cover                      Disable cover art tagging
   --manual                        Manually choose the series to tag from search results
+  --tv-pattern <PATTERN>          Rename pattern for TV episodes
+  --movie-pattern <PATTERN>       Rename pattern for movies
   -p|--pattern <PATTERN>          Custom regex to parse TV episode information
+  --windows-safe                  Remove invalid Windows file name characters when renaming
   -v|--verbose                    Enable verbose output mode
   --set-default                   Set the current arguments as the default
   --version                       Print version number and exit
@@ -37,14 +40,23 @@ Options:
 
 ```
 
+The TV and movie rename patterns are strings used to create the new file name when renaming is enabled. They can use the following variables:
+
+- `%1`: TV Series Name/Movie Title
+- `%2`: TV Season Number/Movie Year
+- `%3`: TV Episode Number
+- `%4`: TV Episode Title
+
 The custom regex pattern is used on the full file path, not just the file name. This allows AutoTag to tag file structures where the series name is not in the file name, e.g. for the structure `Series/Season 1/S01E01 Title.mkv`.
 
 The regex pattern should have 3 named capturing groups: `SeriesName`, `Season` and `Episode`. For the example given above, a pattern could be `.*/(?<SeriesName>.+)/Season (?<Season>\d+)/S\d+E(?<Episode>\d+)`.
 
+The `--windows-safe` option is for use on Linux where the files written may be accessed by a Windows host, or are being written to an NTFS filesystem.
+
 ## Config
 AutoTag creates a config file to store default preferences at `~/.config/autotag/conf.json` or `%APPDATA%\Roaming\autotag\conf.json`. A different config file can be specified using the `-c` option. If the file does not exist, a file will be created with the default settings:
 ```
-"configVer": 1,                         // Internal use
+"configVer": 3,                         // Internal use
 "mode": 0,                              // Default tagging mode, 0 = TV, 1 = Movie
 "manualMode": false,                    // Manual tagging mode
 "verbose": false,                       // Verbose output
@@ -52,8 +64,9 @@ AutoTag creates a config file to store default preferences at `~/.config/autotag
 "tagFiles": true,                       // Write tags to files
 "renameFiles": true,                    // Rename files
 "tvRenamePattern": "%1 - %2x%3 - %4",   // Pattern to rename TV files, %1 = Series Name, %2 = Season, %3 = Episode, %4 = Episode Title
-"movieRenamePattern": "%1 (%2)"         // Pattern to rename movie files, %1 = Title, %2 = Year
-"parsePattern": ""                      // Custom regex to parse TV episode information
+"movieRenamePattern": "%1 (%2)",        // Pattern to rename movie files, %1 = Title, %2 = Year
+"parsePattern": "",                     // Custom regex to parse TV episode information
+"windowsSafe": false                    // Remove any invalid Windows file name characters
 ```
 
 ## Known Issues

@@ -29,7 +29,7 @@ namespace autotag.Core {
                     Save();
                 }
             } else {
-                Console.WriteLine($"Generating new config file with default options '{configPath}'");
+                Console.WriteLine($"Generating new config file with default options: '{configPath}'");
                 FileInfo configFile = new FileInfo(configPath);
                 configFile.Directory.Create();
 

@@ -4,8 +4,8 @@
     <AssemblyName>autotag</AssemblyName>
     <OutputType>Exe</OutputType>
     <TargetFramework>net5.0</TargetFramework>
-    <AssemblyVersion>3.0.3.0</AssemblyVersion>
-    <Version>3.0.3</Version>
+    <AssemblyVersion>3.0.4.0</AssemblyVersion>
+    <Version>3.0.4</Version>
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">

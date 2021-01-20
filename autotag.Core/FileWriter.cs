@@ -1,12 +1,21 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Net;
 
 namespace autotag.Core {
     public class FileWriter {
-        public static bool write(string filePath, FileMetadata metadata, Action<string> setPath, Action<string, bool> setStatus, AutoTagConfig config) {
+        public static bool write(string filePath, FileMetadata metadata, Action<string> setPath, Action<string, MessageType> setStatus, AutoTagConfig config) {
             bool fileSuccess = true;
             if (config.tagFiles) {
+                if (invalidFilenameChars == null) {
+                    invalidFilenameChars = Path.GetInvalidFileNameChars();
+
+                    if (config.windowsSafe) {
+                        invalidFilenameChars = invalidFilenameChars.Union(invalidNtfsChars).ToArray();
+                    }
+                }
+
                 try {
                     TagLib.File file = TagLib.File.Create(filePath);
 
@@ -39,9 +48,9 @@ namespace autotag.Core {
 
                             } catch (WebException ex) {
                                 if (config.verbose) {
-                                    setStatus($"Error: Failed to download cover art - {ex.Message}", true);
+                                    setStatus($"Error: Failed to download cover art ({ex.GetType().Name}: {ex.Message})", MessageType.Error);
                                 } else {
-                                    setStatus("Error: Failed to download cover art", true);
+                                    setStatus("Error: Failed to download cover art", MessageType.Error);
                                 }
                                 fileSuccess = false;
                             }
@@ -56,14 +65,14 @@ namespace autotag.Core {
                     file.Save();
 
                     if (fileSuccess == true) {
-                        setStatus($"Successfully tagged file as {metadata}", false);
+                        setStatus($"Successfully tagged file as {metadata}", MessageType.Information);
                     }
 
                 } catch (Exception ex) {
                     if (config.verbose) {
-                        setStatus($"Error: Failed to write tags to file - {ex.Message}", true);
+                        setStatus($"Error: Failed to write tags to file ({ex.GetType().Name}: {ex.Message})", MessageType.Error);
                     } else {
-                        setStatus("Error: Failed to write tags to file", true);
+                        setStatus("Error: Failed to write tags to file", MessageType.Error);
                     }
                     fileSuccess = false;
                 }
@@ -74,35 +83,50 @@ namespace autotag.Core {
                 if (config.mode == 0) {
                     newPath = Path.Combine(
                         Path.GetDirectoryName(filePath),
-                        EscapeFilename(String.Format(
-                            GetTVRenamePattern(config),
-                            metadata.SeriesName,
-                            metadata.Season,
-                            metadata.Episode.ToString("00"),
-                            metadata.Title) + Path.GetExtension(filePath)
+                        EscapeFilename(
+                            String.Format(
+                                GetTVRenamePattern(config),
+                                metadata.SeriesName,
+                                metadata.Season,
+                                metadata.Episode.ToString("00"),
+                                metadata.Title
+                            ),
+                            Path.GetFileNameWithoutExtension(filePath),
+                            setStatus
                         )
+                        + Path.GetExtension(filePath)
                     );
                 } else {
                     newPath = Path.Combine(
                         Path.GetDirectoryName(filePath),
-                        EscapeFilename(String.Format(
-                            GetMovieRenamePattern(config),
-                            metadata.Title,
-                            metadata.Date.Year) + Path.GetExtension(filePath)
+                        EscapeFilename(
+                            String.Format(
+                                GetMovieRenamePattern(config),
+                                metadata.Title,
+                                metadata.Date.Year
+                            ),
+                            Path.GetFileNameWithoutExtension(filePath),
+                            setStatus
                         )
+                        + Path.GetExtension(filePath)
                     );
                 }
 
                 if (filePath != newPath) {
                     try {
-                        File.Move(filePath, newPath);
-                        setPath(newPath);
-                        setStatus($"Successfully renamed file to '{Path.GetFileName(newPath)}'", false);
+                        if (File.Exists(newPath)) {
+                            setStatus("Error: Could not rename - file already exists", MessageType.Error);
+                            fileSuccess = false;
+                        } else {
+                            File.Move(filePath, newPath);
+                            setPath(newPath);
+                            setStatus($"Successfully renamed file to '{Path.GetFileName(newPath)}'", MessageType.Information);
+                        }
                     } catch (Exception ex) {
                         if (config.verbose) {
-                            setStatus($"Error: Failed to rename file - {ex.Message}", true);
+                            setStatus($"Error: Failed to rename file ({ex.GetType().Name}: {ex.Message})", MessageType.Error);
                         } else {
-                            setStatus("Error: Failed to rename file", true);
+                            setStatus("Error: Failed to rename file", MessageType.Error);
                         }
                         fileSuccess = false;
                     }
@@ -112,8 +136,13 @@ namespace autotag.Core {
             return fileSuccess;
         }
 
-        private static string EscapeFilename(string filename) {
-            return String.Join("", filename.Split(Path.GetInvalidFileNameChars()));
+        private static string EscapeFilename(string filename, string oldFilename, Action<string, MessageType> setStatus) {
+            string result = String.Join("", filename.Split(invalidFilenameChars));
+            if (result != oldFilename && result.Length != filename.Length) {
+                setStatus("Warning: Invalid characters in file name, automatically removing", MessageType.Warning);
+            }
+
+            return result;
         }
 
         private static string GetTVRenamePattern(AutoTagConfig config) { // Get usable renaming pattern
@@ -123,5 +152,9 @@ namespace autotag.Core {
         private static string GetMovieRenamePattern(AutoTagConfig config) { // Get usable renaming pattern
             return config.movieRenamePattern.Replace("%1", "{0}").Replace("%2", "{1}");
         }
+
+        private static char[] invalidFilenameChars { get; set; }
+
+        private readonly static char[] invalidNtfsChars = { '<', '>', ':', '"', '/', '\\', '|', '?', '*' };
     }
 }

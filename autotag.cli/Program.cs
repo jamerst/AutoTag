@@ -15,6 +15,7 @@ namespace autotag.cli {
         private List<TaggingFile> files { get; set; } = new List<TaggingFile>();
         private int index;
         private int lastIndex = -1;
+        private int warnings = 0;
         private bool success = true;
 
         private AutoTagSettings settings;
@@ -46,8 +47,17 @@ namespace autotag.cli {
             if (manualMode) {
                 settings.config.manualMode = true;
             }
+            if (!string.IsNullOrEmpty(tvRenamePattern)) {
+                settings.config.tvRenamePattern = tvRenamePattern;
+            }
+            if (!string.IsNullOrEmpty(movieRenamePattern)) {
+                settings.config.movieRenamePattern = movieRenamePattern;
+            }
             if (!string.IsNullOrEmpty(pattern)) {
                 settings.config.parsePattern = pattern;
+            }
+            if (windowsSafe) {
+                settings.config.windowsSafe = true;
             }
             if (verbose) {
                 settings.config.verbose = true;
@@ -72,7 +82,7 @@ namespace autotag.cli {
             files.Sort((x,y) => x.Path.CompareTo(y.Path));
 
             Action<string> setPath = p => { return; };
-            Action<string, bool> setStatus = (s, e) => SetStatus(s, e);
+            Action<string, MessageType> setStatus = (s, t) => SetStatus(s, t);
 
             Func<List<Tuple<string, string>>, int> choose = (results) => ChooseResult(results);
 
@@ -83,18 +93,28 @@ namespace autotag.cli {
             Console.ResetColor();
 
             if (success) {
-                Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine($"\n\nAll {files.Count()} files successfully processed.");
+                if (warnings == 0) {
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    Console.WriteLine($"\n\n{(files.Count() > 1 ? $"All {files.Count()} files": "File")} successfully processed.");
+                } else {
+                    Console.ForegroundColor = ConsoleColor.Yellow;
+                    Console.WriteLine($"\n\n{(files.Count() > 1 ? $"All {files.Count()} files": "File")} successfully processed with {warnings} warning{(warnings > 1 ? "s" : "")}.");
+                }
                 Console.ResetColor();
                 Environment.Exit(0);
             } else {
                 int failedFiles = files.Where(f => !f.Success).Count();
 
                 if (failedFiles < files.Count()) {
-                    Console.ForegroundColor = ConsoleColor.Green;
-                    Console.WriteLine($"\n\n{files.Count() - failedFiles} files successfully processed.");
+                    if (warnings == 0) {
+                        Console.ForegroundColor = ConsoleColor.Green;
+                        Console.WriteLine($"\n\n{files.Count() - failedFiles} file{(files.Count() - failedFiles > 1 ? "s" : "")} successfully processed.");
+                    } else {
+                        Console.ForegroundColor = ConsoleColor.Yellow;
+                        Console.WriteLine($"\n\n{files.Count() - failedFiles} file{(files.Count() - failedFiles > 1 ? "s" : "")} successfully processed with {warnings} warning{(warnings > 1 ? "s" : "")}.");
+                    }
                     Console.ForegroundColor = ConsoleColor.DarkRed;
-                    Console.Error.WriteLine($"Errors encountered for {failedFiles} files:");
+                    Console.Error.WriteLine($"Errors encountered for {failedFiles} file{(failedFiles > 1 ? "s" : "")}:");
                 } else {
                     Console.Error.WriteLine("\n\nErrors encountered for all files:");
                 }
@@ -111,16 +131,21 @@ namespace autotag.cli {
             }
         }
 
-        private void SetStatus(string status, bool error) {
-            if (error && !files[index].Success) {
+        private void SetStatus(string status, MessageType type) {
+            if (type == MessageType.Error && !files[index].Success) {
                 files[index].Status += Environment.NewLine + status;
-            } else if (error) {
+            } else if (type == MessageType.Error) {
                 success = false;
                 files[index].Success = false;
                 Console.ForegroundColor = ConsoleColor.Red;
                 files[index].Status = status;
             } else if (files[index].Success) {
                 files[index].Status = status;
+            }
+
+            if (type == MessageType.Warning) {
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                warnings++;
             }
 
             if (index > lastIndex) {
@@ -130,6 +155,7 @@ namespace autotag.cli {
                 Console.ResetColor();
             } else {
                 Console.WriteLine($"    {files[index].Status}");
+                Console.ResetColor();
             }
 
         }
@@ -207,8 +233,17 @@ namespace autotag.cli {
         [Option("--manual", "Manually choose the series to tag from search results", CommandOptionType.NoValue)]
         private bool manualMode { get; set; }
 
+        [Option("--tv-pattern <PATTERN>", "Rename pattern for TV episodes", CommandOptionType.SingleValue)]
+        private string tvRenamePattern { get; set; } = "";
+
+        [Option("--movie-pattern <PATTERN>", "Rename pattern for movies", CommandOptionType.SingleValue)]
+        private string movieRenamePattern { get; set; } = "";
+
         [Option(Description = "Custom regex to parse TV episode information")]
         private string pattern { get; set; } = "";
+
+        [Option("--windows-safe", "Remove invalid Windows file name characters when renaming", CommandOptionType.NoValue)]
+        private bool windowsSafe { get; set; }
 
         [Option(Description = "Enable verbose output mode")]
         private bool verbose { get; set; }

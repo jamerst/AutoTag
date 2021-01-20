@@ -7,7 +7,7 @@ namespace autotag.Core {
         Task<bool> process(
             string filePath,
             Action<string> setPath,
-            Action<string, bool> setStatus,
+            Action<string, MessageType> setStatus,
             Func<List<Tuple<string, string>>, int> selectResult,
             AutoTagConfig config
         );

@@ -18,7 +18,13 @@ namespace autotag.Core {
             this.tmdb = new TMDbClient(apiKey);
         }
 
-        public async Task<bool> process(string filePath, Action<string> setPath, Action<string, bool> setStatus, Func<List<Tuple<string, string>>, int> selectResult, AutoTagConfig config) {
+        public async Task<bool> process(
+            string filePath,
+            Action<string> setPath,
+            Action<string, MessageType> setStatus,
+            Func<List<Tuple<string, string>>, int> selectResult,
+            AutoTagConfig config
+        ) {
             FileMetadata result = new FileMetadata(FileMetadata.Types.Movie);
 
             #region "Filename parsing"
@@ -40,18 +46,18 @@ namespace autotag.Core {
                 title = match.Groups["Title"].ToString();
                 year = match.Groups["Year"].ToString();
             } else {
-                setStatus("Error: Failed to parse required information from filename", true);
+                setStatus("Error: Failed to parse required information from filename", MessageType.Error);
                 return false;
             }
 
             title = title.Replace('.', ' '); // change dots to spaces
 
             if (String.IsNullOrWhiteSpace(title)) {
-                setStatus("Error: Failed to parse required information from filename", true);
+                setStatus("Error: Failed to parse required information from filename", MessageType.Error);
                 return false;
             }
 
-            setStatus($"Parsed file as {title}", false);
+            setStatus($"Parsed file as {title}", MessageType.Information);
             #endregion
 
             #region "TMDB API Searching"
@@ -73,14 +79,14 @@ namespace autotag.Core {
                         )).ToList()
                 );
             } else if (searchResults.Results.Count == 0) {
-                setStatus($"Error: failed to find title {title} on TheMovieDB", true);
+                setStatus($"Error: failed to find title {title} on TheMovieDB", MessageType.Error);
                 result.Success = false;
                 return false;
             }
 
             SearchMovie selectedResult = searchResults.Results[selected];
 
-            setStatus($"Found {selectedResult.Title} ({selectedResult.ReleaseDate.Value.Year}) on TheMovieDB", false);
+            setStatus($"Found {selectedResult.Title} ({selectedResult.ReleaseDate.Value.Year}) on TheMovieDB", MessageType.Information);
             #endregion
 
             result.Title = selectedResult.Title;
@@ -90,7 +96,7 @@ namespace autotag.Core {
             result.Date = selectedResult.ReleaseDate.Value;
 
             if (String.IsNullOrEmpty(result.CoverURL)) {
-                setStatus("Error: failed to fetch movie cover", true);
+                setStatus("Error: failed to fetch movie cover", MessageType.Error);
                 result.Complete = false;
             }
 

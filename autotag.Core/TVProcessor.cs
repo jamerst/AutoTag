@@ -22,11 +22,12 @@ namespace autotag.Core {
         }
 
         public async Task<bool> process(
-                string filePath,
-                Action<string> setPath,
-                Action<string, bool> setStatus,
-                Func<List<Tuple<string, string>>, int> selectResult,
-                AutoTagConfig config) {
+            string filePath,
+            Action<string> setPath,
+            Action<string, MessageType> setStatus,
+            Func<List<Tuple<string, string>>, int> selectResult,
+            AutoTagConfig config
+        ) {
 
             if (tvdb.Authentication.Token == null) {
                 await tvdb.Authentication.AuthenticateAsync(apiKey);
@@ -41,7 +42,7 @@ namespace autotag.Core {
                 try {
                     episodeData = EpisodeParser.ParseEpisodeInfo(Path.GetFileName(filePath)); // Parse info from filename
                 } catch (FormatException ex) {
-                    setStatus($"Error: {ex.Message}", true);
+                    setStatus($"Error: {ex.Message}", MessageType.Error);
                     return false;
                 }
             } else {
@@ -54,9 +55,9 @@ namespace autotag.Core {
                     episodeData.Episode = int.Parse(match.Groups["Episode"].Value);
                 } catch (FormatException ex) {
                     if (config.verbose) {
-                        setStatus($"Error: {ex.Message}", true);
+                        setStatus($"Error: Unable to parse required information from filename ({ex.GetType().Name}: {ex.Message})", MessageType.Error);
                     } else {
-                        setStatus($"Error: Unable to parse required information from filename", true);
+                        setStatus($"Error: Unable to parse required information from filename", MessageType.Error);
                     }
                     return false;
                 }
@@ -65,7 +66,7 @@ namespace autotag.Core {
             result.Season = episodeData.Season;
             result.Episode = episodeData.Episode;
 
-            setStatus($"Parsed file as {episodeData}", false);
+            setStatus($"Parsed file as {episodeData}", MessageType.Information);
             #endregion
 
             #region TVDB API searching
@@ -75,9 +76,9 @@ namespace autotag.Core {
                     seriesIdResponse = await tvdb.Search.SearchSeriesByNameAsync(episodeData.SeriesName);
                 } catch (TvDbServerException ex) {
                     if (config.verbose) {
-                        setStatus($"Error: Cannot find series {episodeData.SeriesName} ({ex.Message})", true);
+                        setStatus($"Error: Cannot find series {episodeData.SeriesName} ({ex.GetType().Name}: {ex.Message})", MessageType.Error);
                     } else {
-                        setStatus($"Error: Cannot find series {episodeData.SeriesName} on TheTVDB", true);
+                        setStatus($"Error: Cannot find series {episodeData.SeriesName} on TheTVDB", MessageType.Error);
                     }
                     return false;
                 }
@@ -120,16 +121,16 @@ namespace autotag.Core {
                 } catch (TvDbServerException ex) {
                     if (series.Id == seriesResultCache[episodeData.SeriesName].Last().Id) {
                         if (config.verbose) {
-                            setStatus($"Error: Cannot find {episodeData} ({ex.Message})", true);
+                            setStatus($"Error: Cannot find {episodeData} ({ex.GetType().Name}: {ex.Message})", MessageType.Error);
                         } else {
-                            setStatus($"Error: Cannot find {episodeData} on TheTVDB", true);
+                            setStatus($"Error: Cannot find {episodeData} on TheTVDB", MessageType.Error);
                         }
                         return false;
                     }
                 }
             }
 
-            setStatus($"Found {episodeData} ({result.Title}) on TheTVDB", false);
+            setStatus($"Found {episodeData} ({result.Title}) on TheTVDB", MessageType.Information);
 
             TvDbResponse<TvDbSharper.Dto.Image[]> imagesResponse = null;
 
@@ -147,9 +148,9 @@ namespace autotag.Core {
                         });
                     } catch (TvDbServerException ex) {
                         if (config.verbose) {
-                            setStatus($"Error: Failed to find episode cover - {ex.Message}", true);
+                            setStatus($"Error: Failed to find episode cover ({ex.GetType().Name}: {ex.Message})", MessageType.Error);
                         } else {
-                            setStatus("Error: Failed to find episode cover", true);
+                            setStatus("Error: Failed to find episode cover", MessageType.Error);
                         }
                         result.Complete = false;
                     }
