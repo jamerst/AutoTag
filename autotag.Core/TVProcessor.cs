@@ -6,13 +6,11 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
-using TvDbSharper;
-using TvDbSharper.Dto;
-
 using TMDbLib.Client;
 using TMDbLib.Objects.General;
 using TMDbLib.Objects.Search;
 using TMDbLib.Objects.TvShows;
+
 namespace autotag.Core {
     public class TVProcessor : IProcessor {
         private TMDbClient tmdb;
