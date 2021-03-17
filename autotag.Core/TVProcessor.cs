@@ -128,7 +128,7 @@ namespace autotag.Core {
                         if (seriesImages.Posters.Count > 0) {
                             seriesImages.Posters.OrderByDescending(p => p.VoteAverage);
 
-                            result.CoverURL = $"https://image.tmdb.org/t/p/original/{images.Posters[0].FilePath}";
+                            result.CoverURL = $"https://image.tmdb.org/t/p/original/{seriesImages.Posters[0].FilePath}";
                             seasonPosterCache.Add((result.SeriesName, result.Season), result.CoverURL);
                         } else {
                             setStatus($"Error: Failed to find episode cover", MessageType.Error);
