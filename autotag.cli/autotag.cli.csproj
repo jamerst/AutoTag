@@ -1,11 +1,10 @@
-<Project Sdk="Microsoft.NET.Sdk">
-
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <AssemblyName>autotag</AssemblyName>
     <OutputType>Exe</OutputType>
     <TargetFramework>net5.0</TargetFramework>
-    <AssemblyVersion>3.0.4.0</AssemblyVersion>
-    <Version>3.0.4</Version>
+    <AssemblyVersion>3.1.0.0</AssemblyVersion>
+    <Version>3.1.0</Version>
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
@@ -24,5 +23,10 @@
     <ProjectReference Include="..\autotag.Core\autotag.Core.csproj" />
   </ItemGroup>
 
-
+  <Target Name="KeyCheck" BeforeTargets="PrepareForBuild">
+    <Error
+      Condition="!Exists('$(MSBuildProjectDirectory)/Keys.cs')"
+      Text="API keys file missing. Copy 'Keys.cs.template' to 'Keys.cs' and add your API keys before building."
+    />
+  </Target>
 </Project>

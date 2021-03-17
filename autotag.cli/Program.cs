@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -17,7 +17,6 @@ namespace autotag.cli {
         private int lastIndex = -1;
         private int warnings = 0;
         private bool success = true;
-
         private AutoTagSettings settings;
 
         private async Task OnExecuteAsync() {
@@ -73,9 +72,9 @@ namespace autotag.cli {
 
             IProcessor processor;
             if (settings.config.mode == AutoTagConfig.Modes.TV) {
-                processor = new TVProcessor("TQLC3N5YDI1AQVJF");
+                processor = new TVProcessor(Keys.TMDBKey);
             } else {
-                processor = new MovieProcessor("b342b6005f86daf016533bf0b72535bc");
+                processor = new MovieProcessor(Keys.TMDBKey);
             }
 
             AddFiles(RemainingArguments);
@@ -84,7 +83,7 @@ namespace autotag.cli {
             Action<string> setPath = p => { return; };
             Action<string, MessageType> setStatus = (s, t) => SetStatus(s, t);
 
-            Func<List<Tuple<string, string>>, int> choose = (results) => ChooseResult(results);
+            Func<List<(string,string)>, int> choose = (results) => ChooseResult(results);
 
             for (index = 0; index < files.Count; index++) {
                 success = success & await processor.process(files[index].Path, setPath, setStatus, choose, settings.config);
@@ -160,7 +159,7 @@ namespace autotag.cli {
 
         }
 
-        private int ChooseResult(List<Tuple<string, string>> results) {
+        private int ChooseResult(List<(string, string)> results) {
             Console.ForegroundColor = ConsoleColor.Yellow;
             Console.WriteLine("    Please choose a series:");
             Console.ResetColor();

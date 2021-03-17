@@ -22,7 +22,7 @@ namespace autotag.Core {
             string filePath,
             Action<string> setPath,
             Action<string, MessageType> setStatus,
-            Func<List<Tuple<string, string>>, int> selectResult,
+            Func<List<(string,string)>, int> selectResult,
             AutoTagConfig config
         ) {
             FileMetadata result = new FileMetadata(FileMetadata.Types.Movie);
@@ -70,12 +70,12 @@ namespace autotag.Core {
 
             int selected = 0;
 
-            if (searchResults.Results.Count > 1 && (searchResults.Results[0].Title != title || config.manualMode)) {
+            if (searchResults.Results.Count > 1 && (searchResults.Results[0].Title.Equals(title, StringComparison.InvariantCultureIgnoreCase) || config.manualMode)) {
                 selected = selectResult(
                     searchResults.Results
-                        .Select(m => new Tuple<string, string>(
+                        .Select(m => (
                             m.Title,
-                            m.ReleaseDate == null ? "Unknown" : m.ReleaseDate.Value.Year.ToString()
+                            m.ReleaseDate?.Year.ToString() ?? "Unknown"
                         )).ToList()
                 );
             } else if (searchResults.Results.Count == 0) {

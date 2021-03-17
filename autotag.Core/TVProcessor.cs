@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -8,31 +9,29 @@ using System.Threading.Tasks;
 using TvDbSharper;
 using TvDbSharper.Dto;
 
+using TMDbLib.Client;
+using TMDbLib.Objects.General;
+using TMDbLib.Objects.Search;
+using TMDbLib.Objects.TvShows;
 namespace autotag.Core {
     public class TVProcessor : IProcessor {
-
-        private ITvDbClient tvdb;
-        private Dictionary<string, List<SeriesSearchResult>> seriesResultCache =
-            new Dictionary<string, List<SeriesSearchResult>>(StringComparer.OrdinalIgnoreCase);
-        private string apiKey;
+        private TMDbClient tmdb;
+        private Dictionary<string, List<SearchTv>> seriesCache =
+            new Dictionary<string, List<SearchTv>>(StringComparer.OrdinalIgnoreCase);
+        private Dictionary<(string, int), string> seasonPosterCache =
+            new Dictionary<(string, int), string>();
 
         public TVProcessor(string apiKey) {
-            this.tvdb = new TvDbClient();
-            this.apiKey = apiKey;
+            this.tmdb = new TMDbClient(apiKey);
         }
 
         public async Task<bool> process(
             string filePath,
             Action<string> setPath,
             Action<string, MessageType> setStatus,
-            Func<List<Tuple<string, string>>, int> selectResult,
+            Func<List<(string, string)>, int> selectResult,
             AutoTagConfig config
         ) {
-
-            if (tvdb.Authentication.Token == null) {
-                await tvdb.Authentication.AuthenticateAsync(apiKey);
-            }
-
             FileMetadata result = new FileMetadata(FileMetadata.Types.TV);
 
             #region Filename parsing
@@ -69,105 +68,80 @@ namespace autotag.Core {
             setStatus($"Parsed file as {episodeData}", MessageType.Information);
             #endregion
 
-            #region TVDB API searching
-            if (!seriesResultCache.ContainsKey(episodeData.SeriesName)) { // if not already searched for series
-                TvDbResponse<SeriesSearchResult[]> seriesIdResponse;
-                try {
-                    seriesIdResponse = await tvdb.Search.SearchSeriesByNameAsync(episodeData.SeriesName);
-                } catch (TvDbServerException ex) {
-                    if (config.verbose) {
-                        setStatus($"Error: Cannot find series {episodeData.SeriesName} ({ex.GetType().Name}: {ex.Message})", MessageType.Error);
-                    } else {
-                        setStatus($"Error: Cannot find series {episodeData.SeriesName} on TheTVDB", MessageType.Error);
-                    }
-                    return false;
-                }
+            #region TMDB API searching
+            if (!seriesCache.ContainsKey(episodeData.SeriesName)) { // if not already searched for series
+                SearchContainer<SearchTv> searchResults = await tmdb.SearchTvShowAsync(episodeData.SeriesName);
 
-                // sort results by similarity to parsed series name
-                List<SeriesSearchResult> seriesResults = seriesIdResponse.Data
-                    .OrderByDescending(seriesResult => SeriesNameSimilarity(episodeData.SeriesName, seriesResult.SeriesName))
+                List<SearchTv> seriesResults = searchResults.Results
+                    .OrderByDescending(result => SeriesNameSimilarity(episodeData.SeriesName, result.Name))
                     .ToList();
 
-                if (config.manualMode && seriesResults.Count > 1) {
-                    int chosen = selectResult(seriesResults.Select(
-                        r => new Tuple<string, string>(r.SeriesName, r.FirstAired ?? "Unknown")
-                        ).ToList()
-                    );
+                if (config.manualMode) {
+                    int chosen = selectResult(seriesResults
+                        .Select(t => (t.Name, t.FirstAirDate?.Year.ToString() ?? "Unknown")).ToList());
 
-                    // add only the chosen series to cache if in manual mode
-                    seriesResultCache.Add(episodeData.SeriesName, new List<SeriesSearchResult> { seriesResults[chosen] });
+                    seriesCache.Add(episodeData.SeriesName, new List<SearchTv> { seriesResults[chosen] });
+                } else if (seriesResults.Count == 0) {
+                    setStatus($"Error: Cannot find series {episodeData.SeriesName} on TheMovieDB", MessageType.Error);
+                    result.Success = false;
+                    return false;
                 } else {
-                    seriesResultCache.Add(episodeData.SeriesName, seriesResults);
+                    seriesCache.Add(episodeData.SeriesName, seriesResults);
                 }
             }
 
             // try searching for each series search result
-            foreach (var series in seriesResultCache[episodeData.SeriesName]) {
+            foreach (var series in seriesCache[episodeData.SeriesName]) {
                 result.Id = series.Id;
-                result.SeriesName = series.SeriesName;
+                result.SeriesName = series.Name;
 
-                try {
-                    TvDbResponse<EpisodeRecord[]> episodeResponse = await tvdb.Series.GetEpisodesAsync(series.Id, 1,
-                        new EpisodeQuery {
-                            AiredSeason = episodeData.Season,
-                            AiredEpisode = episodeData.Episode
-                        }
-                    );
+                TvEpisode episodeResult = await tmdb.GetTvEpisodeAsync(series.Id, episodeData.Season, episodeData.Episode);
 
-                    result.Title = episodeResponse.Data[0].EpisodeName;
-                    result.Overview = episodeResponse.Data[0].Overview;
+                if (episodeResult == null) {
+                    if (series.Id == seriesCache[episodeData.SeriesName].Last().Id) {
+                        setStatus($"Error: Cannot find {episodeData} on TheMovieDB", MessageType.Error);
 
-                    break;
-                } catch (TvDbServerException ex) {
-                    if (series.Id == seriesResultCache[episodeData.SeriesName].Last().Id) {
-                        if (config.verbose) {
-                            setStatus($"Error: Cannot find {episodeData} ({ex.GetType().Name}: {ex.Message})", MessageType.Error);
-                        } else {
-                            setStatus($"Error: Cannot find {episodeData} on TheTVDB", MessageType.Error);
-                        }
                         return false;
                     }
+                    continue;
                 }
+
+                result.Title = episodeResult.Name;
+                result.Overview = episodeResult.Overview;
+                break;
             }
 
-            setStatus($"Found {episodeData} ({result.Title}) on TheTVDB", MessageType.Information);
-
-            TvDbResponse<TvDbSharper.Dto.Image[]> imagesResponse = null;
+            setStatus($"Found {episodeData} ({result.Title}) on TheMovieDB", MessageType.Information);
 
             if (config.addCoverArt) {
-                try {
-                    imagesResponse = await tvdb.Series.GetImagesAsync(result.Id, new ImagesQuery {
-                            KeyType = KeyType.Season,
-                            SubKey = episodeData.Season.ToString()
-                        });
-                } catch (TvDbServerException) {
-                    try {
-                        // use a series image if a season-specific image is not available
-                        imagesResponse = await tvdb.Series.GetImagesAsync(result.Id, new ImagesQuery {
-                            KeyType = KeyType.Series
-                        });
-                    } catch (TvDbServerException ex) {
-                        if (config.verbose) {
-                            setStatus($"Error: Failed to find episode cover ({ex.GetType().Name}: {ex.Message})", MessageType.Error);
+                if (seasonPosterCache.TryGetValue((result.SeriesName, result.Season), out string url)) {
+                    result.CoverURL = url;
+                } else {
+                    PosterImages images = await tmdb.GetTvSeasonImagesAsync(result.Id, result.Season, $"{CultureInfo.CurrentCulture.TwoLetterISOLanguageName},null");
+
+                    if (images.Posters.Count > 0) {
+                        images.Posters.OrderByDescending(p => p.VoteAverage);
+
+                        result.CoverURL = $"https://image.tmdb.org/t/p/original/{images.Posters[0].FilePath}";
+                        seasonPosterCache.Add((result.SeriesName, result.Season), result.CoverURL);
+                    } else {
+                        ImagesWithId seriesImages = await tmdb.GetTvShowImagesAsync(result.Id, $"{CultureInfo.CurrentCulture.TwoLetterISOLanguageName},null");
+
+                        if (seriesImages.Posters.Count > 0) {
+                            seriesImages.Posters.OrderByDescending(p => p.VoteAverage);
+
+                            result.CoverURL = $"https://image.tmdb.org/t/p/original/{images.Posters[0].FilePath}";
+                            seasonPosterCache.Add((result.SeriesName, result.Season), result.CoverURL);
                         } else {
-                            setStatus("Error: Failed to find episode cover", MessageType.Error);
+                            setStatus($"Error: Failed to find episode cover", MessageType.Error);
+                            result.Complete = false;
                         }
-                        result.Complete = false;
                     }
                 }
-            }
-
-            string imageFilename = "";
-            if (imagesResponse != null) {
-                imageFilename = imagesResponse.Data
-                    .OrderByDescending(img => img.RatingsInfo.Average)
-                    .First().FileName; // Find highest rated image
             }
             #endregion
 
-            result.CoverURL = (String.IsNullOrEmpty(imageFilename)) ? null : $"https://artworks.thetvdb.com/banners/{imageFilename}";
-
-            result.CoverFilename = imageFilename.Split('/').Last();
+            result.CoverFilename = result.CoverURL?.Split('/').Last() ?? "";
 
             bool taggingSuccess = FileWriter.write(filePath, result, setPath, setStatus, config);
 

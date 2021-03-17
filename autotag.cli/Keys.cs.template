@@ -1,0 +1,9 @@
+/*
+Copy this file to "Keys.cs" and add your API key
+*/
+
+namespace autotag.cli {
+    public static class Keys {
+        public const string TMDBKey = "TMDB_API_KEY";
+    } 
+}

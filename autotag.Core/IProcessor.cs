@@ -8,7 +8,7 @@ namespace autotag.Core {
             string filePath,
             Action<string> setPath,
             Action<string, MessageType> setStatus,
-            Func<List<Tuple<string, string>>, int> selectResult,
+            Func<List<(string,string)>, int> selectResult,
             AutoTagConfig config
         );
     }
