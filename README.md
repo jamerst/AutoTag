@@ -4,7 +4,7 @@
 
 Inspired by [Auto TV Tagger](https://sourceforge.net/projects/autotvtagger/), AutoTag is a command-line utility to make it very easy to organise your <sup>completely legitimate</sup> TV show and movie collection.
 
-AutoTag interprets the file name to find the specific series, season and episode, or movie title, then fetches the relevant information from TheTVDB or TheMovieDB, adds the information to the file and renames it to a set format.
+AutoTag interprets the file name to find the specific series, season and episode, or movie title, then fetches the relevant information from TheMovieDB, adds the information to the file and renames it to a set format.
 
 AutoTag v3 is a rewrite of v2 in .NET Core. This means that binaries can now be run natively on Linux without Mono! It also has a proper fully-functional command-line interface, however, **v3 is currently a command-line only application**.
 
@@ -69,10 +69,10 @@ AutoTag creates a config file to store default preferences at `~/.config/autotag
 "windowsSafe": false                    // Remove any invalid Windows file name characters
 ```
 
-## Known Issues
-- **v3.1.0 and above use TheMovieDB as the TV metadata source instead of TheTVDB. This is due to the declining quality of metadata, and TheTVDB's free API being deprecated in favour of a paid model.**\
-Unfortunately there are many differences in the episode numbering between TheTVDB and TheMovieDB, so you may have to manually rename some files in order for them to be found on TheMovieDB. In the long term this is a good thing as the numbering on TheMovieDB generally makes much more sense than TheTVDB.
-- Some movie filenames may not parse correctly. To fix this you may have to remove extra information from the filename, keeping just the title and year should allow the name to successfully parse. **Please create an issue if you encounter problems, this will help to improve the parsing.**
+## Moving away from TheTVDB
+**v3.1.0 and above use TheMovieDB as the TV metadata source instead of TheTVDB.** This is due to the declining quality of metadata, and TheTVDB's free API being deprecated in favour of a paid model.
+
+Unfortunately there are many differences in the episode numbering between TheTVDB and TheMovieDB, so you may have to manually rename some files in order for them to be found on TheMovieDB. In the long term this is a good thing as the numbering on TheMovieDB generally makes much more sense than TheTVDB, and is a much friendlier community.
 
 ## Download
 Downloads for Linux, macOS and Windows can be found [here](https://github.com/jamerst/AutoTag/releases).
