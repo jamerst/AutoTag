@@ -11,7 +11,7 @@ AutoTag v3 is a rewrite of v2 in .NET Core. This means that binaries can now be 
 This is because building cross-platform user interfaces with .NET Core is still quite difficult, and the documentation of current frameworks for this leave *a lot* to be desired. I personally use AutoTag over SSH to my server, so I have little motivation to develop a GUI that I will never use.
 
 ## Features
-- Information fetched from [thetvdb.com](https://www.thetvdb.com/) and [themoviedb.org](https://www.themoviedb.org/)
+- Information fetched from [themoviedb.org](https://www.themoviedb.org/)
 - Configurable renaming and full metadata tagging, including cover art
 - Manual tagging mode
 - Full Linux support (and presumably macOS?)
@@ -70,10 +70,9 @@ AutoTag creates a config file to store default preferences at `~/.config/autotag
 ```
 
 ## Known Issues
+- **v3.1.0 and above use TheMovieDB as the TV metadata source instead of TheTVDB. This is due to the declining quality of metadata, and TheTVDB's free API being deprecated in favour of a paid model.**\
+Unfortunately there are many differences in the episode numbering between TheTVDB and TheMovieDB, so you may have to manually rename some files in order for them to be found on TheMovieDB. In the long term this is a good thing as the numbering on TheMovieDB generally makes much more sense than TheTVDB.
 - Some movie filenames may not parse correctly. To fix this you may have to remove extra information from the filename, keeping just the title and year should allow the name to successfully parse. **Please create an issue if you encounter problems, this will help to improve the parsing.**
-- Matroska artwork thumbnails don't show up, but this is a problem with Windows (as per usual). <sup>1</sup>
-
-<sup>1</sup> A 3rd party shell extension, [Icaros](http://shark007.net/tools.html), is available which allows the artwork to be shown in Windows Explorer (along with other useful file information).
 
 ## Download
 Downloads for Linux, macOS and Windows can be found [here](https://github.com/jamerst/AutoTag/releases).
@@ -85,7 +84,6 @@ Build file sizes are quite large due to bundled .NET runtimes.
 ## Attributions
 - TV filename parsing based on [SubtitleFetcher](https://github.com/pheiberg/SubtitleFetcher)
 - File tagging provided by [taglib-sharp](https://github.com/mono/taglib-sharp)
-- TheTVDB API support provided by [TvDbSharper](https://github.com/HristoKolev/TvDbSharper)
 - TheMovieDB API support provided by [TMDbLib](https://github.com/LordMike/TMDbLib)
-- Data sourced from [thetvdb.com](https://www.thetvdb.com/) and [themoviedb.org](https://www.themoviedb.org/) using their free APIs
+- Data sourced from [themoviedb.org](https://www.themoviedb.org/) using their free API
 - Command-line interface built using [CommandLineUtils](https://github.com/natemcmaster/CommandLineUtils)
