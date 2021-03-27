@@ -58,6 +58,9 @@ namespace autotag.cli {
             if (windowsSafe) {
                 settings.config.windowsSafe = true;
             }
+            if (extendedTagging) {
+                settings.config.extendedTagging = true;
+            }
             if (verbose) {
                 settings.config.verbose = true;
             }
@@ -86,7 +89,7 @@ namespace autotag.cli {
             Func<List<(string,string)>, int> choose = (results) => ChooseResult(results);
 
             for (index = 0; index < files.Count; index++) {
-                success = success & await processor.process(files[index].Path, setPath, setStatus, choose, settings.config);
+                success = success & await processor.Process(files[index].Path, setPath, setStatus, choose, settings.config);
             }
 
             Console.ResetColor();
@@ -243,6 +246,9 @@ namespace autotag.cli {
 
         [Option("--windows-safe", "Remove invalid Windows file name characters when renaming", CommandOptionType.NoValue)]
         private bool windowsSafe { get; set; }
+
+        [Option("--extended-tagging", "Add more information to Matroska file tags. Reduces tagging speed.", CommandOptionType.NoValue)]
+        private bool extendedTagging { get; set; }
 
         [Option(Description = "Enable verbose output mode")]
         private bool verbose { get; set; }

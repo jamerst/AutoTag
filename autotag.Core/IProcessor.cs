@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 
 namespace autotag.Core {
     public interface IProcessor {
-        Task<bool> process(
+        Task<bool> Process(
             string filePath,
             Action<string> setPath,
             Action<string, MessageType> setStatus,

@@ -13,17 +13,20 @@ using TMDbLib.Objects.TvShows;
 
 namespace autotag.Core {
     public class TVProcessor : IProcessor {
-        private TMDbClient tmdb;
-        private Dictionary<string, List<SearchTv>> seriesCache =
+        private readonly TMDbClient _tmdb;
+        private Dictionary<string, List<SearchTv>> _shows =
             new Dictionary<string, List<SearchTv>>(StringComparer.OrdinalIgnoreCase);
-        private Dictionary<(string, int), string> seasonPosterCache =
+        private Dictionary<(int, int), TvSeason> _seasons =
+            new Dictionary<(int, int), TvSeason>();
+        private Dictionary<(string, int), string> _seasonPosters =
             new Dictionary<(string, int), string>();
+        private List<Genre> Genres = null;
 
         public TVProcessor(string apiKey) {
-            this.tmdb = new TMDbClient(apiKey);
+            this._tmdb = new TMDbClient(apiKey);
         }
 
-        public async Task<bool> process(
+        public async Task<bool> Process(
             string filePath,
             Action<string> setPath,
             Action<string, MessageType> setStatus,
@@ -67,8 +70,8 @@ namespace autotag.Core {
             #endregion
 
             #region TMDB API searching
-            if (!seriesCache.ContainsKey(episodeData.SeriesName)) { // if not already searched for series
-                SearchContainer<SearchTv> searchResults = await tmdb.SearchTvShowAsync(episodeData.SeriesName);
+            if (!_shows.ContainsKey(episodeData.SeriesName)) { // if not already searched for series
+                SearchContainer<SearchTv> searchResults = await _tmdb.SearchTvShowAsync(episodeData.SeriesName);
 
                 List<SearchTv> seriesResults = searchResults.Results
                     .OrderByDescending(result => SeriesNameSimilarity(episodeData.SeriesName, result.Name))
@@ -78,25 +81,45 @@ namespace autotag.Core {
                     int chosen = selectResult(seriesResults
                         .Select(t => (t.Name, t.FirstAirDate?.Year.ToString() ?? "Unknown")).ToList());
 
-                    seriesCache.Add(episodeData.SeriesName, new List<SearchTv> { seriesResults[chosen] });
+                    _shows.Add(episodeData.SeriesName, new List<SearchTv> { seriesResults[chosen] });
                 } else if (seriesResults.Count == 0) {
                     setStatus($"Error: Cannot find series {episodeData.SeriesName} on TheMovieDB", MessageType.Error);
                     result.Success = false;
                     return false;
                 } else {
-                    seriesCache.Add(episodeData.SeriesName, seriesResults);
+                    _shows.Add(episodeData.SeriesName, seriesResults);
                 }
             }
 
             // try searching for each series search result
-            foreach (var series in seriesCache[episodeData.SeriesName]) {
-                result.Id = series.Id;
-                result.SeriesName = series.Name;
+            foreach (var show in _shows[episodeData.SeriesName]) {
+                result.Id = show.Id;
+                result.SeriesName = show.Name;
 
-                TvEpisode episodeResult = await tmdb.GetTvEpisodeAsync(series.Id, episodeData.Season, episodeData.Episode);
+                TvSeason seasonResult;
+                if (!_seasons.TryGetValue((show.Id, episodeData.Season), out seasonResult)) {
+                    seasonResult = await _tmdb.GetTvSeasonAsync(show.Id, episodeData.Season);
 
-                if (episodeResult == null) {
-                    if (series.Id == seriesCache[episodeData.SeriesName].Last().Id) {
+                    if (seasonResult == null) {
+                        if (show.Id == _shows[episodeData.SeriesName].Last().Id) {
+                            setStatus($"Error: Cannot find {episodeData} on TheMovieDB", MessageType.Error);
+
+                            return false;
+                        }
+                        continue;
+                    } else {
+                        _seasons.Add((show.Id, episodeData.Season), seasonResult);
+                    }
+                }
+                result.SeasonEpisodes = seasonResult.Episodes.Count;
+
+                if (!string.IsNullOrEmpty(seasonResult.PosterPath)) {
+                    result.CoverURL = $"https://image.tmdb.org/t/p/original/{seasonResult.PosterPath}";
+                }
+
+                TvSeasonEpisode episodeResult;
+                if ((episodeResult = seasonResult.Episodes.FirstOrDefault(e => e.EpisodeNumber == episodeData.Episode)) == default(TvSeasonEpisode)) {
+                    if (show.Id == _shows[episodeData.SeriesName].Last().Id) {
                         setStatus($"Error: Cannot find {episodeData} on TheMovieDB", MessageType.Error);
 
                         return false;
@@ -106,40 +129,45 @@ namespace autotag.Core {
 
                 result.Title = episodeResult.Name;
                 result.Overview = episodeResult.Overview;
+
+
+                if (Genres == null) {
+                    Genres = await _tmdb.GetTvGenresAsync();
+                }
+                result.Genres = show.GenreIds.Select(gId => Genres.First(g => g.Id == gId).Name).ToArray();
+                
+                if (config.extendedTagging) {
+                    result.Director = episodeResult.Crew.FirstOrDefault(c => c.Job == "Director")?.Name;
+
+                    var credits = await _tmdb.GetTvEpisodeCreditsAsync(show.Id, result.Season, result.Episode);
+                    result.Actors = credits.Cast.Select(c => c.Name).ToArray();
+                    result.Characters = credits.Cast.Select(c => c.Character).ToArray();
+                }
                 break;
             }
 
             setStatus($"Found {episodeData} ({result.Title}) on TheMovieDB", MessageType.Information);
 
-            if (config.addCoverArt) {
-                if (seasonPosterCache.TryGetValue((result.SeriesName, result.Season), out string url)) {
+            if (config.addCoverArt && string.IsNullOrEmpty(result.CoverURL)) {
+                if (_seasonPosters.TryGetValue((result.SeriesName, result.Season), out string url)) {
                     result.CoverURL = url;
                 } else {
-                    PosterImages images = await tmdb.GetTvSeasonImagesAsync(result.Id, result.Season, $"{CultureInfo.CurrentCulture.TwoLetterISOLanguageName},null");
+                    ImagesWithId seriesImages = await _tmdb.GetTvShowImagesAsync(result.Id, $"{CultureInfo.CurrentCulture.TwoLetterISOLanguageName},null");
 
-                    if (images.Posters.Count > 0) {
-                        images.Posters.OrderByDescending(p => p.VoteAverage);
+                    if (seriesImages.Posters.Count > 0) {
+                        seriesImages.Posters.OrderByDescending(p => p.VoteAverage);
 
-                        result.CoverURL = $"https://image.tmdb.org/t/p/original/{images.Posters[0].FilePath}";
-                        seasonPosterCache.Add((result.SeriesName, result.Season), result.CoverURL);
+                        result.CoverURL = $"https://image.tmdb.org/t/p/original/{seriesImages.Posters[0].FilePath}";
+                        _seasonPosters.Add((result.SeriesName, result.Season), result.CoverURL);
                     } else {
-                        ImagesWithId seriesImages = await tmdb.GetTvShowImagesAsync(result.Id, $"{CultureInfo.CurrentCulture.TwoLetterISOLanguageName},null");
-
-                        if (seriesImages.Posters.Count > 0) {
-                            seriesImages.Posters.OrderByDescending(p => p.VoteAverage);
-
-                            result.CoverURL = $"https://image.tmdb.org/t/p/original/{seriesImages.Posters[0].FilePath}";
-                            seasonPosterCache.Add((result.SeriesName, result.Season), result.CoverURL);
-                        } else {
-                            setStatus($"Error: Failed to find episode cover", MessageType.Error);
-                            result.Complete = false;
-                        }
+                        setStatus($"Error: Failed to find episode cover", MessageType.Error);
+                        result.Complete = false;
                     }
                 }
             }
             #endregion
 
-            result.CoverFilename = result.CoverURL?.Split('/').Last() ?? "";
+            result.CoverFilename = result.CoverURL?.Split('/').Last();
 
             bool taggingSuccess = FileWriter.write(filePath, result, setPath, setStatus, config);
 

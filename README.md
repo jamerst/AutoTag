@@ -33,6 +33,7 @@ Options:
   --movie-pattern <PATTERN>       Rename pattern for movies
   -p|--pattern <PATTERN>          Custom regex to parse TV episode information
   --windows-safe                  Remove invalid Windows file name characters when renaming
+  --extended-tagging              Add more information to Matroska file tags. Reduces tagging speed.
   -v|--verbose                    Enable verbose output mode
   --set-default                   Set the current arguments as the default
   --version                       Print version number and exit
@@ -40,6 +41,7 @@ Options:
 
 ```
 
+### Rename Patterns
 The TV and movie rename patterns are strings used to create the new file name when renaming is enabled. They can use the following variables:
 
 - `%1`: TV Series Name/Movie Title
@@ -47,11 +49,18 @@ The TV and movie rename patterns are strings used to create the new file name wh
 - `%3`: TV Episode Number
 - `%4`: TV Episode Title
 
+### Regex Pattern
 The custom regex pattern is used on the full file path, not just the file name. This allows AutoTag to tag file structures where the series name is not in the file name, e.g. for the structure `Series/Season 1/S01E01 Title.mkv`.
 
 The regex pattern should have 3 named capturing groups: `SeriesName`, `Season` and `Episode`. For the example given above, a pattern could be `.*/(?<SeriesName>.+)/Season (?<Season>\d+)/S\d+E(?<Episode>\d+)`.
 
+Note that on Windows all directory separators (`\`) must be escaped as `\\`.
+
+### Windows Safe
 The `--windows-safe` option is for use on Linux where the files written may be accessed by a Windows host, or are being written to an NTFS filesystem.
+
+### Extended Tagging
+The `--extended-tagging` option adds additional information to Matroska video files such as actors and their characters. This option is not enabled by default because it may reduce tagging speed significantly due to the additional API requests needed.
 
 ## Config
 AutoTag creates a config file to store default preferences at `~/.config/autotag/conf.json` or `%APPDATA%\Roaming\autotag\conf.json`. A different config file can be specified using the `-c` option. If the file does not exist, a file will be created with the default settings:
@@ -67,12 +76,16 @@ AutoTag creates a config file to store default preferences at `~/.config/autotag
 "movieRenamePattern": "%1 (%2)",        // Pattern to rename movie files, %1 = Title, %2 = Year
 "parsePattern": "",                     // Custom regex to parse TV episode information
 "windowsSafe": false                    // Remove any invalid Windows file name characters
+"extendedTagging": false                // Add more information to Matroska file tags
 ```
 
 ## Moving away from TheTVDB
 **v3.1.0 and above use TheMovieDB as the TV metadata source instead of TheTVDB.** This is due to the declining quality of metadata, and TheTVDB's free API being deprecated in favour of a paid model.
 
 Unfortunately there are many differences in the episode numbering between TheTVDB and TheMovieDB, so you may have to manually rename some files in order for them to be found on TheMovieDB. In the long term this is a good thing as the numbering on TheMovieDB generally makes much more sense than TheTVDB, and is a much friendlier community.
+
+## Known Issues
+- Some files will refuse to tag with an error such as "File not writeable" or "Invalid EBML format read". This is caused by the tagging library taglib-sharp, which sometimes refuses to tag certain files. The cause of this isn't immediately clear, but a workaround is to simply remux the file using ffmpeg (`ffmepg -i in.mkv -c copy out.mkv`), after which the file should tag successfully.
 
 ## Download
 Downloads for Linux, macOS and Windows can be found [here](https://github.com/jamerst/AutoTag/releases).

@@ -16,22 +16,36 @@ namespace autotag.Core {
                     }
                 }
 
+                TagLib.File file = null;
                 try {
-                    TagLib.File file = TagLib.File.Create(filePath);
+                    file = TagLib.File.Create(filePath);
 
                     file.Tag.Title = metadata.Title;
-                    file.Tag.Comment = metadata.Overview;
-                    file.Tag.Genres = new string[] { (metadata.FileType == FileMetadata.Types.TV) ? "TVShows" : "Movie" };
+                    file.Tag.Description = metadata.Overview;
 
+                    if (metadata.Genres != null && metadata.Genres.Length > 0) {
+                        file.Tag.Genres = metadata.Genres;
+                    }
+
+                    if (config.extendedTagging && file.MimeType == "video/x-matroska") {
+                        var custom = (TagLib.Matroska.Tag)file.GetTag(TagLib.TagTypes.Matroska);
+                        custom.Set("TMDB", "", $"tv/{metadata.Id}");
+
+                        file.Tag.Conductor = metadata.Director;
+                        file.Tag.Performers = metadata.Actors;
+                        file.Tag.PerformersRole = metadata.Characters;
+                    }
+                    
                     if (metadata.FileType == FileMetadata.Types.TV) {
                         file.Tag.Album = metadata.SeriesName;
                         file.Tag.Disc = (uint) metadata.Season;
                         file.Tag.Track = (uint) metadata.Episode;
+                        file.Tag.TrackCount = (uint) metadata.SeasonEpisodes;
                     } else {
                         file.Tag.Year = (uint) metadata.Date.Year;
                     }
 
-                    if (metadata.CoverFilename != "" && config.addCoverArt == true) { // if there is an image available and cover art is enabled
+                    if (!string.IsNullOrEmpty(metadata.CoverFilename) && config.addCoverArt == true) { // if there is an image available and cover art is enabled
                         string downloadPath = Path.Combine(Path.GetTempPath(), "autotag");
                         string downloadFile = Path.Combine(downloadPath, metadata.CoverFilename);
 
@@ -70,7 +84,11 @@ namespace autotag.Core {
 
                 } catch (Exception ex) {
                     if (config.verbose) {
-                        setStatus($"Error: Failed to write tags to file ({ex.GetType().Name}: {ex.Message})", MessageType.Error);
+                        if (file != null && file.CorruptionReasons.ToList().Count > 0) {
+                            setStatus($"Error: Failed to write tags to file ({ex.GetType().Name}: {ex.Message}; CorruptionReasons: {string.Join(", ", file.CorruptionReasons)})", MessageType.Error);
+                        } else {
+                            setStatus($"Error: Failed to write tags to file ({ex.GetType().Name}: {ex.Message}", MessageType.Error);
+                        }
                     } else {
                         setStatus("Error: Failed to write tags to file", MessageType.Error);
                     }

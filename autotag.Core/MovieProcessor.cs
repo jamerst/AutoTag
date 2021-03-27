@@ -12,13 +12,14 @@ using TMDbLib.Objects.Search;
 
 namespace autotag.Core {
     public class MovieProcessor : IProcessor {
-        private TMDbClient tmdb;
+        private readonly TMDbClient _tmdb;
+        private List<Genre> _genres = null;
 
         public MovieProcessor(string apiKey) {
-            this.tmdb = new TMDbClient(apiKey);
+            this._tmdb = new TMDbClient(apiKey);
         }
 
-        public async Task<bool> process(
+        public async Task<bool> Process(
             string filePath,
             Action<string> setPath,
             Action<string, MessageType> setStatus,
@@ -63,9 +64,9 @@ namespace autotag.Core {
             #region "TMDB API Searching"
             SearchContainer<SearchMovie> searchResults;
             if (!String.IsNullOrWhiteSpace(year)) {
-                searchResults = await tmdb.SearchMovieAsync(query: title, year: int.Parse(year)); // if year was parsed, use it to narrow down search further
+                searchResults = await _tmdb.SearchMovieAsync(query: title, year: int.Parse(year)); // if year was parsed, use it to narrow down search further
             } else {
-                searchResults = await tmdb.SearchMovieAsync(query: title);
+                searchResults = await _tmdb.SearchMovieAsync(query: title);
             }
 
             int selected = 0;
@@ -94,6 +95,19 @@ namespace autotag.Core {
             result.CoverURL = (String.IsNullOrEmpty(selectedResult.PosterPath)) ? null : $"https://image.tmdb.org/t/p/original{selectedResult.PosterPath}";
             result.CoverFilename = selectedResult.PosterPath.Replace("/", "");
             result.Date = selectedResult.ReleaseDate.Value;
+
+            if (_genres == null) {
+                _genres = await _tmdb.GetMovieGenresAsync();
+            }
+            result.Genres = selectedResult.GenreIds.Select(gId => _genres.First(g => g.Id == gId).Name).ToArray();
+            
+            if (config.extendedTagging) {
+                var credits = await _tmdb.GetMovieCreditsAsync(selectedResult.Id);
+
+                result.Director = credits.Crew.FirstOrDefault(c => c.Job == "Director")?.Name;
+                result.Actors = credits.Cast.Select(c => c.Name).ToArray();
+                result.Characters = credits.Cast.Select(c => c.Character).ToArray();
+            }
 
             if (String.IsNullOrEmpty(result.CoverURL)) {
                 setStatus("Error: failed to fetch movie cover", MessageType.Error);

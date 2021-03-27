@@ -1,13 +1,15 @@
 using System;
 using System.IO;
 using System.Text.Json;
+using System.Text.Encodings.Web;
 
 namespace autotag.Core {
     public class AutoTagSettings {
         public AutoTagConfig config;
         public string configPath;
         private readonly JsonSerializerOptions jsonOptions = new JsonSerializerOptions {
-            WriteIndented = true
+            WriteIndented = true,
+            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
         };
 
         public AutoTagSettings(string configPath) {

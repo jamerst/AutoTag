@@ -1,7 +1,7 @@
 namespace autotag.Core {
     public class AutoTagConfig {
         public enum Modes { TV, Movie };
-        public static int currentVer = 3;
+        public static int currentVer = 4;
         public int configVer { get; set; } = currentVer;
         public Modes mode { get; set; } = Modes.TV;
         public bool manualMode { get; set; } = false;
@@ -13,5 +13,6 @@ namespace autotag.Core {
         public string movieRenamePattern { get; set; } = "%1 (%2)";
         public string parsePattern { get; set; } = "";
         public bool windowsSafe { get; set; } = false;
+        public bool extendedTagging { get; set; } = false;
     }
 }

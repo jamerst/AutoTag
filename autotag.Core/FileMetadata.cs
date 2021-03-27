@@ -13,11 +13,16 @@ namespace autotag.Core {
         public string CoverFilename;
         public bool Success;
         public bool Complete;
+        public string Director;
+        public string[] Actors;
+        public string[] Characters;
+        public string[] Genres;
 
         // TV specific fields
         public string SeriesName;
         public int Season;
         public int Episode;
+        public int SeasonEpisodes;
 
         // Movie specific fields
         public DateTime Date;
