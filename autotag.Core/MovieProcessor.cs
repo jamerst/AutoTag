@@ -23,7 +23,7 @@ namespace autotag.Core {
             string filePath,
             Action<string> setPath,
             Action<string, MessageType> setStatus,
-            Func<List<(string,string)>, int> selectResult,
+            Func<List<(string,string)>, int?> selectResult,
             AutoTagConfig config
         ) {
             FileMetadata result = new FileMetadata(FileMetadata.Types.Movie);
@@ -53,7 +53,7 @@ namespace autotag.Core {
 
             title = title.Replace('.', ' '); // change dots to spaces
 
-            if (String.IsNullOrWhiteSpace(title)) {
+            if (string.IsNullOrWhiteSpace(title)) {
                 setStatus("Error: Failed to parse required information from filename", MessageType.Error);
                 return false;
             }
@@ -63,7 +63,7 @@ namespace autotag.Core {
 
             #region "TMDB API Searching"
             SearchContainer<SearchMovie> searchResults;
-            if (!String.IsNullOrWhiteSpace(year)) {
+            if (!string.IsNullOrWhiteSpace(year)) {
                 searchResults = await _tmdb.SearchMovieAsync(query: title, year: int.Parse(year)); // if year was parsed, use it to narrow down search further
             } else {
                 searchResults = await _tmdb.SearchMovieAsync(query: title);
@@ -71,15 +71,22 @@ namespace autotag.Core {
 
             int selected = 0;
 
-            if (searchResults.Results.Count > 1 && (searchResults.Results[0].Title.Equals(title, StringComparison.InvariantCultureIgnoreCase) || config.manualMode)) {
-                selected = selectResult(
+            if (searchResults.Results.Count > 1 && (!searchResults.Results[0].Title.Equals(title, StringComparison.InvariantCultureIgnoreCase) || config.manualMode)) {
+                int? selection = selectResult(
                     searchResults.Results
                         .Select(m => (
                             m.Title,
                             m.ReleaseDate?.Year.ToString() ?? "Unknown"
                         )).ToList()
                 );
-            } else if (searchResults.Results.Count == 0) {
+
+                if (selection.HasValue) {
+                    selected = selection.Value;
+                } else {
+                    setStatus("File skipped", MessageType.Warning);
+                    return true;
+                }
+            } else if (!searchResults.Results.Any()) {
                 setStatus($"Error: failed to find title {title} on TheMovieDB", MessageType.Error);
                 result.Success = false;
                 return false;
@@ -92,7 +99,7 @@ namespace autotag.Core {
 
             result.Title = selectedResult.Title;
             result.Overview = selectedResult.Overview;
-            result.CoverURL = (String.IsNullOrEmpty(selectedResult.PosterPath)) ? null : $"https://image.tmdb.org/t/p/original{selectedResult.PosterPath}";
+            result.CoverURL = string.IsNullOrEmpty(selectedResult.PosterPath) ? null : $"https://image.tmdb.org/t/p/original{selectedResult.PosterPath}";
             result.CoverFilename = selectedResult.PosterPath.Replace("/", "");
             result.Date = selectedResult.ReleaseDate.Value;
 
@@ -100,7 +107,7 @@ namespace autotag.Core {
                 _genres = await _tmdb.GetMovieGenresAsync();
             }
             result.Genres = selectedResult.GenreIds.Select(gId => _genres.First(g => g.Id == gId).Name).ToArray();
-            
+
             if (config.extendedTagging) {
                 var credits = await _tmdb.GetMovieCreditsAsync(selectedResult.Id);
 
@@ -114,7 +121,7 @@ namespace autotag.Core {
                 result.Complete = false;
             }
 
-            bool taggingSuccess = FileWriter.write(filePath, result, setPath, setStatus, config);
+            bool taggingSuccess = await FileWriter.Write(filePath, result, setPath, setStatus, config);
 
             return taggingSuccess && result.Success && result.Complete;
         }

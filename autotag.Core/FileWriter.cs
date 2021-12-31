@@ -1,11 +1,17 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net;
+using System.Net.Http;
+using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 
 namespace autotag.Core {
     public class FileWriter {
-        public static bool write(string filePath, FileMetadata metadata, Action<string> setPath, Action<string, MessageType> setStatus, AutoTagConfig config) {
+        private readonly static HttpClient _client = new HttpClient();
+        private static Dictionary<string, byte[]> _images = new Dictionary<string, byte[]>();
+
+        public static async Task<bool> Write(string filePath, FileMetadata metadata, Action<string> setPath, Action<string, MessageType> setStatus, AutoTagConfig config) {
             bool fileSuccess = true;
             if (config.tagFiles) {
                 if (invalidFilenameChars == null) {
@@ -23,19 +29,21 @@ namespace autotag.Core {
                     file.Tag.Title = metadata.Title;
                     file.Tag.Description = metadata.Overview;
 
-                    if (metadata.Genres != null && metadata.Genres.Length > 0) {
+                    if (metadata.Genres != null && metadata.Genres.Any()) {
                         file.Tag.Genres = metadata.Genres;
                     }
 
                     if (config.extendedTagging && file.MimeType == "video/x-matroska") {
-                        var custom = (TagLib.Matroska.Tag)file.GetTag(TagLib.TagTypes.Matroska);
-                        custom.Set("TMDB", "", $"tv/{metadata.Id}");
+                        if (metadata.FileType == FileMetadata.Types.TV && metadata.Id.HasValue) {
+                            var custom = (TagLib.Matroska.Tag)file.GetTag(TagLib.TagTypes.Matroska);
+                            custom.Set("TMDB", "", $"tv/{metadata.Id}");
+                        }
 
                         file.Tag.Conductor = metadata.Director;
                         file.Tag.Performers = metadata.Actors;
                         file.Tag.PerformersRole = metadata.Characters;
                     }
-                    
+
                     if (metadata.FileType == FileMetadata.Types.TV) {
                         file.Tag.Album = metadata.SeriesName;
                         file.Tag.Disc = (uint) metadata.Season;
@@ -46,33 +54,24 @@ namespace autotag.Core {
                     }
 
                     if (!string.IsNullOrEmpty(metadata.CoverFilename) && config.addCoverArt == true) { // if there is an image available and cover art is enabled
-                        string downloadPath = Path.Combine(Path.GetTempPath(), "autotag");
-                        string downloadFile = Path.Combine(downloadPath, metadata.CoverFilename);
-
-                        if (!File.Exists(downloadFile)) { // only download file if it hasn't already been downloaded
-                            if (!Directory.Exists(downloadPath)) {
-                                Directory.CreateDirectory(downloadPath); // create temp directory
-                            }
-
-                            try {
-                                using (WebClient client = new WebClient()) {
-                                    client.DownloadFile(metadata.CoverURL, downloadFile); // download image
-                                }
-                                file.Tag.Pictures = new TagLib.Picture[] { new TagLib.Picture(downloadFile) { Filename = "cover.jpg" } };
-
-                            } catch (WebException ex) {
+                        if (!_images.ContainsKey(metadata.CoverFilename)) {
+                            var response = await _client.GetAsync(metadata.CoverURL, HttpCompletionOption.ResponseHeadersRead);
+                            if (response.IsSuccessStatusCode) {
+                                _images[metadata.CoverFilename] = await response.Content.ReadAsByteArrayAsync();
+                            } else {
                                 if (config.verbose) {
-                                    setStatus($"Error: Failed to download cover art ({ex.GetType().Name}: {ex.Message})", MessageType.Error);
+                                    setStatus($"Error: failed to download cover art ({(int) response.StatusCode}:{metadata.CoverURL})", MessageType.Error);
                                 } else {
-                                    setStatus("Error: Failed to download cover art", MessageType.Error);
+                                    setStatus($"Error: failed to download cover art", MessageType.Error);
                                 }
                                 fileSuccess = false;
                             }
-                        } else {
-                            // overwrite default file name - allows software such as Icaros to display cover art thumbnails - default isn't compliant with Matroska guidelines
-                            file.Tag.Pictures = new TagLib.Picture[] { new TagLib.Picture(downloadFile) { Filename = "cover.jpg" } };
                         }
-                    } else if (String.IsNullOrEmpty(metadata.CoverFilename) && config.addCoverArt == true) {
+
+                        if (_images.TryGetValue(metadata.CoverFilename, out byte[] imgBytes)) {
+                            file.Tag.Pictures = new TagLib.Picture[] { new TagLib.Picture(imgBytes) { Filename = "cover.jpg" } };
+                        }
+                    } else if (string.IsNullOrEmpty(metadata.CoverFilename) && config.addCoverArt == true) {
                         fileSuccess = false;
                     }
 
@@ -84,7 +83,7 @@ namespace autotag.Core {
 
                 } catch (Exception ex) {
                     if (config.verbose) {
-                        if (file != null && file.CorruptionReasons.ToList().Count > 0) {
+                        if (file != null && file.CorruptionReasons.Any()) {
                             setStatus($"Error: Failed to write tags to file ({ex.GetType().Name}: {ex.Message}; CorruptionReasons: {string.Join(", ", file.CorruptionReasons)})", MessageType.Error);
                         } else {
                             setStatus($"Error: Failed to write tags to file ({ex.GetType().Name}: {ex.Message}", MessageType.Error);
@@ -102,13 +101,7 @@ namespace autotag.Core {
                     newPath = Path.Combine(
                         Path.GetDirectoryName(filePath),
                         EscapeFilename(
-                            String.Format(
-                                GetTVRenamePattern(config),
-                                metadata.SeriesName,
-                                metadata.Season,
-                                metadata.Episode.ToString("00"),
-                                metadata.Title
-                            ),
+                            GetTVFileName(config, metadata.SeriesName, metadata.Season, metadata.Episode, metadata.Title),
                             Path.GetFileNameWithoutExtension(filePath),
                             setStatus
                         )
@@ -118,11 +111,7 @@ namespace autotag.Core {
                     newPath = Path.Combine(
                         Path.GetDirectoryName(filePath),
                         EscapeFilename(
-                            String.Format(
-                                GetMovieRenamePattern(config),
-                                metadata.Title,
-                                metadata.Date.Year
-                            ),
+                            GetMovieFileName(config, metadata.Title, metadata.Date.Year),
                             Path.GetFileNameWithoutExtension(filePath),
                             setStatus
                         )
@@ -163,12 +152,36 @@ namespace autotag.Core {
             return result;
         }
 
-        private static string GetTVRenamePattern(AutoTagConfig config) { // Get usable renaming pattern
-            return config.tvRenamePattern.Replace("%1", "{0}").Replace("%2", "{1}").Replace("%3", "{2}").Replace("%4", "{3}");
+        private static string GetTVFileName(AutoTagConfig config, string series, int season, int episode, string title) {
+            return _renameRegex.Replace(config.tvRenamePattern, (m) => {
+                switch (m.Groups["num"].Value) {
+                    case "1": return series;
+                    case "2": return FormatRenameNumber(m, season);
+                    case "3": return FormatRenameNumber(m, episode);
+                    case "4": return title;
+                    default: return m.Value;
+                }
+            });
         }
 
-        private static string GetMovieRenamePattern(AutoTagConfig config) { // Get usable renaming pattern
-            return config.movieRenamePattern.Replace("%1", "{0}").Replace("%2", "{1}");
+        private static string GetMovieFileName(AutoTagConfig config, string title, int year) {
+            return _renameRegex.Replace(config.movieRenamePattern, (m) => {
+                switch (m.Groups["num"].Value) {
+                    case "1": return title;
+                    case "2": return FormatRenameNumber(m, year);
+                    default: return m.Value;
+                }
+            });
+        }
+
+        private readonly static Regex _renameRegex = new Regex(@"%(?<num>\d+)(?:\:(?<format>[0#]+))?");
+
+        private static string FormatRenameNumber(Match match, int value) {
+            if (match.Groups.ContainsKey("format")) {
+                return value.ToString(match.Groups["format"].Value);
+            } else {
+                return value.ToString();
+            }
         }
 
         private static char[] invalidFilenameChars { get; set; }

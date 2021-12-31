@@ -26,6 +26,10 @@ namespace autotag.Core {
                 }
 
                 if (config.configVer != AutoTagConfig.currentVer) {
+                    if (config.configVer < 5 && config.tvRenamePattern == "%1 - %2x%3 - %4") {
+                        config.tvRenamePattern = "%1 - %2x%3:00 - %4";
+                    }
+
                     // if config file outdated, update it with new options
                     config.configVer = AutoTagConfig.currentVer;
                     Save();

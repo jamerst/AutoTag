@@ -49,6 +49,11 @@ The TV and movie rename patterns are strings used to create the new file name wh
 - `%3`: TV Episode Number
 - `%4`: TV Episode Title
 
+#### Numeric Format Strings
+Numeric variables (TV season/episode and movie year) also support a format string to specify the format of the number. They support the standard numeric format specifiers of `0` and `#`.
+
+Example: to get the name "Series S01E01 Title.mkv", use the format `%1 S%2:00E%3:00 %4`.
+
 ### Regex Pattern
 The custom regex pattern is used on the full file path, not just the file name. This allows AutoTag to tag file structures where the series name is not in the file name, e.g. for the structure `Series/Season 1/S01E01 Title.mkv`.
 
@@ -65,18 +70,18 @@ The `--extended-tagging` option adds additional information to Matroska video fi
 ## Config
 AutoTag creates a config file to store default preferences at `~/.config/autotag/conf.json` or `%APPDATA%\Roaming\autotag\conf.json`. A different config file can be specified using the `-c` option. If the file does not exist, a file will be created with the default settings:
 ```
-"configVer": 3,                         // Internal use
-"mode": 0,                              // Default tagging mode, 0 = TV, 1 = Movie
-"manualMode": false,                    // Manual tagging mode
-"verbose": false,                       // Verbose output
-"addCoverArt": true,                    // Add cover art to files
-"tagFiles": true,                       // Write tags to files
-"renameFiles": true,                    // Rename files
-"tvRenamePattern": "%1 - %2x%3 - %4",   // Pattern to rename TV files, %1 = Series Name, %2 = Season, %3 = Episode, %4 = Episode Title
-"movieRenamePattern": "%1 (%2)",        // Pattern to rename movie files, %1 = Title, %2 = Year
-"parsePattern": "",                     // Custom regex to parse TV episode information
-"windowsSafe": false                    // Remove any invalid Windows file name characters
-"extendedTagging": false                // Add more information to Matroska file tags
+"configVer": 5,                           // Internal use
+"mode": 0,                                // Default tagging mode, 0 = TV, 1 = Movie
+"manualMode": false,                      // Manual tagging mode
+"verbose": false,                         // Verbose output
+"addCoverArt": true,                      // Add cover art to files
+"tagFiles": true,                         // Write tags to files
+"renameFiles": true,                      // Rename files
+"tvRenamePattern": "%1 - %2x%3:00 - %4",  // Pattern to rename TV files, %1 = Series Name, %2 = Season, %3 = Episode, %4 = Episode Title
+"movieRenamePattern": "%1 (%2)",          // Pattern to rename movie files, %1 = Title, %2 = Year
+"parsePattern": "",                       // Custom regex to parse TV episode information
+"windowsSafe": false                      // Remove any invalid Windows file name characters
+"extendedTagging": false                  // Add more information to Matroska file tags
 ```
 
 ## Moving away from TheTVDB

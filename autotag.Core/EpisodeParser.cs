@@ -23,11 +23,11 @@ namespace autotag.Core {
                 var endEpisode = ExtractEndEpisode(match.Groups["EndEpisode"], int.Parse(episode));
                 var releaseGroup = match.Groups["ReleaseGroup"].Value;
 
-                if (String.IsNullOrWhiteSpace(seriesName)) {
+                if (string.IsNullOrWhiteSpace(seriesName)) {
                     throw new FormatException("Unable to parse series name from filename");
-                } else if (String.IsNullOrWhiteSpace(season)) {
+                } else if (string.IsNullOrWhiteSpace(season)) {
                     throw new FormatException("Unable to parse season from filename");
-                } else if (String.IsNullOrWhiteSpace(episode)) {
+                } else if (string.IsNullOrWhiteSpace(episode)) {
                     throw new FormatException("Unable to parse episode from filename");
                 }
 
@@ -43,7 +43,7 @@ namespace autotag.Core {
         }
 
         private static int ExtractEndEpisode(Capture endEpisodeGroup, int episode) {
-            return !String.IsNullOrEmpty(endEpisodeGroup.Value) ? int.Parse(endEpisodeGroup.Value) : episode;
+            return !string.IsNullOrEmpty(endEpisodeGroup.Value) ? int.Parse(endEpisodeGroup.Value) : episode;
         }
     }
 }

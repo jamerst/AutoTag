@@ -30,7 +30,7 @@ namespace autotag.Core {
             string filePath,
             Action<string> setPath,
             Action<string, MessageType> setStatus,
-            Func<List<(string, string)>, int> selectResult,
+            Func<List<(string, string)>, int?> selectResult,
             AutoTagConfig config
         ) {
             FileMetadata result = new FileMetadata(FileMetadata.Types.TV);
@@ -78,10 +78,15 @@ namespace autotag.Core {
                     .ToList();
 
                 if (config.manualMode) {
-                    int chosen = selectResult(seriesResults
+                    int? chosen = selectResult(seriesResults
                         .Select(t => (t.Name, t.FirstAirDate?.Year.ToString() ?? "Unknown")).ToList());
 
-                    _shows.Add(episodeData.SeriesName, new List<SearchTv> { seriesResults[chosen] });
+                    if (chosen.HasValue) {
+                        _shows.Add(episodeData.SeriesName, new List<SearchTv> { seriesResults[chosen.Value] });
+                    } else {
+                        setStatus("File skipped", MessageType.Warning);
+                        return true;
+                    }
                 } else if (seriesResults.Count == 0) {
                     setStatus($"Error: Cannot find series {episodeData.SeriesName} on TheMovieDB", MessageType.Error);
                     result.Success = false;
@@ -135,7 +140,7 @@ namespace autotag.Core {
                     Genres = await _tmdb.GetTvGenresAsync();
                 }
                 result.Genres = show.GenreIds.Select(gId => Genres.First(g => g.Id == gId).Name).ToArray();
-                
+
                 if (config.extendedTagging) {
                     result.Director = episodeResult.Crew.FirstOrDefault(c => c.Job == "Director")?.Name;
 
@@ -152,9 +157,9 @@ namespace autotag.Core {
                 if (_seasonPosters.TryGetValue((result.SeriesName, result.Season), out string url)) {
                     result.CoverURL = url;
                 } else {
-                    ImagesWithId seriesImages = await _tmdb.GetTvShowImagesAsync(result.Id, $"{CultureInfo.CurrentCulture.TwoLetterISOLanguageName},null");
+                    ImagesWithId seriesImages = await _tmdb.GetTvShowImagesAsync(result.Id.Value, $"{CultureInfo.CurrentCulture.TwoLetterISOLanguageName},null");
 
-                    if (seriesImages.Posters.Count > 0) {
+                    if (seriesImages.Posters.Any()) {
                         seriesImages.Posters.OrderByDescending(p => p.VoteAverage);
 
                         result.CoverURL = $"https://image.tmdb.org/t/p/original/{seriesImages.Posters[0].FilePath}";
@@ -169,7 +174,7 @@ namespace autotag.Core {
 
             result.CoverFilename = result.CoverURL?.Split('/').Last();
 
-            bool taggingSuccess = FileWriter.write(filePath, result, setPath, setStatus, config);
+            bool taggingSuccess = await FileWriter.Write(filePath, result, setPath, setStatus, config);
 
             return taggingSuccess && result.Success && result.Complete;
         }

@@ -6,7 +6,7 @@ namespace autotag.Core {
 
         // Common fields
         public Types FileType;
-        public int Id;
+        public int? Id;
         public string Title;
         public string Overview;
         public string CoverURL;
@@ -35,7 +35,7 @@ namespace autotag.Core {
 
         public override string ToString() {
             if (FileType == Types.TV) {
-                if (!String.IsNullOrEmpty(Title)) {
+                if (!string.IsNullOrEmpty(Title)) {
                     return $"{SeriesName} S{Season.ToString("00")}E{Episode.ToString("00")} ({Title})";
                 } else {
                     return $"{SeriesName} S{Season.ToString("00")}E{Episode.ToString("00")}";

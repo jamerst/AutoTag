@@ -68,7 +68,7 @@ namespace autotag.cli {
                 settings.Save();
             }
 
-            if (RemainingArguments.Length == 0) {
+            if (!RemainingArguments.Any()) {
                 Console.Error.WriteLine("No files provided");
                 Environment.Exit(1);
             }
@@ -81,15 +81,16 @@ namespace autotag.cli {
             }
 
             AddFiles(RemainingArguments);
+
+            if (!files.Any()) {
+                Console.Error.WriteLine("No files found");
+                Environment.Exit(1);
+            }
+
             files.Sort((x,y) => x.Path.CompareTo(y.Path));
 
-            Action<string> setPath = p => { return; };
-            Action<string, MessageType> setStatus = (s, t) => SetStatus(s, t);
-
-            Func<List<(string,string)>, int> choose = (results) => ChooseResult(results);
-
             for (index = 0; index < files.Count; index++) {
-                success = success & await processor.Process(files[index].Path, setPath, setStatus, choose, settings.config);
+                success &= await processor.Process(files[index].Path, p => {}, SetStatus, ChooseResult, settings.config);
             }
 
             Console.ResetColor();
@@ -162,9 +163,9 @@ namespace autotag.cli {
 
         }
 
-        private int ChooseResult(List<(string, string)> results) {
+        private int? ChooseResult(List<(string, string)> results) {
             Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine("    Please choose a series:");
+            Console.WriteLine("    Please choose an option, or press enter to skip file:");
             Console.ResetColor();
             for (int i = 0; i < results.Count; i++) {
                 Console.ForegroundColor = ConsoleColor.Cyan;
@@ -172,19 +173,28 @@ namespace autotag.cli {
             }
             Console.ResetColor();
 
-            return InputResult(results.Count);
+            int? choice = null;
+            bool inputSuccess = false;
+            while (!inputSuccess) {
+                choice = InputResult(results.Count, out inputSuccess);
+            }
+
+            return choice;
         }
 
-        private int InputResult(int count) {
+        private int? InputResult(int count, out bool success) {
+            success = true;
             Console.Write($"    Choose an option [0-{count - 1}]: ");
             string choice = Console.ReadLine();
 
             int chosen;
             if (int.TryParse(choice, out chosen) && chosen >= 0 && chosen < count) {
                 return chosen;
-            } else {
-                return InputResult(count);
+            } else if (!string.IsNullOrEmpty(choice)) { // if entry is either not a number or out of range
+                success = false;
             }
+
+            return null;
         }
 
         private void AddFiles(string[] paths) {
