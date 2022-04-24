@@ -38,7 +38,7 @@ namespace autotag.Core {
             #region Filename parsing
             FileMetadata episodeData;
 
-            if (string.IsNullOrEmpty(config.parsePattern)) {
+            if (string.IsNullOrEmpty(config.ParsePattern)) {
                 try {
                     episodeData = EpisodeParser.ParseEpisodeInfo(Path.GetFileName(filePath)); // Parse info from filename
                 } catch (FormatException ex) {
@@ -47,14 +47,14 @@ namespace autotag.Core {
                 }
             } else {
                 try {
-                    var match = Regex.Match(Path.GetFullPath(filePath), config.parsePattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+                    var match = Regex.Match(Path.GetFullPath(filePath), config.ParsePattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
                     episodeData = new FileMetadata(FileMetadata.Types.TV);
                     episodeData.SeriesName = match.Groups["SeriesName"].Value;
                     episodeData.Season = int.Parse(match.Groups["Season"].Value);
                     episodeData.Episode = int.Parse(match.Groups["Episode"].Value);
                 } catch (FormatException ex) {
-                    if (config.verbose) {
+                    if (config.Verbose) {
                         setStatus($"Error: Unable to parse required information from filename ({ex.GetType().Name}: {ex.Message})", MessageType.Error);
                     } else {
                         setStatus($"Error: Unable to parse required information from filename", MessageType.Error);
@@ -77,7 +77,7 @@ namespace autotag.Core {
                     .OrderByDescending(result => SeriesNameSimilarity(episodeData.SeriesName, result.Name))
                     .ToList();
 
-                if (config.manualMode) {
+                if (config.ManualMode) {
                     int? chosen = selectResult(seriesResults
                         .Select(t => (t.Name, t.FirstAirDate?.Year.ToString() ?? "Unknown")).ToList());
 
@@ -141,7 +141,7 @@ namespace autotag.Core {
                 }
                 result.Genres = show.GenreIds.Select(gId => Genres.First(g => g.Id == gId).Name).ToArray();
 
-                if (config.extendedTagging) {
+                if (config.ExtendedTagging) {
                     result.Director = episodeResult.Crew.FirstOrDefault(c => c.Job == "Director")?.Name;
 
                     var credits = await _tmdb.GetTvEpisodeCreditsAsync(show.Id, result.Season, result.Episode);
@@ -153,7 +153,7 @@ namespace autotag.Core {
 
             setStatus($"Found {episodeData} ({result.Title}) on TheMovieDB", MessageType.Information);
 
-            if (config.addCoverArt && string.IsNullOrEmpty(result.CoverURL)) {
+            if (config.AddCoverArt && string.IsNullOrEmpty(result.CoverURL)) {
                 if (_seasonPosters.TryGetValue((result.SeriesName, result.Season), out string url)) {
                     result.CoverURL = url;
                 } else {

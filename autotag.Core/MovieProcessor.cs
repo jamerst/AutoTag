@@ -71,7 +71,7 @@ namespace autotag.Core {
 
             int selected = 0;
 
-            if (searchResults.Results.Count > 1 && (!searchResults.Results[0].Title.Equals(title, StringComparison.InvariantCultureIgnoreCase) || config.manualMode)) {
+            if (searchResults.Results.Count > 1 && (!searchResults.Results[0].Title.Equals(title, StringComparison.InvariantCultureIgnoreCase) || config.ManualMode)) {
                 int? selection = selectResult(
                     searchResults.Results
                         .Select(m => (
@@ -108,7 +108,7 @@ namespace autotag.Core {
             }
             result.Genres = selectedResult.GenreIds.Select(gId => _genres.First(g => g.Id == gId).Name).ToArray();
 
-            if (config.extendedTagging) {
+            if (config.ExtendedTagging) {
                 var credits = await _tmdb.GetMovieCreditsAsync(selectedResult.Id);
 
                 result.Director = credits.Crew.FirstOrDefault(c => c.Job == "Director")?.Name;

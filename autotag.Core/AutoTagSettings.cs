@@ -5,18 +5,20 @@ using System.Text.Encodings.Web;
 
 namespace autotag.Core {
     public class AutoTagSettings {
-        public AutoTagConfig config;
-        public string configPath;
+        public AutoTagConfig Config;
+        private string ConfigPath;
         private readonly JsonSerializerOptions jsonOptions = new JsonSerializerOptions {
             WriteIndented = true,
-            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         };
 
         public AutoTagSettings(string configPath) {
-            this.configPath = configPath;
+            ConfigPath = configPath;
+
             if (File.Exists(configPath)) {
                 try {
-                    config = JsonSerializer.Deserialize<AutoTagConfig>(File.ReadAllText(configPath));
+                    Config = JsonSerializer.Deserialize<AutoTagConfig>(File.ReadAllText(configPath));
                 } catch (JsonException) {
                     Console.Error.WriteLine($"Error parsing config file '{configPath}'");
                 } catch (UnauthorizedAccessException) {
@@ -25,13 +27,13 @@ namespace autotag.Core {
                     Console.Error.WriteLine($"Error reading config file '{configPath}': {e.Message}");
                 }
 
-                if (config.configVer != AutoTagConfig.currentVer) {
-                    if (config.configVer < 5 && config.tvRenamePattern == "%1 - %2x%3 - %4") {
-                        config.tvRenamePattern = "%1 - %2x%3:00 - %4";
+                if (Config.ConfigVer != AutoTagConfig.CurrentVer) {
+                    if (Config.ConfigVer < 5 && Config.TVRenamePattern == "%1 - %2x%3 - %4") {
+                        Config.TVRenamePattern = "%1 - %2x%3:00 - %4";
                     }
 
                     // if config file outdated, update it with new options
-                    config.configVer = AutoTagConfig.currentVer;
+                    Config.ConfigVer = AutoTagConfig.CurrentVer;
                     Save();
                 }
             } else {
@@ -48,7 +50,7 @@ namespace autotag.Core {
                 }
 
                 try {
-                    config = JsonSerializer.Deserialize<AutoTagConfig>(File.ReadAllText(configPath));
+                    Config = JsonSerializer.Deserialize<AutoTagConfig>(File.ReadAllText(configPath));
                 } catch (JsonException) {
                     Console.Error.WriteLine($"Error parsing config file '{configPath}'");
                 } catch (UnauthorizedAccessException) {
@@ -61,7 +63,7 @@ namespace autotag.Core {
 
         public void Save() {
             try {
-                    File.WriteAllText(configPath, JsonSerializer.Serialize<AutoTagConfig>(config, jsonOptions));
+                    File.WriteAllText(ConfigPath, JsonSerializer.Serialize<AutoTagConfig>(Config, jsonOptions));
                 } catch (UnauthorizedAccessException) {
                     Console.Error.WriteLine("Config file not writeable");
                 } catch (Exception) {

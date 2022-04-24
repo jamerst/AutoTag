@@ -5,7 +5,6 @@ using System.Linq;
 using System.Net.Http;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-
 namespace autotag.Core {
     public class FileWriter {
         private readonly static HttpClient _client = new HttpClient();
@@ -13,11 +12,11 @@ namespace autotag.Core {
 
         public static async Task<bool> Write(string filePath, FileMetadata metadata, Action<string> setPath, Action<string, MessageType> setStatus, AutoTagConfig config) {
             bool fileSuccess = true;
-            if (config.tagFiles) {
+            if (config.TagFiles) {
                 if (invalidFilenameChars == null) {
                     invalidFilenameChars = Path.GetInvalidFileNameChars();
 
-                    if (config.windowsSafe) {
+                    if (config.WindowsSafe) {
                         invalidFilenameChars = invalidFilenameChars.Union(invalidNtfsChars).ToArray();
                     }
                 }
@@ -33,7 +32,7 @@ namespace autotag.Core {
                         file.Tag.Genres = metadata.Genres;
                     }
 
-                    if (config.extendedTagging && file.MimeType == "video/x-matroska") {
+                    if (config.ExtendedTagging && file.MimeType == "video/x-matroska") {
                         if (metadata.FileType == FileMetadata.Types.TV && metadata.Id.HasValue) {
                             var custom = (TagLib.Matroska.Tag)file.GetTag(TagLib.TagTypes.Matroska);
                             custom.Set("TMDB", "", $"tv/{metadata.Id}");
@@ -49,17 +48,51 @@ namespace autotag.Core {
                         file.Tag.Disc = (uint) metadata.Season;
                         file.Tag.Track = (uint) metadata.Episode;
                         file.Tag.TrackCount = (uint) metadata.SeasonEpisodes;
+
+                        // set extra tags because Apple is stupid and uses different tags for some reason
+                        // for a list of tags see https://kdenlive.org/en/project/adding-meta-data-to-mp4-video/
+                        if (config.AppleTagging && file.MimeType.EndsWith("/mp4")) {
+                            var appleTags = (TagLib.Mpeg4.AppleTag) file.GetTag(TagLib.TagTypes.Apple);
+
+                            // Media Type - allows Apple software to recognise as a TV show
+                            // for a list of values see http://www.zoyinc.com/?p=1004
+                            appleTags.SetData("stik", new TagLib.ByteVector(_stikTVShow), (uint) TagLib.Mpeg4.AppleDataBox.FlagType.ContainsData);
+
+                            // Series
+                            appleTags.SetText("tvsh", metadata.SeriesName);
+
+                            if (metadata.Season >= byte.MinValue && metadata.Season <= byte.MaxValue) {
+                                // Season number
+                                appleTags.SetData("tvsn", new TagLib.ByteVector((byte) metadata.Season), (uint) TagLib.Mpeg4.AppleDataBox.FlagType.ContainsData);
+                            } else {
+                                setStatus($"Warning: cannot add Apple tag for season number - value out of range", MessageType.Warning);
+                            }
+
+                            if (metadata.Episode >= byte.MinValue && metadata.Episode <= byte.MaxValue) {
+                                // Episode number
+                                appleTags.SetData("tves", new TagLib.ByteVector((byte) metadata.Episode), (uint) TagLib.Mpeg4.AppleDataBox.FlagType.ContainsData);
+                            } else {
+                                setStatus($"Warning: cannot add Apple tag for episode number - value out of range", MessageType.Warning);
+                            }
+                        }
                     } else {
                         file.Tag.Year = (uint) metadata.Date.Year;
+
+                        if (config.AppleTagging && file.MimeType.EndsWith("/mp4")) {
+                            var appleTags = (TagLib.Mpeg4.AppleTag) file.GetTag(TagLib.TagTypes.Apple);
+
+                            // Media Type - allows Apple software to recognise as a movie
+                            appleTags.SetData("stik", new TagLib.ByteVector(_stikMovie), (uint) TagLib.Mpeg4.AppleDataBox.FlagType.ContainsData);
+                        }
                     }
 
-                    if (!string.IsNullOrEmpty(metadata.CoverFilename) && config.addCoverArt == true) { // if there is an image available and cover art is enabled
+                    if (!string.IsNullOrEmpty(metadata.CoverFilename) && config.AddCoverArt == true) { // if there is an image available and cover art is enabled
                         if (!_images.ContainsKey(metadata.CoverFilename)) {
                             var response = await _client.GetAsync(metadata.CoverURL, HttpCompletionOption.ResponseHeadersRead);
                             if (response.IsSuccessStatusCode) {
                                 _images[metadata.CoverFilename] = await response.Content.ReadAsByteArrayAsync();
                             } else {
-                                if (config.verbose) {
+                                if (config.Verbose) {
                                     setStatus($"Error: failed to download cover art ({(int) response.StatusCode}:{metadata.CoverURL})", MessageType.Error);
                                 } else {
                                     setStatus($"Error: failed to download cover art", MessageType.Error);
@@ -71,7 +104,7 @@ namespace autotag.Core {
                         if (_images.TryGetValue(metadata.CoverFilename, out byte[] imgBytes)) {
                             file.Tag.Pictures = new TagLib.Picture[] { new TagLib.Picture(imgBytes) { Filename = "cover.jpg" } };
                         }
-                    } else if (string.IsNullOrEmpty(metadata.CoverFilename) && config.addCoverArt == true) {
+                    } else if (string.IsNullOrEmpty(metadata.CoverFilename) && config.AddCoverArt == true) {
                         fileSuccess = false;
                     }
 
@@ -82,7 +115,7 @@ namespace autotag.Core {
                     }
 
                 } catch (Exception ex) {
-                    if (config.verbose) {
+                    if (config.Verbose) {
                         if (file != null && file.CorruptionReasons.Any()) {
                             setStatus($"Error: Failed to write tags to file ({ex.GetType().Name}: {ex.Message}; CorruptionReasons: {string.Join(", ", file.CorruptionReasons)})", MessageType.Error);
                         } else {
@@ -95,9 +128,9 @@ namespace autotag.Core {
                 }
             }
 
-            if (config.renameFiles) {
+            if (config.RenameFiles) {
                 string newPath;
-                if (config.mode == 0) {
+                if (config.Mode == 0) {
                     newPath = Path.Combine(
                         Path.GetDirectoryName(filePath),
                         EscapeFilename(
@@ -130,7 +163,7 @@ namespace autotag.Core {
                             setStatus($"Successfully renamed file to '{Path.GetFileName(newPath)}'", MessageType.Information);
                         }
                     } catch (Exception ex) {
-                        if (config.verbose) {
+                        if (config.Verbose) {
                             setStatus($"Error: Failed to rename file ({ex.GetType().Name}: {ex.Message})", MessageType.Error);
                         } else {
                             setStatus("Error: Failed to rename file", MessageType.Error);
@@ -153,7 +186,7 @@ namespace autotag.Core {
         }
 
         private static string GetTVFileName(AutoTagConfig config, string series, int season, int episode, string title) {
-            return _renameRegex.Replace(config.tvRenamePattern, (m) => {
+            return _renameRegex.Replace(config.TVRenamePattern, (m) => {
                 switch (m.Groups["num"].Value) {
                     case "1": return series;
                     case "2": return FormatRenameNumber(m, season);
@@ -165,7 +198,7 @@ namespace autotag.Core {
         }
 
         private static string GetMovieFileName(AutoTagConfig config, string title, int year) {
-            return _renameRegex.Replace(config.movieRenamePattern, (m) => {
+            return _renameRegex.Replace(config.MovieRenamePattern, (m) => {
                 switch (m.Groups["num"].Value) {
                     case "1": return title;
                     case "2": return FormatRenameNumber(m, year);
@@ -187,5 +220,8 @@ namespace autotag.Core {
         private static char[] invalidFilenameChars { get; set; }
 
         private readonly static char[] invalidNtfsChars = { '<', '>', ':', '"', '/', '\\', '|', '?', '*' };
+
+        private const byte _stikTVShow = 10;
+        private const byte _stikMovie = 9;
     }
 }

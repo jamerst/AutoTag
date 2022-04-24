@@ -10,8 +10,8 @@
             "request": "launch",
             "preLaunchTask": "build",
             // If you have changed target frameworks, make sure to update the program path.
-            "program": "${workspaceFolder}/autotag.cli/bin/Debug/net5.0/autotag.dll",
-            "args": [],
+            "program": "${workspaceFolder}/autotag.cli/bin/Debug/net6.0/autotag.dll",
+            "args": ["--apple-tagging","Star Trek: Lower Decks - 2x10 - First First Contact.mp4"],
             "cwd": "${workspaceFolder}/autotag.cli",
             // For more information about the 'console' field, see https://aka.ms/VSCode-CS-LaunchJson-Console
             "console": "internalConsole",

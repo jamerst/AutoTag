@@ -30,39 +30,42 @@ namespace autotag.cli {
             settings = new AutoTagSettings(configPath);
 
             if (tv) {
-                settings.config.mode = AutoTagConfig.Modes.TV;
+                settings.Config.Mode = AutoTagConfig.Modes.TV;
             } else if (movie) {
-                settings.config.mode = AutoTagConfig.Modes.Movie;
+                settings.Config.Mode = AutoTagConfig.Modes.Movie;
             }
             if (noRename) {
-                settings.config.renameFiles = false;
+                settings.Config.RenameFiles = false;
             }
             if (noTag) {
-                settings.config.tagFiles = false;
+                settings.Config.TagFiles = false;
             }
             if (noCoverArt) {
-                settings.config.addCoverArt = false;
+                settings.Config.AddCoverArt = false;
             }
             if (manualMode) {
-                settings.config.manualMode = true;
+                settings.Config.ManualMode = true;
             }
             if (!string.IsNullOrEmpty(tvRenamePattern)) {
-                settings.config.tvRenamePattern = tvRenamePattern;
+                settings.Config.TVRenamePattern = tvRenamePattern;
             }
             if (!string.IsNullOrEmpty(movieRenamePattern)) {
-                settings.config.movieRenamePattern = movieRenamePattern;
+                settings.Config.MovieRenamePattern = movieRenamePattern;
             }
             if (!string.IsNullOrEmpty(pattern)) {
-                settings.config.parsePattern = pattern;
+                settings.Config.ParsePattern = pattern;
             }
             if (windowsSafe) {
-                settings.config.windowsSafe = true;
+                settings.Config.WindowsSafe = true;
             }
             if (extendedTagging) {
-                settings.config.extendedTagging = true;
+                settings.Config.ExtendedTagging = true;
+            }
+            if (appleTagging) {
+                settings.Config.AppleTagging = true;
             }
             if (verbose) {
-                settings.config.verbose = true;
+                settings.Config.Verbose = true;
             }
             if (setDefault) {
                 settings.Save();
@@ -74,7 +77,7 @@ namespace autotag.cli {
             }
 
             IProcessor processor;
-            if (settings.config.mode == AutoTagConfig.Modes.TV) {
+            if (settings.Config.Mode == AutoTagConfig.Modes.TV) {
                 processor = new TVProcessor(Keys.TMDBKey);
             } else {
                 processor = new MovieProcessor(Keys.TMDBKey);
@@ -90,7 +93,7 @@ namespace autotag.cli {
             files.Sort((x,y) => x.Path.CompareTo(y.Path));
 
             for (index = 0; index < files.Count; index++) {
-                success &= await processor.Process(files[index].Path, p => {}, SetStatus, ChooseResult, settings.config);
+                success &= await processor.Process(files[index].Path, p => {}, SetStatus, ChooseResult, settings.Config);
             }
 
             Console.ResetColor();
@@ -201,15 +204,15 @@ namespace autotag.cli {
             foreach (string path in paths) {
                 if (File.Exists(path) || Directory.Exists(path)) {
                     if (File.GetAttributes(path).HasFlag(FileAttributes.Directory)) {
-                        if (settings.config.verbose) Console.WriteLine($"Adding all files in directory '{path}'");
+                        if (settings.Config.Verbose) Console.WriteLine($"Adding all files in directory '{path}'");
                         AddFiles(Directory.GetFileSystemEntries(path));
                     } else if (!files.Any(f => Path.GetFullPath(f.Path) == Path.GetFullPath(path))) {
                         if (supportedExtensions.Contains(Path.GetExtension(path))) {
                             // add file if not already added and has a supported file extension
                             files.Add(new TaggingFile { Path = path });
-                            if (settings.config.verbose) Console.WriteLine($"Adding file '{path}'");
+                            if (settings.Config.Verbose) Console.WriteLine($"Adding file '{path}'");
                         } else {
-                            if (settings.config.verbose) Console.Error.WriteLine($"Unsupported file: '{path}'");
+                            if (settings.Config.Verbose) Console.Error.WriteLine($"Unsupported file: '{path}'");
                         }
                     }
                 } else {
@@ -259,6 +262,9 @@ namespace autotag.cli {
 
         [Option("--extended-tagging", "Add more information to Matroska file tags. Reduces tagging speed.", CommandOptionType.NoValue)]
         private bool extendedTagging { get; set; }
+
+        [Option("--apple-tagging", "Add extra tags to mp4 files for use with Apple devices and software", CommandOptionType.NoValue)]
+        private bool appleTagging { get; set; }
 
         [Option(Description = "Enable verbose output mode")]
         private bool verbose { get; set; }

@@ -34,6 +34,7 @@ Options:
   -p|--pattern <PATTERN>          Custom regex to parse TV episode information
   --windows-safe                  Remove invalid Windows file name characters when renaming
   --extended-tagging              Add more information to Matroska file tags. Reduces tagging speed.
+  --apple-tagging                 Add extra tags to mp4 files for use with Apple devices and software
   -v|--verbose                    Enable verbose output mode
   --set-default                   Set the current arguments as the default
   --version                       Print version number and exit
@@ -82,6 +83,7 @@ AutoTag creates a config file to store default preferences at `~/.config/autotag
 "parsePattern": "",                       // Custom regex to parse TV episode information
 "windowsSafe": false                      // Remove any invalid Windows file name characters
 "extendedTagging": false                  // Add more information to Matroska file tags
+"appleTagging": false                     // Add extra tags to mp4 files for use with Apple devices and software
 ```
 
 ## Moving away from TheTVDB
