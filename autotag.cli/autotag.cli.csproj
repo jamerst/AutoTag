@@ -16,7 +16,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="McMaster.Extensions.CommandLineUtils" Version="4.0.0" />
+    <PackageReference Include="McMaster.Extensions.CommandLineUtils" Version="4.0.1" />
   </ItemGroup>
 
   <ItemGroup>
@@ -24,9 +24,6 @@
   </ItemGroup>
 
   <Target Name="KeyCheck" BeforeTargets="PrepareForBuild">
-    <Error
-      Condition="!Exists('$(MSBuildProjectDirectory)/Keys.cs')"
-      Text="API keys file missing. Copy 'Keys.cs.template' to 'Keys.cs' and add your API keys before building."
-    />
+    <Error Condition="!Exists('$(MSBuildProjectDirectory)/Keys.cs')" Text="API keys file missing. Copy 'Keys.cs.template' to 'Keys.cs' and add your API keys before building." />
   </Target>
 </Project>
