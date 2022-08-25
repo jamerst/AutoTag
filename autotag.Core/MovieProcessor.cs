@@ -100,7 +100,7 @@ namespace autotag.Core {
             result.Title = selectedResult.Title;
             result.Overview = selectedResult.Overview;
             result.CoverURL = string.IsNullOrEmpty(selectedResult.PosterPath) ? null : $"https://image.tmdb.org/t/p/original{selectedResult.PosterPath}";
-            result.CoverFilename = selectedResult.PosterPath.Replace("/", "");
+            result.CoverFilename = selectedResult.PosterPath?.Replace("/", "");
             result.Date = selectedResult.ReleaseDate.Value;
 
             if (_genres == null) {
