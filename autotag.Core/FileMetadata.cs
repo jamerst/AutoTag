@@ -1,48 +1,59 @@
-﻿using System;
+﻿using System.Text.RegularExpressions;
 
-namespace autotag.Core {
-    public class FileMetadata {
-        public enum Types { TV, Movie };
+namespace autotag.Core;
+public abstract class FileMetadata
+{
+    public int Id;
+    public string Title = null!;
+    public string? Overview;
+    public string? CoverURL;
+    public string? CoverFilename;
+    public bool Success;
+    public bool Complete;
+    public string? Director;
+    public IEnumerable<string>? Actors;
+    public IEnumerable<string>? Characters;
+    public IEnumerable<string> Genres = null!;
 
-        // Common fields
-        public Types FileType;
-        public int? Id;
-        public string Title;
-        public string Overview;
-        public string CoverURL;
-        public string CoverFilename;
-        public bool Success;
-        public bool Complete;
-        public string Director;
-        public string[] Actors;
-        public string[] Characters;
-        public string[] Genres;
+    public FileMetadata()
+    {
+        Success = true;
+        Complete = true;
+    }
 
-        // TV specific fields
-        public string SeriesName;
-        public int Season;
-        public int Episode;
-        public int SeasonEpisodes;
+    public virtual void WriteToFile(TagLib.File file, AutoTagConfig config, Action<string, MessageType> setStatus)
+    {
+        file.Tag.Title = Title;
+        file.Tag.Description = Overview;
 
-        // Movie specific fields
-        public DateTime Date;
-
-        public FileMetadata(Types type) {
-            FileType = type;
-            Success = true;
-            Complete = true;
+        if (Genres != null && Genres.Any())
+        {
+            file.Tag.Genres = Genres.ToArray();
         }
 
-        public override string ToString() {
-            if (FileType == Types.TV) {
-                if (!string.IsNullOrEmpty(Title)) {
-                    return $"{SeriesName} S{Season.ToString("00")}E{Episode.ToString("00")} ({Title})";
-                } else {
-                    return $"{SeriesName} S{Season.ToString("00")}E{Episode.ToString("00")}";
-                }
-            } else {
-                return $"{Title} ({Date.Year})";
-            }
+        if (config.ExtendedTagging && file.MimeType == "video/x-matroska")
+        {
+            file.Tag.Conductor = Director;
+            file.Tag.Performers = Actors?.ToArray();
+            file.Tag.PerformersRole = Characters?.ToArray();
         }
     }
+
+    public abstract string GetFileName(AutoTagConfig config);
+
+    protected readonly static Regex _renameRegex = new Regex(@"%(?<num>\d+)(?:\:(?<format>[0#]+))?");
+
+    protected static string FormatRenameNumber(Match match, int value)
+    {
+        if (match.Groups.ContainsKey("format"))
+        {
+            return value.ToString(match.Groups["format"].Value);
+        }
+        else
+        {
+            return value.ToString();
+        }
+    }
+
+    public override abstract string ToString();
 }
