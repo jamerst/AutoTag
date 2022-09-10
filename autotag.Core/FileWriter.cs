@@ -12,25 +12,16 @@ public class FileWriter : IDisposable
         _cache = new MemoryCache(new MemoryCacheOptions());
     }
 
-    public async Task<bool> WriteAsync(string filePath, FileMetadata metadata, Action<string> setPath, Action<string, MessageType> setStatus, AutoTagConfig config)
+    public async Task<bool> WriteAsync(TaggingFile taggingFile, FileMetadata metadata, Action<string> setPath, Action<string, MessageType> setStatus, AutoTagConfig config)
     {
         bool fileSuccess = true;
-        if (config.TagFiles)
+
+        if (config.TagFiles && taggingFile.Taggable)
         {
-            if (invalidFilenameChars == null)
-            {
-                invalidFilenameChars = Path.GetInvalidFileNameChars();
-
-                if (config.WindowsSafe)
-                {
-                    invalidFilenameChars = invalidFilenameChars.Union(invalidNtfsChars).ToArray();
-                }
-            }
-
             TagLib.File? file = null;
             try
             {
-                using (file = TagLib.File.Create(filePath))
+                using (file = TagLib.File.Create(taggingFile.Path))
                 {
                     metadata.WriteToFile(file, config, setStatus);
 
@@ -98,44 +89,67 @@ public class FileWriter : IDisposable
 
         if (config.RenameFiles)
         {
-            string newPath = Path.Combine(
-                Path.GetDirectoryName(filePath)!,
-                EscapeFilename(
-                    metadata.GetFileName(config),
-                    Path.GetFileNameWithoutExtension(filePath),
-                    setStatus
-                )
-                + Path.GetExtension(filePath)
-            );
-
-            if (filePath != newPath)
+            if (invalidFilenameChars == null)
             {
-                try
+                invalidFilenameChars = Path.GetInvalidFileNameChars();
+
+                if (config.WindowsSafe)
                 {
-                    if (File.Exists(newPath))
-                    {
-                        setStatus("Error: Could not rename - file already exists", MessageType.Error);
-                        fileSuccess = false;
-                    }
-                    else
-                    {
-                        File.Move(filePath, newPath);
-                        setPath(newPath);
-                        setStatus($"Successfully renamed file to '{Path.GetFileName(newPath)}'", MessageType.Information);
-                    }
+                    invalidFilenameChars = invalidFilenameChars.Union(invalidNtfsChars).ToArray();
                 }
-                catch (Exception ex)
+            }
+
+            fileSuccess &= RenameFile(taggingFile.Path, metadata.GetFileName(config), setPath, setStatus, config, null);
+
+            if (!string.IsNullOrEmpty(taggingFile.SubtitlePath))
+            {
+                fileSuccess &= RenameFile(taggingFile.SubtitlePath, metadata.GetFileName(config), setPath, setStatus, config, "subtitle ");
+            }
+        }
+
+        return fileSuccess;
+    }
+
+    private static bool RenameFile(string path, string newName, Action<string> setPath, Action<string, MessageType> setStatus, AutoTagConfig config, string? prefix)
+    {
+        bool fileSuccess = true;
+        string newPath = Path.Combine(
+            Path.GetDirectoryName(path)!,
+            EscapeFilename(
+                newName,
+                Path.GetFileNameWithoutExtension(path),
+                setStatus
+            )
+            + Path.GetExtension(path)
+        );
+
+        if (path != newPath)
+        {
+            try
+            {
+                if (File.Exists(newPath))
                 {
-                    if (config.Verbose)
-                    {
-                        setStatus($"Error: Failed to rename file ({ex.GetType().Name}: {ex.Message})", MessageType.Error);
-                    }
-                    else
-                    {
-                        setStatus("Error: Failed to rename file", MessageType.Error);
-                    }
+                    setStatus($"Error: Could not rename - {prefix}file already exists", MessageType.Error);
                     fileSuccess = false;
                 }
+                else
+                {
+                    File.Move(path, newPath);
+                    setPath(newPath);
+                    setStatus($"Successfully renamed {prefix}file to '{Path.GetFileName(newPath)}'", MessageType.Information);
+                }
+            }
+            catch (Exception ex)
+            {
+                if (config.Verbose)
+                {
+                    setStatus($"Error: Failed to rename {prefix}file ({ex.GetType().Name}: {ex.Message})", MessageType.Error);
+                }
+                else
+                {
+                    setStatus($"Error: Failed to rename {prefix}file", MessageType.Error);
+                }
+                fileSuccess = false;
             }
         }
 
@@ -156,6 +170,8 @@ public class FileWriter : IDisposable
     private static char[]? invalidFilenameChars { get; set; }
 
     private readonly static char[] invalidNtfsChars = { '<', '>', ':', '"', '/', '\\', '|', '?', '*' };
+
+    private readonly static string[] subtitleFileExtensions = { ".srt", ".vtt", ".sub", ".ssa" };
 
     public void Dispose()
     {

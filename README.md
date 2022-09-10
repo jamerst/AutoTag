@@ -16,6 +16,7 @@ This is because building cross-platform user interfaces with .NET Core is still 
 - Manual tagging mode
 - Full Linux support (and presumably macOS?)
 - Supports mp4 and mkv containers
+- Subtitle file renaming
 
 ## Usage
 ```
@@ -25,7 +26,7 @@ Options:
   -t|--tv                         TV tagging mode
   -m|--movie                      Movie tagging mode
   -c|--config-path <CONFIG_PATH>  Specify config file to load
-  --no-rename                     Disable file renaming
+  --no-rename                     Disable file and subtitle renaming
   --no-tag                        Disable file tagging
   --no-cover                      Disable cover art tagging
   --manual                        Manually choose the series to tag from search results
@@ -35,6 +36,7 @@ Options:
   --windows-safe                  Remove invalid Windows file name characters when renaming
   --extended-tagging              Add more information to Matroska file tags. Reduces tagging speed.
   --apple-tagging                 Add extra tags to mp4 files for use with Apple devices and software
+  --rename-subs                   Rename subtitle files
   -v|--verbose                    Enable verbose output mode
   --set-default                   Set the current arguments as the default
   --version                       Print version number and exit
@@ -71,7 +73,7 @@ The `--extended-tagging` option adds additional information to Matroska video fi
 ## Config
 AutoTag creates a config file to store default preferences at `~/.config/autotag/conf.json` or `%APPDATA%\Roaming\autotag\conf.json`. A different config file can be specified using the `-c` option. If the file does not exist, a file will be created with the default settings:
 ```
-"configVer": 5,                           // Internal use
+"configVer": 7,                           // Internal use
 "mode": 0,                                // Default tagging mode, 0 = TV, 1 = Movie
 "manualMode": false,                      // Manual tagging mode
 "verbose": false,                         // Verbose output
@@ -81,9 +83,10 @@ AutoTag creates a config file to store default preferences at `~/.config/autotag
 "tvRenamePattern": "%1 - %2x%3:00 - %4",  // Pattern to rename TV files, %1 = Series Name, %2 = Season, %3 = Episode, %4 = Episode Title
 "movieRenamePattern": "%1 (%2)",          // Pattern to rename movie files, %1 = Title, %2 = Year
 "parsePattern": "",                       // Custom regex to parse TV episode information
-"windowsSafe": false                      // Remove any invalid Windows file name characters
-"extendedTagging": false                  // Add more information to Matroska file tags
-"appleTagging": false                     // Add extra tags to mp4 files for use with Apple devices and software
+"windowsSafe": false,                     // Remove any invalid Windows file name characters
+"extendedTagging": false,                 // Add more information to Matroska file tags
+"appleTagging": false,                    // Add extra tags to mp4 files for use with Apple devices and software
+"renameSubtitles": false                  // Rename subtitle files
 ```
 
 ## Moving away from TheTVDB

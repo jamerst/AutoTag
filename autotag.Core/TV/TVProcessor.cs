@@ -24,7 +24,7 @@ public class TVProcessor : IProcessor, IDisposable
     }
 
     public async Task<bool> ProcessAsync(
-        string filePath,
+        TaggingFile file,
         Action<string> setPath,
         Action<string, MessageType> setStatus,
         Func<List<(string, string)>, int?> selectResult,
@@ -41,7 +41,7 @@ public class TVProcessor : IProcessor, IDisposable
         {
             try
             {
-                episodeData = EpisodeParser.ParseEpisodeInfo(Path.GetFileName(filePath)); // Parse info from filename
+                episodeData = EpisodeParser.ParseEpisodeInfo(Path.GetFileName(file.Path)); // Parse info from filename
             }
             catch (FormatException ex)
             {
@@ -53,7 +53,7 @@ public class TVProcessor : IProcessor, IDisposable
         {
             try
             {
-                var match = Regex.Match(Path.GetFullPath(filePath), config.ParsePattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+                var match = Regex.Match(Path.GetFullPath(file.Path), config.ParsePattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
                 episodeData = new TVFileMetadata();
                 episodeData.SeriesName = match.Groups["SeriesName"].Value;
@@ -177,7 +177,7 @@ public class TVProcessor : IProcessor, IDisposable
             }
             result.Genres = show.GenreIds.Select(gId => Genres.First(g => g.Id == gId).Name).ToArray();
 
-            if (config.ExtendedTagging)
+            if (config.ExtendedTagging && file.Taggable)
             {
                 result.Director = episodeResult.Crew.FirstOrDefault(c => c.Job == "Director")?.Name;
 
@@ -190,7 +190,7 @@ public class TVProcessor : IProcessor, IDisposable
 
         setStatus($"Found {episodeData} ({result.Title}) on TheMovieDB", MessageType.Information);
 
-        if (config.AddCoverArt && string.IsNullOrEmpty(result.CoverURL))
+        if (config.AddCoverArt && string.IsNullOrEmpty(result.CoverURL) && file.Taggable)
         {
             if (_seasonPosters.TryGetValue((result.SeriesName, result.Season), out string? url))
             {
@@ -218,7 +218,7 @@ public class TVProcessor : IProcessor, IDisposable
 
         result.CoverFilename = result.CoverURL?.Split('/').Last();
 
-        bool taggingSuccess = await writer.WriteAsync(filePath, result, setPath, setStatus, config);
+        bool taggingSuccess = await writer.WriteAsync(file, result, setPath, setStatus, config);
 
         return taggingSuccess && result.Success && result.Complete;
     }
@@ -235,6 +235,6 @@ public class TVProcessor : IProcessor, IDisposable
 
     public void Dispose()
     {
-        // _tmdb.Dispose();
+        _tmdb.Dispose();
     }
 }

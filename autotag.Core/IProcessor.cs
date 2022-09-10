@@ -2,7 +2,7 @@ namespace autotag.Core;
 public interface IProcessor : IDisposable
 {
     Task<bool> ProcessAsync(
-        string filePath,
+        TaggingFile file,
         Action<string> setPath,
         Action<string, MessageType> setStatus,
         Func<List<(string, string)>, int?> selectResult,

@@ -74,6 +74,10 @@ class Program
         {
             settings.Config.AppleTagging = true;
         }
+        if (renameSubtitles)
+        {
+            settings.Config.RenameSubtitles = true;
+        }
         if (verbose)
         {
             settings.Config.Verbose = true;
@@ -89,8 +93,23 @@ class Program
             Environment.Exit(1);
         }
 
-        List<TaggingFile> files = FindFiles(RemainingArguments)
-            .DistinctBy(f => f.Path)
+        IEnumerable<string> supportedExtensions = videoExtensions;
+        if (settings.Config.RenameSubtitles)
+        {
+            supportedExtensions = supportedExtensions.Concat(subtitleExtensions);
+        }
+
+        var tempFiles = FindFiles(RemainingArguments, supportedExtensions)
+            .DistinctBy(f => f.Path);
+
+        if (settings.Config.RenameSubtitles && string.IsNullOrEmpty(settings.Config.ParsePattern))
+        {
+            tempFiles = tempFiles
+                .GroupBy(f => Path.GetFileNameWithoutExtension(f.Path))
+                .SelectMany(f => FindSubtitles(f));
+        }
+
+        List<TaggingFile> files = tempFiles
             .OrderBy(f => f.Path)
             .ToList();
 
@@ -111,7 +130,7 @@ class Program
                 Console.WriteLine($"\n{file.Path}:");
                 Console.ResetColor();
 
-                success &= await processor.ProcessAsync(file.Path, p => { }, (s, t) => SetStatus(file, s, t), ChooseResult, settings.Config, writer);
+                success &= await processor.ProcessAsync(file, p => { }, (s, t) => SetStatus(file, s, t), ChooseResult, settings.Config, writer);
             }
         }
 
@@ -240,7 +259,7 @@ class Program
         return null;
     }
 
-    private IEnumerable<TaggingFile> FindFiles(IEnumerable<string> paths)
+    private IEnumerable<TaggingFile> FindFiles(IEnumerable<string> paths, IEnumerable<string> supportedExtensions)
     {
         foreach (string path in paths)
         {
@@ -253,7 +272,7 @@ class Program
                         Console.WriteLine($"Adding all files in directory '{path}'");
                     }
 
-                    foreach (var file in FindFiles(Directory.GetFileSystemEntries(path)))
+                    foreach (var file in FindFiles(Directory.GetFileSystemEntries(path), supportedExtensions))
                     {
                         yield return file;
                     }
@@ -266,7 +285,11 @@ class Program
                         Console.WriteLine($"Adding file '{path}'");
                     }
 
-                    yield return new TaggingFile { Path = path };
+                    yield return new TaggingFile
+                    {
+                        Path = path,
+                        Taggable = videoExtensions.Contains(Path.GetExtension(path))
+                    };
                 }
                 else if (settings.Config.Verbose)
                 {
@@ -276,6 +299,51 @@ class Program
             else
             {
                 Console.Error.WriteLine($"Path not found: {path}");
+            }
+        }
+    }
+
+    public IEnumerable<TaggingFile> FindSubtitles(IGrouping<string, TaggingFile> files)
+    {
+        if (files.Count() == 1)
+        {
+            yield return files.First();
+        }
+        else if (files.Count(f => videoExtensions.Contains(Path.GetExtension(f.Path))) > 1
+            || files.Count(f => subtitleExtensions.Contains(Path.GetExtension(f.Path))) > 1)
+        {
+            if (settings.Config.Verbose)
+            {
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine($@"Warning, detected multiple files named ""{files.Key}"", files will be processed separately");
+                Console.ResetColor();
+            }
+
+            foreach (var f in files)
+            {
+                yield return f;
+            }
+        }
+        else
+        {
+            string? videoPath = files.FirstOrDefault(f => videoExtensions.Contains(Path.GetExtension(f.Path)))?.Path;
+            string? subPath = files.FirstOrDefault(f => subtitleExtensions.Contains(Path.GetExtension(f.Path)))?.Path;
+
+            if (videoPath != null)
+            {
+                yield return new TaggingFile
+                {
+                    Path = videoPath,
+                    SubtitlePath = subPath
+                };
+            }
+            else if (subPath != null)
+            {
+                yield return new TaggingFile
+                {
+                    Path = subPath,
+                    Taggable = false
+                };
             }
         }
     }
@@ -295,7 +363,7 @@ class Program
         "conf.json"
     );
 
-    [Option("--no-rename", "Disable file renaming", CommandOptionType.NoValue)]
+    [Option("--no-rename", "Disable file and subtitle renaming", CommandOptionType.NoValue)]
     private bool noRename { get; set; }
 
     [Option("--no-tag", "Disable file tagging", CommandOptionType.NoValue)]
@@ -325,6 +393,9 @@ class Program
     [Option("--apple-tagging", "Add extra tags to mp4 files for use with Apple devices and software", CommandOptionType.NoValue)]
     private bool appleTagging { get; set; }
 
+    [Option("--rename-subs", "Rename subtitle files", CommandOptionType.NoValue)]
+    private bool renameSubtitles { get; set; }
+
     [Option(Description = "Enable verbose output mode")]
     private bool verbose { get; set; }
 
@@ -334,5 +405,7 @@ class Program
     [Option("--version", "Print version number and exit", CommandOptionType.NoValue)]
     private bool version { get; set; }
     private string[] RemainingArguments { get; } = null!;
-    private static readonly string[] supportedExtensions = new string[] { ".mp4", ".m4v", ".mkv" };
+
+    private static readonly string[] videoExtensions = { ".mp4", ".m4v", ".mkv" };
+    private static readonly string[] subtitleExtensions = { ".srt", ".vtt", ".sub", ".ssa" };
 }

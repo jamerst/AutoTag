@@ -17,7 +17,7 @@ public class MovieProcessor : IProcessor, IDisposable
     }
 
     public async Task<bool> ProcessAsync(
-        string filePath,
+        TaggingFile file,
         Action<string> setPath,
         Action<string, MessageType> setStatus,
         Func<List<(string, string)>, int?> selectResult,
@@ -40,7 +40,7 @@ public class MovieProcessor : IProcessor, IDisposable
                 "\\.(mp4|m4v|mkv)$" + // file extensions
             ")";
 
-        Match match = Regex.Match(Path.GetFileName(filePath), pattern);
+        Match match = Regex.Match(Path.GetFileName(file.Path), pattern);
         string title, year;
         if (match.Success)
         {
@@ -127,7 +127,7 @@ public class MovieProcessor : IProcessor, IDisposable
         }
         result.Genres = selectedResult.GenreIds.Select(gId => _genres.First(g => g.Id == gId).Name).ToList();
 
-        if (config.ExtendedTagging)
+        if (config.ExtendedTagging && file.Taggable)
         {
             var credits = await _tmdb.GetMovieCreditsAsync(selectedResult.Id);
 
@@ -142,7 +142,7 @@ public class MovieProcessor : IProcessor, IDisposable
             result.Complete = false;
         }
 
-        bool taggingSuccess = await writer.WriteAsync(filePath, result, setPath, setStatus, config);
+        bool taggingSuccess = await writer.WriteAsync(file, result, setPath, setStatus, config);
 
         return taggingSuccess && result.Success && result.Complete;
     }

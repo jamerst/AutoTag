@@ -3,8 +3,8 @@
     <AssemblyName>autotag</AssemblyName>
     <OutputType>Exe</OutputType>
     <TargetFramework>net6.0</TargetFramework>
-    <AssemblyVersion>3.3.2.0</AssemblyVersion>
-    <Version>3.3.2</Version>
+    <AssemblyVersion>3.4.0.0</AssemblyVersion>
+    <Version>3.4.0</Version>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
