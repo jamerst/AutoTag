@@ -2,7 +2,7 @@ namespace autotag.Core;
 public class AutoTagConfig
 {
     public enum Modes { TV, Movie };
-    public const int CurrentVer = 7;
+    public const int CurrentVer = 8;
     public int ConfigVer { get; set; } = CurrentVer;
     public Modes Mode { get; set; } = Modes.TV;
     public bool ManualMode { get; set; } = false;
@@ -17,6 +17,7 @@ public class AutoTagConfig
     public bool ExtendedTagging { get; set; } = false;
     public bool AppleTagging { get; set; } = false;
     public bool RenameSubtitles { get; set; } = false;
+    public string Language { get; set; } = "en";
 
     public bool IsTVMode() => Mode == Modes.TV;
 }

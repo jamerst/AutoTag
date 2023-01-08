@@ -18,9 +18,11 @@ public class TVProcessor : IProcessor, IDisposable
         new Dictionary<(string, int), string>();
     private IEnumerable<Genre> Genres = Enumerable.Empty<Genre>();
 
-    public TVProcessor(string apiKey)
+    public TVProcessor(string apiKey, AutoTagConfig config)
     {
-        this._tmdb = new TMDbClient(apiKey);
+        _tmdb = new TMDbClient(apiKey);
+        _tmdb.DefaultLanguage = config.Language;
+        _tmdb.DefaultImageLanguage = config.Language;
     }
 
     public async Task<bool> ProcessAsync(

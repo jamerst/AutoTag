@@ -37,6 +37,7 @@ Options:
   --extended-tagging              Add more information to Matroska file tags. Reduces tagging speed.
   --apple-tagging                 Add extra tags to mp4 files for use with Apple devices and software
   --rename-subs                   Rename subtitle files
+  -l|--language                   Metadata language
   -v|--verbose                    Enable verbose output mode
   --set-default                   Set the current arguments as the default
   --version                       Print version number and exit
@@ -70,10 +71,13 @@ The `--windows-safe` option is for use on Linux where the files written may be a
 ### Extended Tagging
 The `--extended-tagging` option adds additional information to Matroska video files such as actors and their characters. This option is not enabled by default because it may reduce tagging speed significantly due to the additional API requests needed.
 
+### Language
+The language of the metadata can be set using the `-l` or `--language` option. This accepts a [ISO 639-1 language code](https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes) with optional [ISO 3166 alpha-2 country code](https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2) for regional variants. E.g., to get metadata in German use `-l de`, or for Brazilian Portuguese use `-l pt-BR`. Note that the data for other languages is probably less complete than it is for English. If data in a given language is not available it will fall back to some alternative, likely English.
+
 ## Config
 AutoTag creates a config file to store default preferences at `~/.config/autotag/conf.json` or `%APPDATA%\Roaming\autotag\conf.json`. A different config file can be specified using the `-c` option. If the file does not exist, a file will be created with the default settings:
 ```
-"configVer": 7,                           // Internal use
+"configVer": 8,                           // Internal use
 "mode": 0,                                // Default tagging mode, 0 = TV, 1 = Movie
 "manualMode": false,                      // Manual tagging mode
 "verbose": false,                         // Verbose output
@@ -86,7 +90,8 @@ AutoTag creates a config file to store default preferences at `~/.config/autotag
 "windowsSafe": false,                     // Remove any invalid Windows file name characters
 "extendedTagging": false,                 // Add more information to Matroska file tags
 "appleTagging": false,                    // Add extra tags to mp4 files for use with Apple devices and software
-"renameSubtitles": false                  // Rename subtitle files
+"renameSubtitles": false,                 // Rename subtitle files
+"language": "en"                          // Metadata language
 ```
 
 ## Moving away from TheTVDB

@@ -78,6 +78,10 @@ class Program
         {
             settings.Config.RenameSubtitles = true;
         }
+        if (!string.IsNullOrEmpty(language))
+        {
+            settings.Config.Language = language;
+        }
         if (verbose)
         {
             settings.Config.Verbose = true;
@@ -122,8 +126,10 @@ class Program
         }
 
         using (FileWriter writer = new FileWriter())
-        using (IProcessor processor = settings.Config.IsTVMode() ? new TVProcessor(Keys.TMDBKey) : new MovieProcessor(Keys.TMDBKey))
-        {
+        using (IProcessor processor = settings.Config.IsTVMode()
+            ? new TVProcessor(Keys.TMDBKey, settings.Config)
+            : new MovieProcessor(Keys.TMDBKey, settings.Config)
+        ) {
             foreach (var file in files)
             {
                 Console.ForegroundColor = ConsoleColor.Magenta;
@@ -395,6 +401,9 @@ class Program
 
     [Option("--rename-subs", "Rename subtitle files", CommandOptionType.NoValue)]
     private bool renameSubtitles { get; set; }
+
+    [Option(Description = "Metadata language")]
+    public string? language { get; set; }
 
     [Option(Description = "Enable verbose output mode")]
     private bool verbose { get; set; }

@@ -11,9 +11,11 @@ public class MovieProcessor : IProcessor, IDisposable
     private readonly TMDbClient _tmdb;
     private IEnumerable<Genre> _genres = Enumerable.Empty<Genre>();
 
-    public MovieProcessor(string apiKey)
+    public MovieProcessor(string apiKey, AutoTagConfig config)
     {
-        this._tmdb = new TMDbClient(apiKey);
+        _tmdb = new TMDbClient(apiKey);
+        _tmdb.DefaultLanguage = config.Language;
+        _tmdb.DefaultImageLanguage = config.Language;
     }
 
     public async Task<bool> ProcessAsync(

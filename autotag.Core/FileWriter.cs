@@ -26,10 +26,10 @@ public class FileWriter : IDisposable
                     metadata.WriteToFile(file, config, setStatus);
 
                     // if there is an image available and cover art is enabled
-                    if (!string.IsNullOrEmpty(metadata.CoverFilename) && config.AddCoverArt == true)
+                    if (!string.IsNullOrEmpty(metadata.CoverURL) && config.AddCoverArt == true)
                     {
                         byte[] imgBytes;
-                        if (!_cache.TryGetValue<byte[]>(metadata.CoverURL, out imgBytes))
+                        if (!_cache.TryGetValue<byte[]>(metadata.CoverURL, out imgBytes!))
                         {
                             var response = await _client.GetAsync(metadata.CoverURL, HttpCompletionOption.ResponseHeadersRead);
                             if (response.IsSuccessStatusCode)
@@ -53,7 +53,7 @@ public class FileWriter : IDisposable
 
                         file.Tag.Pictures = new[] { new TagLib.Picture(imgBytes) { Filename = "cover.jpg" } };
                     }
-                    else if (string.IsNullOrEmpty(metadata.CoverFilename) && config.AddCoverArt == true)
+                    else if (string.IsNullOrEmpty(metadata.CoverURL) && config.AddCoverArt == true)
                     {
                         fileSuccess = false;
                     }
