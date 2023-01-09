@@ -12,8 +12,6 @@ public class CommandLineOptionAttribute<T> : Attribute
     private bool DefaultValueProvided { get; set; }
     public T? DefaultValue { get; set; }
 
-    public bool UseInitialValueAsDefault { get; set; }
-
     [SetsRequiredMembers]
     public CommandLineOptionAttribute(string name, string description)
     {
