@@ -1,4 +1,4 @@
-namespace autotag.Core.TV;
+namespace AutoTag.Core.TV;
 
 public class TVFileMetadata : FileMetadata
 {

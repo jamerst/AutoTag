@@ -20,28 +20,33 @@ This is because building cross-platform user interfaces with .NET Core is still 
 
 ## Usage
 ```
-Usage: autotag [options] [paths]
+Usage:
+  autotag [<paths>...] [options]
+
+Arguments:
+  <paths>  Files or directories to process
 
 Options:
-  -t|--tv                         TV tagging mode
-  -m|--movie                      Movie tagging mode
-  -c|--config-path <CONFIG_PATH>  Specify config file to load
-  --no-rename                     Disable file and subtitle renaming
-  --no-tag                        Disable file tagging
-  --no-cover                      Disable cover art tagging
-  --manual                        Manually choose the series to tag from search results
-  --tv-pattern <PATTERN>          Rename pattern for TV episodes
-  --movie-pattern <PATTERN>       Rename pattern for movies
-  -p|--pattern <PATTERN>          Custom regex to parse TV episode information
-  --windows-safe                  Remove invalid Windows file name characters when renaming
-  --extended-tagging              Add more information to Matroska file tags. Reduces tagging speed.
-  --apple-tagging                 Add extra tags to mp4 files for use with Apple devices and software
-  --rename-subs                   Rename subtitle files
-  -l|--language                   Metadata language
-  -v|--verbose                    Enable verbose output mode
-  --set-default                   Set the current arguments as the default
-  --version                       Print version number and exit
-  -?|-h|--help                    Show help information
+  -t, --tv                         TV tagging mode
+  -m, --movie                      Movie tagging mode
+  --no-tag                         Disable file tagging
+  --no-cover                       Disable cover art tagging
+  --manual                         Manually choose the TV series for a file from search results
+  --extended-tagging               Add more information to Matroska file tags. Reduces tagging speed.
+  --apple-tagging                  Add extra tags to mp4 files for use with Apple devices and software
+  -l, --language <language>        Metadata language [default: en]
+  --no-rename                      Disable file and subtitle renaming
+  --tv-pattern <tv-pattern>        Rename pattern for TV episodes
+  --movie-pattern <movie-pattern>  Rename pattern for movies
+  --windows-safe                   Remove invalid Windows file name characters when renaming
+  --rename-subs                    Rename subtitle files
+  -c, --config <config>            Config file path
+  -p, --pattern <pattern>          Custom regex to parse TV episode information
+  -v, --verbose                    Enable verbose output mode
+  --set-default                    Set the current arguments as the default
+  --print-config                   Print loaded configuration and exit
+  --version                        Show version information
+  -?, -h, --help                   Show help and usage information
 
 ```
 
@@ -114,4 +119,3 @@ Build file sizes are quite large due to bundled .NET runtimes.
 - File tagging provided by [taglib-sharp](https://github.com/mono/taglib-sharp)
 - TheMovieDB API support provided by [TMDbLib](https://github.com/LordMike/TMDbLib)
 - Data sourced from [themoviedb.org](https://www.themoviedb.org/) using their free API
-- Command-line interface built using [CommandLineUtils](https://github.com/natemcmaster/CommandLineUtils)

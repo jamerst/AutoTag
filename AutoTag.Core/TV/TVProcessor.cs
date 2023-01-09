@@ -6,7 +6,7 @@ using TMDbLib.Objects.General;
 using TMDbLib.Objects.Search;
 using TMDbLib.Objects.TvShows;
 
-namespace autotag.Core.TV;
+namespace AutoTag.Core.TV;
 public class TVProcessor : IProcessor, IDisposable
 {
     private readonly TMDbClient _tmdb;

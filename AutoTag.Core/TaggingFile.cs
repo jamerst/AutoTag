@@ -1,4 +1,4 @@
-namespace autotag.Core;
+namespace AutoTag.Core;
 public class TaggingFile
 {
     public string Path { get; set; } = null!;

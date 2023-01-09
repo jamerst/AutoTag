@@ -7,7 +7,7 @@
             "type": "process",
             "args": [
                 "build",
-                "${workspaceFolder}/autotag.cli/autotag.cli.csproj",
+                "${workspaceFolder}/AutoTag.CLI/AutoTag.CLI.csproj",
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary"
             ],
@@ -19,7 +19,7 @@
             "type": "process",
             "args": [
                 "publish",
-                "${workspaceFolder}/autotag.cli/autotag.cli.csproj",
+                "${workspaceFolder}/AutoTag.CLI/AutoTag.CLI.csproj",
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary"
             ],
@@ -32,7 +32,7 @@
             "args": [
                 "watch",
                 "run",
-                "${workspaceFolder}/autotag.cli/autotag.cli.csproj",
+                "${workspaceFolder}/AutoTag.CLI/AutoTag.CLI.csproj",
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary"
             ],

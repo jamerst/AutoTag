@@ -5,7 +5,7 @@ using TMDbLib.Objects.General;
 using TMDbLib.Objects.Search;
 
 
-namespace autotag.Core.Movie;
+namespace AutoTag.Core.Movie;
 public class MovieProcessor : IProcessor, IDisposable
 {
     private readonly TMDbClient _tmdb;

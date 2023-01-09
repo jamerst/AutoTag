@@ -1,4 +1,4 @@
-namespace autotag.Core;
+namespace AutoTag.Core;
 public class AutoTagConfig
 {
     public enum Modes { TV, Movie };
@@ -12,7 +12,7 @@ public class AutoTagConfig
     public bool RenameFiles { get; set; } = true;
     public string TVRenamePattern { get; set; } = "%1 - %2x%3:00 - %4";
     public string MovieRenamePattern { get; set; } = "%1 (%2)";
-    public string ParsePattern { get; set; } = "";
+    public string? ParsePattern { get; set; }
     public bool WindowsSafe { get; set; } = false;
     public bool ExtendedTagging { get; set; } = false;
     public bool AppleTagging { get; set; } = false;

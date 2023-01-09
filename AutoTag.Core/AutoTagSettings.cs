@@ -1,12 +1,12 @@
 using System.Text.Json;
 using System.Text.Encodings.Web;
 
-namespace autotag.Core;
+namespace AutoTag.Core;
 public class AutoTagSettings
 {
     public AutoTagConfig Config;
     private string ConfigPath;
-    private readonly JsonSerializerOptions jsonOptions = new JsonSerializerOptions
+    private static readonly JsonSerializerOptions jsonOptions = new JsonSerializerOptions
     {
         WriteIndented = true,
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,

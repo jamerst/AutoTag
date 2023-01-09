@@ -1,23 +1,31 @@
-using autotag.Core;
-using autotag.Core.Movie;
-using autotag.Core.TV;
+using AutoTag.Core.Movie;
+using AutoTag.Core.TV;
 
-namespace autotag.cli;
+namespace AutoTag.CLI;
 
 public class Processor
 {
-    /*public async Task ProcessAsync(AutoTagConfig config)
+    private readonly AutoTagConfig Config;
+    private bool Success = true;
+    private int Warnings = 0;
+
+    public Processor(AutoTagConfig config)
+    {
+        Config = config;
+    }
+
+    public async Task<int> ProcessAsync(IEnumerable<FileSystemInfo> entries)
     {
         IEnumerable<string> supportedExtensions = videoExtensions;
-        if (config.RenameSubtitles)
+        if (Config.RenameSubtitles)
         {
             supportedExtensions = supportedExtensions.Concat(subtitleExtensions);
         }
 
-        var tempFiles = FindFiles(RemainingArguments, supportedExtensions)
+        var tempFiles = FindFiles(entries, supportedExtensions)
             .DistinctBy(f => f.Path);
 
-        if (settings.Config.RenameSubtitles && string.IsNullOrEmpty(settings.Config.ParsePattern))
+        if (Config.RenameSubtitles && string.IsNullOrEmpty(Config.ParsePattern))
         {
             tempFiles = tempFiles
                 .GroupBy(f => Path.GetFileNameWithoutExtension(f.Path))
@@ -33,13 +41,13 @@ public class Processor
         if (!files.Any())
         {
             Console.Error.WriteLine("No files found");
-            Environment.Exit(1);
+            return 1;
         }
 
         using (FileWriter writer = new FileWriter())
-        using (IProcessor processor = settings.Config.IsTVMode()
-            ? new TVProcessor(Keys.TMDBKey, settings.Config)
-            : new MovieProcessor(Keys.TMDBKey, settings.Config)
+        using (IProcessor processor = Config.IsTVMode()
+            ? new TVProcessor(Keys.TMDBKey, Config)
+            : new MovieProcessor(Keys.TMDBKey, Config)
         ) {
             foreach (var file in files)
             {
@@ -47,15 +55,15 @@ public class Processor
                 Console.WriteLine($"\n{file.Path}:");
                 Console.ResetColor();
 
-                success &= await processor.ProcessAsync(file, p => { }, (s, t) => SetStatus(file, s, t), ChooseResult, settings.Config, writer);
+                Success &= await processor.ProcessAsync(file, p => { }, (s, t) => SetStatus(file, s, t), ChooseResult, Config, writer);
             }
         }
 
         Console.ResetColor();
 
-        if (success)
+        if (Success)
         {
-            if (warnings == 0)
+            if (Warnings == 0)
             {
                 Console.ForegroundColor = ConsoleColor.Green;
                 Console.WriteLine($"\n\n{(fileCount > 1 ? $"All {fileCount} files" : "File")} successfully processed.");
@@ -63,10 +71,10 @@ public class Processor
             else
             {
                 Console.ForegroundColor = ConsoleColor.Yellow;
-                Console.WriteLine($"\n\n{(fileCount > 1 ? $"All {fileCount} files" : "File")} successfully processed with {warnings} warning{(warnings > 1 ? "s" : "")}.");
+                Console.WriteLine($"\n\n{(fileCount > 1 ? $"All {fileCount} files" : "File")} successfully processed with {Warnings} warning{(Warnings > 1 ? "s" : "")}.");
             }
             Console.ResetColor();
-            Environment.Exit(0);
+            return 0;
         }
         else
         {
@@ -74,7 +82,7 @@ public class Processor
 
             if (failedFiles < fileCount)
             {
-                if (warnings == 0)
+                if (Warnings == 0)
                 {
                     Console.ForegroundColor = ConsoleColor.Green;
                     Console.WriteLine($"\n\n{fileCount - failedFiles} file{(fileCount - failedFiles > 1 ? "s" : "")} successfully processed.");
@@ -82,7 +90,7 @@ public class Processor
                 else
                 {
                     Console.ForegroundColor = ConsoleColor.Yellow;
-                    Console.WriteLine($"\n\n{fileCount - failedFiles} file{(fileCount - failedFiles > 1 ? "s" : "")} successfully processed with {warnings} warning{(warnings > 1 ? "s" : "")}.");
+                    Console.WriteLine($"\n\n{fileCount - failedFiles} file{(fileCount - failedFiles > 1 ? "s" : "")} successfully processed with {Warnings} warning{(Warnings > 1 ? "s" : "")}.");
                 }
 
                 Console.ForegroundColor = ConsoleColor.DarkRed;
@@ -102,7 +110,7 @@ public class Processor
             }
 
             Console.ResetColor();
-            Environment.Exit(1);
+            return 1;
         }
     }
 
@@ -114,7 +122,7 @@ public class Processor
         }
         else if (type == MessageType.Error)
         {
-            success = false;
+            Success = false;
             file.Success = false;
             Console.ForegroundColor = ConsoleColor.Red;
             file.Status = status;
@@ -127,7 +135,7 @@ public class Processor
         if (type == MessageType.Warning)
         {
             Console.ForegroundColor = ConsoleColor.Yellow;
-            warnings++;
+            Warnings++;
         }
 
         Console.WriteLine($"    {file.Status}");
@@ -176,46 +184,46 @@ public class Processor
         return null;
     }
 
-    private IEnumerable<TaggingFile> FindFiles(IEnumerable<string> paths, IEnumerable<string> supportedExtensions)
+    private IEnumerable<TaggingFile> FindFiles(IEnumerable<FileSystemInfo> entries, IEnumerable<string> supportedExtensions)
     {
-        foreach (string path in paths)
+        foreach (var entry in entries)
         {
-            if (File.Exists(path) || Directory.Exists(path))
+            if (entry.Exists)
             {
-                if (File.GetAttributes(path).HasFlag(FileAttributes.Directory))
+                if (entry is DirectoryInfo directory)
                 {
-                    if (settings.Config.Verbose)
+                    if (Config.Verbose)
                     {
-                        Console.WriteLine($"Adding all files in directory '{path}'");
+                        Console.WriteLine($"Adding all files in directory '{directory}'");
                     }
 
-                    foreach (var file in FindFiles(Directory.GetFileSystemEntries(path), supportedExtensions))
+                    foreach (var file in FindFiles(directory.GetFileSystemInfos(), supportedExtensions))
                     {
                         yield return file;
                     }
                 }
-                else if (supportedExtensions.Contains(Path.GetExtension(path)))
+                else if (entry is FileInfo file && supportedExtensions.Contains(file.Extension))
                 {
                     // add file if not already added and has a supported file extension
-                    if (settings.Config.Verbose)
+                    if (Config.Verbose)
                     {
-                        Console.WriteLine($"Adding file '{path}'");
+                        Console.WriteLine($"Adding file '{file}'");
                     }
 
                     yield return new TaggingFile
                     {
-                        Path = path,
-                        Taggable = videoExtensions.Contains(Path.GetExtension(path))
+                        Path = file.FullName,
+                        Taggable = videoExtensions.Contains(file.Extension)
                     };
                 }
-                else if (settings.Config.Verbose)
+                else if (Config.Verbose)
                 {
-                    Console.Error.WriteLine($"Unsupported file: '{path}'");
+                    Console.Error.WriteLine($"Unsupported file: '{entry}'");
                 }
             }
             else
             {
-                Console.Error.WriteLine($"Path not found: {path}");
+                Console.Error.WriteLine($"Path not found: {entry}");
             }
         }
     }
@@ -229,7 +237,7 @@ public class Processor
         else if (files.Count(f => videoExtensions.Contains(Path.GetExtension(f.Path))) > 1
             || files.Count(f => subtitleExtensions.Contains(Path.GetExtension(f.Path))) > 1)
         {
-            if (settings.Config.Verbose)
+            if (Config.Verbose)
             {
                 Console.ForegroundColor = ConsoleColor.Yellow;
                 Console.WriteLine($@"Warning, detected multiple files named ""{files.Key}"", files will be processed separately");
@@ -266,5 +274,5 @@ public class Processor
     }
 
     private static readonly string[] videoExtensions = { ".mp4", ".m4v", ".mkv" };
-    private static readonly string[] subtitleExtensions = { ".srt", ".vtt", ".sub", ".ssa" };*/
+    private static readonly string[] subtitleExtensions = { ".srt", ".vtt", ".sub", ".ssa" };
 }

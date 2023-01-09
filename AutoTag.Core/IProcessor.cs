@@ -1,4 +1,4 @@
-namespace autotag.Core;
+namespace AutoTag.Core;
 public interface IProcessor : IDisposable
 {
     Task<bool> ProcessAsync(

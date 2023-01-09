@@ -1,6 +1,6 @@
 using System.Text.RegularExpressions;
 
-namespace autotag.Core.TV;
+namespace AutoTag.Core.TV;
 public class EpisodeParser
 {
     // Based on SubtitleFetcher's filename parsing

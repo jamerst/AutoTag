@@ -1,6 +1,6 @@
 ﻿using System.Text.RegularExpressions;
 
-namespace autotag.Core;
+namespace AutoTag.Core;
 public abstract class FileMetadata
 {
     public int Id;

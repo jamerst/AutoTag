@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Caching.Memory;
 
-namespace autotag.Core;
+namespace AutoTag.Core;
 public class FileWriter : IDisposable
 {
     private readonly static HttpClient _client = new HttpClient();

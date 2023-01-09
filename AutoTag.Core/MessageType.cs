@@ -1,4 +1,4 @@
-namespace autotag.Core;
+namespace AutoTag.Core;
 public enum MessageType
 {
     Information,

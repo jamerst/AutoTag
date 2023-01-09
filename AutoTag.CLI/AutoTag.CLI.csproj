@@ -14,16 +14,15 @@
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <SelfContained>true</SelfContained>
     <PublishTrimmed>true</PublishTrimmed>
-    <TrimMode>Link</TrimMode>
+    <TrimMode>partial</TrimMode>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="McMaster.Extensions.CommandLineUtils" Version="4.0.2" />
     <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\autotag.Core\autotag.Core.csproj" />
+    <ProjectReference Include="..\AutoTag.Core\AutoTag.Core.csproj" />
   </ItemGroup>
 
   <Target Name="KeyCheck" BeforeTargets="PrepareForBuild">

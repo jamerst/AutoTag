@@ -3,9 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.26124.0
 MinimumVisualStudioVersion = 15.0.26124.0
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "autotag.Core", "autotag.Core\autotag.Core.csproj", "{01D319B4-C0F1-421B-B65D-B854CD6AD76E}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AutoTag.Core", "AutoTag.Core\AutoTag.Core.csproj", "{01D319B4-C0F1-421B-B65D-B854CD6AD76E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "autotag.cli", "autotag.cli\autotag.cli.csproj", "{3EB7244A-0C0C-4F74-9A0F-EBB2F63156B5}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AutoTag.cli", "AutoTag.cli\AutoTag.cli.csproj", "{3EB7244A-0C0C-4F74-9A0F-EBB2F63156B5}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

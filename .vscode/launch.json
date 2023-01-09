@@ -10,8 +10,8 @@
             "request": "launch",
             "preLaunchTask": "build",
             // If you have changed target frameworks, make sure to update the program path.
-            "program": "${workspaceFolder}/autotag.cli/bin/Debug/net6.0/autotag.dll",
-            "args": ["/home/james/Desktop/test", "--rename-subs"],
+            "program": "${workspaceFolder}/autotag.cli/bin/Debug/net7.0/autotag.dll",
+            "args": ["/home/james/Desktop/test", "/home/james/Desktop/Inside No, 9 S02E02.mkv", "-v"],
             "cwd": "${workspaceFolder}/autotag.cli",
             // For more information about the 'console' field, see https://aka.ms/VSCode-CS-LaunchJson-Console
             "console": "internalConsole",
