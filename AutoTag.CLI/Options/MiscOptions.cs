@@ -8,8 +8,8 @@ public class MiscOptions : OptionsBase<MiscOptions>, IOptionsBase<MiscOptions>
     [CommandLineOption<string>("--pattern", "-p", "Custom regex to parse TV episode information")]
     public string? ParsePattern { get; set; }
 
-    [CommandLineOption<bool>("--verbose", "-v", "Enable verbose output mode")]
-    public bool Verbose { get; set; }
+    [CommandLineOption<bool?>("--verbose", "-v", "Enable verbose output mode")]
+    public bool? Verbose { get; set; }
 
     [CommandLineOption<bool>("--set-default", "Set the current arguments as the default")]
     public bool SetDefault { get; set; }
@@ -38,9 +38,8 @@ public class MiscOptions : OptionsBase<MiscOptions>, IOptionsBase<MiscOptions>
 
     public void UpdateConfig(AutoTagConfig config)
     {
-        config.ParsePattern = ParsePattern;
-
-        config.Verbose = Verbose;
+        config.ParsePattern = string.IsNullOrWhiteSpace(ParsePattern) ? config.ParsePattern : ParsePattern;
+        config.Verbose = Verbose ?? config.Verbose;
     }
 
     private static string GetDefaultConfigPath() => Path.Combine(

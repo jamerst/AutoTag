@@ -2,19 +2,19 @@ namespace AutoTag.CLI.Options;
 
 public class RenameOptions : OptionsBase<RenameOptions>, IOptionsBase<RenameOptions>
 {
-    [CommandLineOption<bool>("--no-rename", "Disable file and subtitle renaming")]
-    public bool NoRename { get; set; }
+    [CommandLineOption<bool?>("--no-rename", "Disable file and subtitle renaming")]
+    public bool? NoRename { get; set; }
 
     [CommandLineOption<string>("--tv-pattern", "Rename pattern for TV episodes")]
     public string? TVPattern { get; set; }
     [CommandLineOption<string>("--movie-pattern", "Rename pattern for movies")]
     public string? MoviePattern { get; set; }
 
-    [CommandLineOption<bool>("--windows-safe", "Remove invalid Windows file name characters when renaming")]
-    public bool WindowsSafe { get; set; }
+    [CommandLineOption<bool?>("--windows-safe", "Remove invalid Windows file name characters when renaming")]
+    public bool? WindowsSafe { get; set; }
 
-    [CommandLineOption<bool>("--rename-subs", "Rename subtitle files")]
-    public bool RenameSubs { get; set; }
+    [CommandLineOption<bool?>("--rename-subs", "Rename subtitle files")]
+    public bool? RenameSubs { get; set; }
 
     public static IEnumerable<Option> GetOptions()
     {
@@ -37,7 +37,7 @@ public class RenameOptions : OptionsBase<RenameOptions>, IOptionsBase<RenameOpti
 
     public void UpdateConfig(AutoTagConfig config)
     {
-        config.RenameFiles = !NoRename;
+        config.RenameFiles = !NoRename ?? config.RenameFiles;
 
         if (!string.IsNullOrEmpty(TVPattern))
         {
@@ -49,8 +49,8 @@ public class RenameOptions : OptionsBase<RenameOptions>, IOptionsBase<RenameOpti
             config.MovieRenamePattern = MoviePattern;
         }
 
-        config.WindowsSafe = WindowsSafe;
+        config.WindowsSafe = WindowsSafe ?? config.WindowsSafe;
 
-        config.RenameSubtitles = RenameSubs;
+        config.RenameSubtitles = RenameSubs ?? config.RenameSubtitles;
     }
 }

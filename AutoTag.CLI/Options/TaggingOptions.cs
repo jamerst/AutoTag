@@ -8,21 +8,21 @@ public class TaggingOptions : OptionsBase<TaggingOptions>, IOptionsBase<TaggingO
     [CommandLineOption<bool>("--movie", "-m", "Movie tagging mode")]
     public bool MovieMode { get; set; }
 
-    [CommandLineOption<bool>("--no-tag", "Disable file tagging")]
-    public bool NoTag { get; set; }
-    [CommandLineOption<bool>("--no-cover", "Disable cover art tagging")]
-    public bool NoCover { get; set; }
+    [CommandLineOption<bool?>("--no-tag", "Disable file tagging")]
+    public bool? NoTag { get; set; }
+    [CommandLineOption<bool?>("--no-cover", "Disable cover art tagging")]
+    public bool? NoCover { get; set; }
 
-    [CommandLineOption<bool>("--manual", "Manually choose the TV series for a file from search results")]
-    public bool Manual { get; set; }
+    [CommandLineOption<bool?>("--manual", "Manually choose the TV series for a file from search results")]
+    public bool? Manual { get; set; }
 
-    [CommandLineOption<bool>("--extended-tagging", "Add more information to Matroska file tags. Reduces tagging speed.")]
-    public bool ExtendedTagging { get; set; }
-    [CommandLineOption<bool>("--apple-tagging", "Add extra tags to mp4 files for use with Apple devices and software")]
-    public bool AppleTagging { get; set; }
+    [CommandLineOption<bool?>("--extended-tagging", "Add more information to Matroska file tags. Reduces tagging speed.")]
+    public bool? ExtendedTagging { get; set; }
+    [CommandLineOption<bool?>("--apple-tagging", "Add extra tags to mp4 files for use with Apple devices and software")]
+    public bool? AppleTagging { get; set; }
 
-    [CommandLineOption<string>("--language", "-l", "Metadata language", "en")]
-    public string Language { get; set; } = null!;
+    [CommandLineOption<string>("--language", "-l", "Metadata language")]
+    public string? Language { get; set; }
 
     public static IEnumerable<Option> GetOptions()
     {
@@ -61,14 +61,14 @@ public class TaggingOptions : OptionsBase<TaggingOptions>, IOptionsBase<TaggingO
             config.Mode = AutoTagConfig.Modes.Movie;
         }
 
-        config.TagFiles = !NoTag;
-        config.AddCoverArt = !NoCover;
+        config.TagFiles = !NoTag ?? config.TagFiles;
+        config.AddCoverArt = !NoCover ?? config.AddCoverArt;
 
-        config.ManualMode = Manual;
+        config.ManualMode = Manual ?? config.ManualMode;
 
-        config.ExtendedTagging = ExtendedTagging;
-        config.AppleTagging = AppleTagging;
+        config.ExtendedTagging = ExtendedTagging ?? config.ExtendedTagging;
+        config.AppleTagging = AppleTagging ?? config.AppleTagging;
 
-        config.Language = Language;
+        config.Language = string.IsNullOrWhiteSpace(Language) ? config.Language : Language;
     }
 }
