@@ -61,14 +61,34 @@ public class TaggingOptions : OptionsBase<TaggingOptions>, IOptionsBase<TaggingO
             config.Mode = AutoTagConfig.Modes.Movie;
         }
 
-        config.TagFiles = !NoTag ?? config.TagFiles;
-        config.AddCoverArt = !NoCover ?? config.AddCoverArt;
+        if (NoTag.HasValue)
+        {
+            config.TagFiles = !NoTag.Value;
+        }
 
-        config.ManualMode = Manual ?? config.ManualMode;
+        if (NoCover.HasValue)
+        {
+            config.AddCoverArt = !NoCover.Value;
+        }
 
-        config.ExtendedTagging = ExtendedTagging ?? config.ExtendedTagging;
-        config.AppleTagging = AppleTagging ?? config.AppleTagging;
+        if (Manual.HasValue)
+        {
+            config.ManualMode = Manual.Value;
+        }
 
-        config.Language = string.IsNullOrWhiteSpace(Language) ? config.Language : Language;
+        if (ExtendedTagging.HasValue)
+        {
+            config.ExtendedTagging = ExtendedTagging.Value;
+        }
+
+        if (AppleTagging.HasValue)
+        {
+            config.AppleTagging = AppleTagging.Value;
+        }
+
+        if (!string.IsNullOrWhiteSpace(Language))
+        {
+            config.Language = Language;
+        }
     }
 }

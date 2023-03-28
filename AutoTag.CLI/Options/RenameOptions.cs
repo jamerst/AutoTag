@@ -37,7 +37,10 @@ public class RenameOptions : OptionsBase<RenameOptions>, IOptionsBase<RenameOpti
 
     public void UpdateConfig(AutoTagConfig config)
     {
-        config.RenameFiles = !NoRename ?? config.RenameFiles;
+        if (NoRename.HasValue)
+        {
+            config.RenameFiles = !NoRename.Value;
+        }
 
         if (!string.IsNullOrEmpty(TVPattern))
         {
@@ -49,8 +52,14 @@ public class RenameOptions : OptionsBase<RenameOptions>, IOptionsBase<RenameOpti
             config.MovieRenamePattern = MoviePattern;
         }
 
-        config.WindowsSafe = WindowsSafe ?? config.WindowsSafe;
+        if (WindowsSafe.HasValue)
+        {
+            config.WindowsSafe = WindowsSafe.Value;
+        }
 
-        config.RenameSubtitles = RenameSubs ?? config.RenameSubtitles;
+        if (RenameSubs.HasValue)
+        {
+            config.RenameSubtitles = RenameSubs.Value;
+        }
     }
 }

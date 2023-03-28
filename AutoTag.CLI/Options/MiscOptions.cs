@@ -38,8 +38,15 @@ public class MiscOptions : OptionsBase<MiscOptions>, IOptionsBase<MiscOptions>
 
     public void UpdateConfig(AutoTagConfig config)
     {
-        config.ParsePattern = string.IsNullOrWhiteSpace(ParsePattern) ? config.ParsePattern : ParsePattern;
-        config.Verbose = Verbose ?? config.Verbose;
+        if (!string.IsNullOrWhiteSpace(ParsePattern))
+        {
+            config.ParsePattern = ParsePattern;
+        }
+
+        if (Verbose.HasValue)
+        {
+            config.Verbose = Verbose.Value;
+        }
     }
 
     private static string GetDefaultConfigPath() => Path.Combine(
