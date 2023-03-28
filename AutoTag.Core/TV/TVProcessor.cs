@@ -200,7 +200,7 @@ public class TVProcessor : IProcessor, IDisposable
             }
             else
             {
-                ImagesWithId seriesImages = await _tmdb.GetTvShowImagesAsync(result.Id, $"{CultureInfo.CurrentCulture.TwoLetterISOLanguageName},null");
+                ImagesWithId seriesImages = await _tmdb.GetTvShowImagesAsync(result.Id, $"{config.Language},null");
 
                 if (seriesImages.Posters.Any())
                 {
