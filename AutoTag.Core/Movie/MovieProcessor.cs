@@ -82,7 +82,7 @@ public class MovieProcessor : IProcessor, IDisposable
 
         int selected = 0;
 
-        if (searchResults.Results.Count > 1 && (!searchResults.Results.First().Title.Equals(title, StringComparison.InvariantCultureIgnoreCase) || config.ManualMode))
+        if (config.ManualMode)
         {
             int? selection = selectResult(
                 searchResults.Results
