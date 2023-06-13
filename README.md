@@ -40,6 +40,7 @@ Options:
   --movie-pattern <movie-pattern>  Rename pattern for movies
   --windows-safe                   Remove invalid Windows file name characters when renaming
   --rename-subs                    Rename subtitle files
+  --replace <replace replacement>  Replace <replace> with <replacement> in file names
   -c, --config <config>            Config file path
   -p, --pattern <pattern>          Custom regex to parse TV episode information
   -v, --verbose                    Enable verbose output mode
@@ -71,7 +72,10 @@ The regex pattern should have 3 named capturing groups: `SeriesName`, `Season` a
 Note that on Windows all directory separators (`\`) must be escaped as `\\`.
 
 ### Windows Safe
-The `--windows-safe` option is for use on Linux where the files written may be accessed by a Windows host, or are being written to an NTFS filesystem.
+The `--windows-safe` option is for use on Linux/macOS where the files written may be accessed by a Windows host, or are being written to an NTFS filesystem. It automatically removes any invalid NTFS file name characters.
+
+### File Name Replacements
+The `--replace` option allows specific characters or strings in a file name to be replaced, e.g. `--replace a b` will replace all the `a` characters in the file name with `b`. This option can be used multiple times for multiple replacements, e.g. `--replace a b --replace foo bar --replace c ''`. **Note: the arguments for this option are case sensitive.**
 
 ### Extended Tagging
 The `--extended-tagging` option adds additional information to Matroska video files such as actors and their characters. This option is not enabled by default because it may reduce tagging speed significantly due to the additional API requests needed.
@@ -82,7 +86,7 @@ The language of the metadata can be set using the `-l` or `--language` option. T
 ## Config
 AutoTag creates a config file to store default preferences at `~/.config/autotag/conf.json` or `%APPDATA%\Roaming\autotag\conf.json`. A different config file can be specified using the `-c` option. If the file does not exist, a file will be created with the default settings:
 ```
-"configVer": 8,                           // Internal use
+"configVer": 9,                           // Internal use
 "mode": 0,                                // Default tagging mode, 0 = TV, 1 = Movie
 "manualMode": false,                      // Manual tagging mode
 "verbose": false,                         // Verbose output
@@ -96,7 +100,8 @@ AutoTag creates a config file to store default preferences at `~/.config/autotag
 "extendedTagging": false,                 // Add more information to Matroska file tags
 "appleTagging": false,                    // Add extra tags to mp4 files for use with Apple devices and software
 "renameSubtitles": false,                 // Rename subtitle files
-"language": "en"                          // Metadata language
+"language": "en"                          // Metadata language,
+"fileNameReplaces": []                    // File name character replacements. Array of objects of the form { "replace": "", replacement: "" }
 ```
 
 ## Moving away from TheTVDB

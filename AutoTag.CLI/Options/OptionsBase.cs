@@ -6,7 +6,7 @@ namespace AutoTag.CLI.Options;
 public abstract class OptionsBase<TOptions>
 {
     private static Dictionary<string, Option> _propertyOptions = new Dictionary<string, Option>();
-    protected static Option<TValue> GetOption<TValue>(Expression<Func<TOptions, TValue>> property)
+    protected static Option<TValue> GetOption<TValue>(Expression<Func<TOptions, TValue>> property, Action<Option<TValue>>? configure = null)
     {
         var info = GetPropertyInfo(property);
         var attr = info.GetCustomAttribute(typeof(CommandLineOptionAttribute<TValue>)) as CommandLineOptionAttribute<TValue>;
@@ -14,6 +14,8 @@ public abstract class OptionsBase<TOptions>
         {
             var option = attr.GetOption();
             _propertyOptions[info.Name] = option;
+
+            configure?.Invoke(option);
 
             return option;
         }

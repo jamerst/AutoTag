@@ -115,10 +115,11 @@ public class FileWriter : IDisposable
         bool fileSuccess = true;
         string newPath = Path.Combine(
             Path.GetDirectoryName(path)!,
-            EscapeFilename(
+            GetFileName(
                 newName,
                 Path.GetFileNameWithoutExtension(path),
-                setStatus
+                setStatus,
+                config
             )
             + Path.GetExtension(path)
         );
@@ -156,15 +157,21 @@ public class FileWriter : IDisposable
         return fileSuccess;
     }
 
-    private static string EscapeFilename(string filename, string oldFilename, Action<string, MessageType> setStatus)
+    private static string GetFileName(string fileName, string oldFileName, Action<string, MessageType> setStatus, AutoTagConfig config)
     {
-        string result = String.Join("", filename.Split(invalidFilenameChars));
-        if (result != oldFilename && result.Length != filename.Length)
+        string result = fileName;
+        foreach (var replace in config.FileNameReplaces)
+        {
+            result = replace.Apply(result);
+        }
+
+        string escapedResult = String.Concat(result.Split(invalidFilenameChars));
+        if (escapedResult != oldFileName && escapedResult.Length != fileName.Length)
         {
             setStatus("Warning: Invalid characters in file name, automatically removing", MessageType.Warning);
         }
 
-        return result;
+        return escapedResult;
     }
 
     private static char[]? invalidFilenameChars { get; set; }

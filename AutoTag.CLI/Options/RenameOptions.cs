@@ -16,6 +16,9 @@ public class RenameOptions : OptionsBase<RenameOptions>, IOptionsBase<RenameOpti
     [CommandLineOption<bool?>("--rename-subs", "Rename subtitle files")]
     public bool? RenameSubs { get; set; }
 
+    [CommandLineOption<IEnumerable<string>>("--replace", "Replace <replace> with <replacement> in file names")]
+    public IEnumerable<string>? FileNameReplaces { get; set; }
+
     public static IEnumerable<Option> GetOptions()
     {
         yield return GetOption(o => o.NoRename);
@@ -23,6 +26,15 @@ public class RenameOptions : OptionsBase<RenameOptions>, IOptionsBase<RenameOpti
         yield return GetOption(o => o.MoviePattern);
         yield return GetOption(o => o.WindowsSafe);
         yield return GetOption(o => o.RenameSubs);
+        yield return GetOption(
+            o => o.FileNameReplaces,
+            o =>
+            {
+                o.AllowMultipleArgumentsPerToken = true;
+                o.Arity = new ArgumentArity(2, 2);
+                o.ArgumentHelpName = "replace replacement";
+            }
+        );
     }
 
     public static RenameOptions GetBoundValues(BindingContext context) =>
@@ -32,7 +44,8 @@ public class RenameOptions : OptionsBase<RenameOptions>, IOptionsBase<RenameOpti
             TVPattern = GetValueForProperty(o => o.TVPattern, context),
             MoviePattern = GetValueForProperty(o => o.MoviePattern, context),
             WindowsSafe = GetValueForProperty(o => o.WindowsSafe, context),
-            RenameSubs = GetValueForProperty(o => o.RenameSubs, context)
+            RenameSubs = GetValueForProperty(o => o.RenameSubs, context),
+            FileNameReplaces = GetValueForProperty(o => o.FileNameReplaces, context),
         };
 
     public void UpdateConfig(AutoTagConfig config)
@@ -60,6 +73,11 @@ public class RenameOptions : OptionsBase<RenameOptions>, IOptionsBase<RenameOpti
         if (RenameSubs.HasValue)
         {
             config.RenameSubtitles = RenameSubs.Value;
+        }
+
+        if (FileNameReplaces != null && FileNameReplaces.Any())
+        {
+            config.FileNameReplaces = FileNameReplace.FromStrings(FileNameReplaces);
         }
     }
 }
