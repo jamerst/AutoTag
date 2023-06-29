@@ -1,5 +1,4 @@
-﻿using System.Globalization;
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
 
 using TMDbLib.Client;
 using TMDbLib.Objects.General;
@@ -7,15 +6,12 @@ using TMDbLib.Objects.Search;
 using TMDbLib.Objects.TvShows;
 
 namespace AutoTag.Core.TV;
-public class TVProcessor : IProcessor, IDisposable
+public class TVProcessor : IProcessor
 {
     private readonly TMDbClient _tmdb;
-    private Dictionary<string, List<SearchTv>> _shows =
-        new Dictionary<string, List<SearchTv>>(StringComparer.OrdinalIgnoreCase);
-    private Dictionary<(int, int), TvSeason> _seasons =
-        new Dictionary<(int, int), TvSeason>();
-    private Dictionary<(string, int), string> _seasonPosters =
-        new Dictionary<(string, int), string>();
+    private readonly Dictionary<string, List<ShowResult>> _shows = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<(int, int), TvSeason> _seasons = new();
+    private readonly Dictionary<(string, int), string> _seasonPosters = new();
     private IEnumerable<Genre> Genres = Enumerable.Empty<Genre>();
 
     public TVProcessor(string apiKey, AutoTagConfig config)
@@ -34,7 +30,7 @@ public class TVProcessor : IProcessor, IDisposable
         FileWriter writer
     )
     {
-        TVFileMetadata result = new TVFileMetadata();
+        var result = new TVFileMetadata();
 
         #region Filename parsing
         TVFileMetadata episodeData;
@@ -95,7 +91,8 @@ public class TVProcessor : IProcessor, IDisposable
                 .OrderByDescending(result => SeriesNameSimilarity(episodeData.SeriesName, result.Name))
                 .ToList();
 
-            if (config.ManualMode)
+            // using episode groups, requires the manual selection of a show
+            if (config.ManualMode || config.EpisodeGroup)
             {
                 int? chosen = selectResult(seriesResults
                     .Select(t => (t.Name, t.FirstAirDate?.Year.ToString() ?? "Unknown"))
@@ -104,7 +101,7 @@ public class TVProcessor : IProcessor, IDisposable
 
                 if (chosen.HasValue)
                 {
-                    _shows.Add(episodeData.SeriesName, new List<SearchTv> { seriesResults[chosen.Value] });
+                    _shows.Add(episodeData.SeriesName, new List<ShowResult> { seriesResults[chosen.Value] });
                 }
                 else
                 {
@@ -120,24 +117,51 @@ public class TVProcessor : IProcessor, IDisposable
             }
             else
             {
-                _shows.Add(episodeData.SeriesName, seriesResults);
+                _shows.Add(episodeData.SeriesName, ShowResult.FromSearchResults(seriesResults));
             }
         }
+
+        if (config.EpisodeGroup)
+        {
+            var seriesResult = _shows[episodeData.SeriesName].First();
+            var tvShow = await _tmdb.GetTvShowAsync(seriesResult.TvSearchResult.Id, TvShowMethods.EpisodeGroups);
+            var groups = tvShow.EpisodeGroups;
+
+            // TODO: add group filter, to get only those, that have seasons
+            
+            var chosenGroup = selectResult(groups.Results.Select(group =>
+                ($"[{group.Type}] {group.Name}", $"S: {group.GroupCount} E: {group.EpisodeCount}")).ToList());
+            
+            if (chosenGroup.HasValue)
+            {
+                var groupInfo = await _tmdb.GetTvEpisodeGroupsAsync(groups.Results.First().Id, config.Language);
+                seriesResult.AddEpisodeGroup(groupInfo);
+            }
+            else
+            {
+                setStatus("File skipped", MessageType.Warning);
+                return true;
+            }
+
+        }
+        
 
         // try searching for each series search result
         foreach (var show in _shows[episodeData.SeriesName])
         {
-            result.Id = show.Id;
-            result.SeriesName = show.Name;
+            var showData = show.TvSearchResult;
+            
+            result.Id = showData.Id;
+            result.SeriesName = showData.Name;
 
             TvSeason? seasonResult;
-            if (!_seasons.TryGetValue((show.Id, episodeData.Season), out seasonResult))
+            if (!_seasons.TryGetValue((showData.Id, episodeData.Season), out seasonResult))
             {
-                seasonResult = await _tmdb.GetTvSeasonAsync(show.Id, episodeData.Season);
+                seasonResult = await _tmdb.GetTvSeasonAsync(showData.Id, episodeData.Season);
 
                 if (seasonResult == null)
                 {
-                    if (show.Id == _shows[episodeData.SeriesName].Last().Id)
+                    if (showData.Id == _shows[episodeData.SeriesName].Last().TvSearchResult.Id)
                     {
                         setStatus($"Error: Cannot find {episodeData} on TheMovieDB", MessageType.Error);
 
@@ -145,10 +169,8 @@ public class TVProcessor : IProcessor, IDisposable
                     }
                     continue;
                 }
-                else
-                {
-                    _seasons.Add((show.Id, episodeData.Season), seasonResult);
-                }
+
+                _seasons.Add((showData.Id, episodeData.Season), seasonResult);
             }
             result.SeasonEpisodes = seasonResult.Episodes.Count;
 
@@ -157,10 +179,10 @@ public class TVProcessor : IProcessor, IDisposable
                 result.CoverURL = $"https://image.tmdb.org/t/p/original/{seasonResult.PosterPath}";
             }
 
-            TvSeasonEpisode? episodeResult = seasonResult.Episodes.FirstOrDefault(e => e.EpisodeNumber == episodeData.Episode);
+            var episodeResult = seasonResult.Episodes.FirstOrDefault(e => e.EpisodeNumber == episodeData.Episode);
             if (episodeResult == default)
             {
-                if (show.Id == _shows[episodeData.SeriesName].Last().Id)
+                if (showData.Id == _shows[episodeData.SeriesName].Last().TvSearchResult.Id)
                 {
                     setStatus($"Error: Cannot find {episodeData} on TheMovieDB", MessageType.Error);
 
@@ -177,13 +199,13 @@ public class TVProcessor : IProcessor, IDisposable
             {
                 Genres = await _tmdb.GetTvGenresAsync();
             }
-            result.Genres = show.GenreIds.Select(gId => Genres.First(g => g.Id == gId).Name).ToArray();
+            result.Genres = showData.GenreIds.Select(gId => Genres.First(g => g.Id == gId).Name).ToArray();
 
             if (config.ExtendedTagging && file.Taggable)
             {
                 result.Director = episodeResult.Crew.FirstOrDefault(c => c.Job == "Director")?.Name;
 
-                var credits = await _tmdb.GetTvEpisodeCreditsAsync(show.Id, result.Season, result.Episode);
+                var credits = await _tmdb.GetTvEpisodeCreditsAsync(showData.Id, result.Season, result.Episode);
                 result.Actors = credits.Cast.Select(c => c.Name).ToArray();
                 result.Characters = credits.Cast.Select(c => c.Character).ToArray();
             }
@@ -224,7 +246,7 @@ public class TVProcessor : IProcessor, IDisposable
 
         return taggingSuccess && result.Success && result.Complete;
     }
-
+    
     private double SeriesNameSimilarity(string parsedName, string seriesName)
     {
         if (seriesName.ToLower().Contains(parsedName.ToLower()))
