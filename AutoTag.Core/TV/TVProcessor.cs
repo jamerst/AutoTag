@@ -53,10 +53,12 @@ public class TVProcessor : IProcessor
             {
                 var match = Regex.Match(Path.GetFullPath(file.Path), config.ParsePattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
-                episodeData = new TVFileMetadata();
-                episodeData.SeriesName = match.Groups["SeriesName"].Value;
-                episodeData.Season = int.Parse(match.Groups["Season"].Value);
-                episodeData.Episode = int.Parse(match.Groups["Episode"].Value);
+                episodeData = new TVFileMetadata
+                {
+                    SeriesName = match.Groups["SeriesName"].Value,
+                    Season = int.Parse(match.Groups["Season"].Value),
+                    Episode = int.Parse(match.Groups["Episode"].Value)
+                };
             }
             catch (FormatException ex)
             {
@@ -126,8 +128,6 @@ public class TVProcessor : IProcessor
             var seriesResult = _shows[episodeData.SeriesName].First();
             var tvShow = await _tmdb.GetTvShowAsync(seriesResult.TvSearchResult.Id, TvShowMethods.EpisodeGroups);
             var groups = tvShow.EpisodeGroups;
-
-            // TODO: add group filter, to get only those, that have seasons
             
             var chosenGroup = selectResult(groups.Results.Select(group =>
                 ($"[{group.Type}] {group.Name}", $"S: {group.GroupCount} E: {group.EpisodeCount}")).ToList());
@@ -135,14 +135,18 @@ public class TVProcessor : IProcessor
             if (chosenGroup.HasValue)
             {
                 var groupInfo = await _tmdb.GetTvEpisodeGroupsAsync(groups.Results.First().Id, config.Language);
-                seriesResult.AddEpisodeGroup(groupInfo);
+                if (!seriesResult.AddEpisodeGroup(groupInfo))
+                {
+                    setStatus($"Error: Episode Group {groupInfo.Name} is not containing Seasons or Volumes! ", MessageType.Error);
+                    result.Success = false;
+                    return false;
+                }
             }
             else
             {
                 setStatus("File skipped", MessageType.Warning);
                 return true;
             }
-
         }
         
 
@@ -150,14 +154,28 @@ public class TVProcessor : IProcessor
         foreach (var show in _shows[episodeData.SeriesName])
         {
             var showData = show.TvSearchResult;
+
+            var lookupSeason = episodeData.Season;
+            var lookupEpisode = episodeData.Episode;
+            
+            if(config.EpisodeGroup)
+            {
+                if (!show.TryGetMapping(episodeData.Season, episodeData.Episode, out var groupNumbering))
+                {
+                    setStatus($"Error: Cannot find {episodeData} in episode group on TheMovieDB", MessageType.Error);
+                    return false;
+                }
+                lookupSeason = groupNumbering!.Value.season;
+                lookupEpisode = groupNumbering.Value.episode;
+            }
             
             result.Id = showData.Id;
             result.SeriesName = showData.Name;
-
+            
             TvSeason? seasonResult;
-            if (!_seasons.TryGetValue((showData.Id, episodeData.Season), out seasonResult))
+            if (!_seasons.TryGetValue((showData.Id, lookupSeason), out seasonResult))
             {
-                seasonResult = await _tmdb.GetTvSeasonAsync(showData.Id, episodeData.Season);
+                seasonResult = await _tmdb.GetTvSeasonAsync(showData.Id, lookupSeason);
 
                 if (seasonResult == null)
                 {
@@ -170,7 +188,7 @@ public class TVProcessor : IProcessor
                     continue;
                 }
 
-                _seasons.Add((showData.Id, episodeData.Season), seasonResult);
+                _seasons.Add((showData.Id, lookupSeason), seasonResult);
             }
             result.SeasonEpisodes = seasonResult.Episodes.Count;
 
@@ -179,7 +197,7 @@ public class TVProcessor : IProcessor
                 result.CoverURL = $"https://image.tmdb.org/t/p/original/{seasonResult.PosterPath}";
             }
 
-            var episodeResult = seasonResult.Episodes.FirstOrDefault(e => e.EpisodeNumber == episodeData.Episode);
+            var episodeResult = seasonResult.Episodes.FirstOrDefault(e => e.EpisodeNumber == lookupEpisode);
             if (episodeResult == default)
             {
                 if (showData.Id == _shows[episodeData.SeriesName].Last().TvSearchResult.Id)
@@ -226,9 +244,9 @@ public class TVProcessor : IProcessor
 
                 if (seriesImages.Posters.Any())
                 {
-                    seriesImages.Posters.OrderByDescending(p => p.VoteAverage);
-
-                    result.CoverURL = $"https://image.tmdb.org/t/p/original/{seriesImages.Posters[0].FilePath}";
+                    var bestVotedImage = seriesImages.Posters.OrderByDescending(p => p.VoteAverage).First();
+                    
+                    result.CoverURL = $"https://image.tmdb.org/t/p/original/{bestVotedImage.FilePath}";
                     _seasonPosters.Add((result.SeriesName, result.Season), result.CoverURL);
                 }
                 else
