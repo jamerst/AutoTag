@@ -9,10 +9,10 @@ namespace AutoTag.Core.TV;
 public class TVProcessor : IProcessor
 {
     private readonly TMDbClient _tmdb;
-    private readonly Dictionary<string, List<ShowResult>> _shows = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, List<ShowResults>> _shows = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<(int, int), TvSeason> _seasons = new();
     private readonly Dictionary<(string, int), string> _seasonPosters = new();
-    private IEnumerable<Genre> Genres = Enumerable.Empty<Genre>();
+    private IEnumerable<Genre> _genres = Enumerable.Empty<Genre>();
 
     public TVProcessor(string apiKey, AutoTagConfig config)
     {
@@ -89,21 +89,21 @@ public class TVProcessor : IProcessor
             // if not already searched for series
             SearchContainer<SearchTv> searchResults = await _tmdb.SearchTvShowAsync(episodeData.SeriesName);
 
-            List<SearchTv> seriesResults = searchResults.Results
+            var seriesResults = searchResults.Results
                 .OrderByDescending(result => SeriesNameSimilarity(episodeData.SeriesName, result.Name))
                 .ToList();
 
             // using episode groups, requires the manual selection of a show
             if (config.ManualMode || config.EpisodeGroup)
             {
-                int? chosen = selectResult(seriesResults
+                var chosen = selectResult(seriesResults
                     .Select(t => (t.Name, t.FirstAirDate?.Year.ToString() ?? "Unknown"))
                     .ToList()
                 );
 
                 if (chosen.HasValue)
                 {
-                    _shows.Add(episodeData.SeriesName, new List<ShowResult> { seriesResults[chosen.Value] });
+                    _shows.Add(episodeData.SeriesName, new List<ShowResults> { seriesResults[chosen.Value] });
                 }
                 else
                 {
@@ -119,33 +119,33 @@ public class TVProcessor : IProcessor
             }
             else
             {
-                _shows.Add(episodeData.SeriesName, ShowResult.FromSearchResults(seriesResults));
+                _shows.Add(episodeData.SeriesName, ShowResults.FromSearchResults(seriesResults));
             }
-        }
-
-        if (config.EpisodeGroup)
-        {
-            var seriesResult = _shows[episodeData.SeriesName].First();
-            var tvShow = await _tmdb.GetTvShowAsync(seriesResult.TvSearchResult.Id, TvShowMethods.EpisodeGroups);
-            var groups = tvShow.EpisodeGroups;
             
-            var chosenGroup = selectResult(groups.Results.Select(group =>
-                ($"[{group.Type}] {group.Name}", $"S: {group.GroupCount} E: {group.EpisodeCount}")).ToList());
-            
-            if (chosenGroup.HasValue)
+            if (config.EpisodeGroup)
             {
-                var groupInfo = await _tmdb.GetTvEpisodeGroupsAsync(groups.Results.First().Id, config.Language);
-                if (!seriesResult.AddEpisodeGroup(groupInfo))
+                var seriesResult = _shows[episodeData.SeriesName].First();
+                var tvShow = await _tmdb.GetTvShowAsync(seriesResult.TvSearchResult.Id, TvShowMethods.EpisodeGroups);
+                var groups = tvShow.EpisodeGroups;
+            
+                var chosenGroup = selectResult(groups.Results.Select(group =>
+                    ($"[{group.Type}] {group.Name}", $"S: {group.GroupCount} E: {group.EpisodeCount}")).ToList());
+            
+                if (chosenGroup.HasValue)
                 {
-                    setStatus($"Error: Episode Group {groupInfo.Name} is not containing Seasons or Volumes! ", MessageType.Error);
-                    result.Success = false;
-                    return false;
+                    var groupInfo = await _tmdb.GetTvEpisodeGroupsAsync(groups.Results.First().Id, config.Language);
+                    if (!seriesResult.AddEpisodeGroup(groupInfo))
+                    {
+                        setStatus($"Error: Episode Group {groupInfo.Name} is not containing Seasons or Volumes! ", MessageType.Error);
+                        result.Success = false;
+                        return false;
+                    }
                 }
-            }
-            else
-            {
-                setStatus("File skipped", MessageType.Warning);
-                return true;
+                else
+                {
+                    setStatus("File skipped", MessageType.Warning);
+                    return true;
+                }
             }
         }
         
@@ -171,9 +171,8 @@ public class TVProcessor : IProcessor
             
             result.Id = showData.Id;
             result.SeriesName = showData.Name;
-            
-            TvSeason? seasonResult;
-            if (!_seasons.TryGetValue((showData.Id, lookupSeason), out seasonResult))
+
+            if (!_seasons.TryGetValue((showData.Id, lookupSeason), out var seasonResult))
             {
                 seasonResult = await _tmdb.GetTvSeasonAsync(showData.Id, lookupSeason);
 
@@ -182,12 +181,10 @@ public class TVProcessor : IProcessor
                     if (showData.Id == _shows[episodeData.SeriesName].Last().TvSearchResult.Id)
                     {
                         setStatus($"Error: Cannot find {episodeData} on TheMovieDB", MessageType.Error);
-
                         return false;
                     }
                     continue;
                 }
-
                 _seasons.Add((showData.Id, lookupSeason), seasonResult);
             }
             result.SeasonEpisodes = seasonResult.Episodes.Count;
@@ -213,17 +210,17 @@ public class TVProcessor : IProcessor
             result.Overview = episodeResult.Overview;
 
 
-            if (!Genres.Any())
+            if (!_genres.Any())
             {
-                Genres = await _tmdb.GetTvGenresAsync();
+                _genres = await _tmdb.GetTvGenresAsync();
             }
-            result.Genres = showData.GenreIds.Select(gId => Genres.First(g => g.Id == gId).Name).ToArray();
+            result.Genres = showData.GenreIds.Select(gId => _genres.First(g => g.Id == gId).Name).ToArray();
 
             if (config.ExtendedTagging && file.Taggable)
             {
                 result.Director = episodeResult.Crew.FirstOrDefault(c => c.Job == "Director")?.Name;
 
-                var credits = await _tmdb.GetTvEpisodeCreditsAsync(showData.Id, result.Season, result.Episode);
+                var credits = await _tmdb.GetTvEpisodeCreditsAsync(showData.Id, lookupSeason, lookupEpisode);
                 result.Actors = credits.Cast.Select(c => c.Name).ToArray();
                 result.Characters = credits.Cast.Select(c => c.Character).ToArray();
             }
@@ -234,13 +231,13 @@ public class TVProcessor : IProcessor
 
         if (config.AddCoverArt && string.IsNullOrEmpty(result.CoverURL) && file.Taggable)
         {
-            if (_seasonPosters.TryGetValue((result.SeriesName, result.Season), out string? url))
+            if (_seasonPosters.TryGetValue((result.SeriesName, result.Season), out var url))
             {
                 result.CoverURL = url;
             }
             else
             {
-                ImagesWithId seriesImages = await _tmdb.GetTvShowImagesAsync(result.Id, $"{config.Language},null");
+                var seriesImages = await _tmdb.GetTvShowImagesAsync(result.Id, $"{config.Language},null");
 
                 if (seriesImages.Posters.Any())
                 {
@@ -251,7 +248,7 @@ public class TVProcessor : IProcessor
                 }
                 else
                 {
-                    setStatus($"Error: Failed to find episode cover", MessageType.Error);
+                    setStatus("Error: Failed to find episode cover", MessageType.Error);
                     result.Complete = false;
                 }
             }
@@ -260,7 +257,7 @@ public class TVProcessor : IProcessor
 
         result.CoverFilename = result.CoverURL?.Split('/').Last();
 
-        bool taggingSuccess = await writer.WriteAsync(file, result, setPath, setStatus, config);
+        var taggingSuccess = await writer.WriteAsync(file, result, setPath, setStatus, config);
 
         return taggingSuccess && result.Success && result.Complete;
     }

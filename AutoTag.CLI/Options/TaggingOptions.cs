@@ -24,7 +24,7 @@ public class TaggingOptions : OptionsBase<TaggingOptions>, IOptionsBase<TaggingO
     [CommandLineOption<string>("--language", "-l", "Metadata language")]
     public string? Language { get; set; }
     
-    [CommandLineOption<bool?>("--episode-group", "-g", "Manually choose episode group for tagging")] 
+    [CommandLineOption<bool?>("--episode-group", "-g", "Manually choose the Episode Group for a TV episode. Enables manual mode.")] 
     public bool? EpisodeGroup { get; set; }
 
     public static IEnumerable<Option> GetOptions()
