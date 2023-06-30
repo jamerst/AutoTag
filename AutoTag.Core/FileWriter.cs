@@ -3,7 +3,7 @@ using Microsoft.Extensions.Caching.Memory;
 namespace AutoTag.Core;
 public class FileWriter : IDisposable
 {
-    private readonly static HttpClient _client = new HttpClient();
+    private static readonly HttpClient _client = new HttpClient();
     private static Dictionary<string, byte[]> _images = new Dictionary<string, byte[]>();
     private readonly IMemoryCache _cache;
 
@@ -176,9 +176,9 @@ public class FileWriter : IDisposable
 
     private static char[]? invalidFilenameChars { get; set; }
 
-    private readonly static char[] invalidNtfsChars = { '<', '>', ':', '"', '/', '\\', '|', '?', '*' };
+    private static readonly char[] invalidNtfsChars = { '<', '>', ':', '"', '/', '\\', '|', '?', '*' };
 
-    private readonly static string[] subtitleFileExtensions = { ".srt", ".vtt", ".sub", ".ssa" };
+    private static readonly string[] subtitleFileExtensions = { ".srt", ".vtt", ".sub", ".ssa" };
 
     public void Dispose()
     {

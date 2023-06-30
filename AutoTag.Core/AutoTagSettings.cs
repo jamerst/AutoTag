@@ -39,10 +39,7 @@ public class AutoTagSettings
             }
             finally
             {
-                if (Config == null)
-                {
-                    Config = new AutoTagConfig();
-                }
+                Config ??= new AutoTagConfig();
             }
 
             if (Config.ConfigVer != AutoTagConfig.CurrentVer)
@@ -98,10 +95,7 @@ public class AutoTagSettings
             }
         }
 
-        if (Config == null)
-        {
-            Config = new AutoTagConfig();
-        }
+        Config ??= new AutoTagConfig();
     }
 
     public void Save()
