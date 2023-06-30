@@ -4,7 +4,10 @@ using TMDbLib.Objects.TvShows;
 
 namespace AutoTag.Core.TV;
 
-public partial class ShowResult
+/// <summary>
+/// Container class to hold episode as well as related episode group search results
+/// </summary>
+public partial class ShowResults
 {
     /* settings */
     [GeneratedRegex("(volume|season)\\s(?<episode>\\d+)")]
@@ -20,20 +23,20 @@ public partial class ShowResult
     /// Create simple ShowResult container with <see cref="SearchTv"/> base
     /// </summary>
     /// <param name="tvSearchResult"></param>
-    public ShowResult(SearchTv tvSearchResult)
+    public ShowResults(SearchTv tvSearchResult)
     {
         TvSearchResult = tvSearchResult;
     }
 
-    public static implicit operator ShowResult(SearchTv tv) => new(tv);
+    public static implicit operator ShowResults(SearchTv tv) => new(tv);
 
     /// <summary>
-    /// Generates <see cref="ShowResult"/> list from any <see cref="SearchTv"/> enumerable 
+    /// Generates <see cref="ShowResults"/> list from any <see cref="SearchTv"/> enumerable 
     /// </summary>
     /// <param name="results">Result from tmdb client</param>
-    public static List<ShowResult> FromSearchResults(IEnumerable<SearchTv> results)
+    public static List<ShowResults> FromSearchResults(IEnumerable<SearchTv> results)
     {
-        return results.Select(result => (ShowResult)result).ToList();
+        return results.Select(result => (ShowResults)result).ToList();
     }
 
     
@@ -50,6 +53,13 @@ public partial class ShowResult
         return true;
     }
 
+    /// <summary>
+    /// Try to retrieve episode mapping for episode group order
+    /// </summary>
+    /// <param name="seasonNumber">Season number as defined in episode group</param>
+    /// <param name="episodeNumber">Episode number as defined in episode group</param>
+    /// <param name="numbering">Matching episode number and season of "standard" order</param>
+    /// <returns>True if mapping exists, false if not</returns>
     public bool TryGetMapping(int seasonNumber, int episodeNumber, out (int season, int episode)? numbering)
     {
         numbering = null;
