@@ -124,7 +124,7 @@ public class TVProcessor : IProcessor
             
             if (config.EpisodeGroup)
             {
-                var seriesResult = _shows[episodeData.SeriesName].First();
+                var seriesResult = _shows[episodeData.SeriesName][0];
                 var tvShow = await _tmdb.GetTvShowAsync(seriesResult.TvSearchResult.Id, TvShowMethods.EpisodeGroups);
                 var groups = tvShow.EpisodeGroups;
             
@@ -133,7 +133,7 @@ public class TVProcessor : IProcessor
             
                 if (chosenGroup.HasValue)
                 {
-                    var groupInfo = await _tmdb.GetTvEpisodeGroupsAsync(groups.Results.First().Id, config.Language);
+                    var groupInfo = await _tmdb.GetTvEpisodeGroupsAsync(groups.Results[0].Id, config.Language);
                     if (!seriesResult.AddEpisodeGroup(groupInfo))
                     {
                         setStatus($"Error: Episode Group {groupInfo.Name} is not containing Seasons or Volumes! ", MessageType.Error);
@@ -178,7 +178,7 @@ public class TVProcessor : IProcessor
 
                 if (seasonResult == null)
                 {
-                    if (showData.Id == _shows[episodeData.SeriesName].Last().TvSearchResult.Id)
+                    if (showData.Id == _shows[episodeData.SeriesName][-1].TvSearchResult.Id)
                     {
                         setStatus($"Error: Cannot find {episodeData} on TheMovieDB", MessageType.Error);
                         return false;
@@ -194,10 +194,10 @@ public class TVProcessor : IProcessor
                 result.CoverURL = $"https://image.tmdb.org/t/p/original/{seasonResult.PosterPath}";
             }
 
-            var episodeResult = seasonResult.Episodes.FirstOrDefault(e => e.EpisodeNumber == lookupEpisode);
+            var episodeResult = seasonResult.Episodes.Find(e => e.EpisodeNumber == lookupEpisode);
             if (episodeResult == default)
             {
-                if (showData.Id == _shows[episodeData.SeriesName].Last().TvSearchResult.Id)
+                if (showData.Id == _shows[episodeData.SeriesName][-1].TvSearchResult.Id)
                 {
                     setStatus($"Error: Cannot find {episodeData} on TheMovieDB", MessageType.Error);
 
@@ -218,7 +218,7 @@ public class TVProcessor : IProcessor
 
             if (config.ExtendedTagging && file.Taggable)
             {
-                result.Director = episodeResult.Crew.FirstOrDefault(c => c.Job == "Director")?.Name;
+                result.Director = episodeResult.Crew.Find(c => c.Job == "Director")?.Name;
 
                 var credits = await _tmdb.GetTvEpisodeCreditsAsync(showData.Id, lookupSeason, lookupEpisode);
                 result.Actors = credits.Cast.Select(c => c.Name).ToArray();
@@ -255,14 +255,14 @@ public class TVProcessor : IProcessor
         }
         #endregion
 
-        result.CoverFilename = result.CoverURL?.Split('/').Last();
+        result.CoverFilename = result.CoverURL?.Split('/')[-1];
 
         var taggingSuccess = await writer.WriteAsync(file, result, setPath, setStatus, config);
 
         return taggingSuccess && result.Success && result.Complete;
     }
     
-    private double SeriesNameSimilarity(string parsedName, string seriesName)
+    private static double SeriesNameSimilarity(string parsedName, string seriesName)
     {
         if (seriesName.ToLower().Contains(parsedName.ToLower()))
         {
