@@ -2,7 +2,7 @@ namespace AutoTag.Core;
 public class AutoTagConfig
 {
     public enum Modes { TV, Movie };
-    public const int CurrentVer = 9;
+    public const int CurrentVer = 10;
     public int ConfigVer { get; set; } = CurrentVer;
     public Modes Mode { get; set; } = Modes.TV;
     public bool ManualMode { get; set; } = false;
