@@ -121,34 +121,40 @@ public class TVProcessor : IProcessor
             {
                 _shows.Add(episodeData.SeriesName, ShowResults.FromSearchResults(seriesResults));
             }
-            
+
             if (config.EpisodeGroup)
             {
                 var seriesResult = _shows[episodeData.SeriesName][0];
                 var tvShow = await _tmdb.GetTvShowAsync(seriesResult.TvSearchResult.Id, TvShowMethods.EpisodeGroups);
                 var groups = tvShow.EpisodeGroups;
-            
-                var chosenGroup = selectResult(groups.Results.Select(group =>
-                    ($"[{group.Type}] {group.Name}", $"S: {group.GroupCount} E: {group.EpisodeCount}")).ToList());
-            
-                if (chosenGroup.HasValue)
+
+                if (groups.Results.Any())
                 {
-                    var groupInfo = await _tmdb.GetTvEpisodeGroupsAsync(groups.Results[0].Id, config.Language);
-                    if (!seriesResult.AddEpisodeGroup(groupInfo))
+                    var chosenGroup = selectResult(groups.Results.Select(group =>
+                        ($"[{group.Type}] {group.Name}", $"{group.GroupCount} seasons, {group.EpisodeCount} episodes")).ToList());
+
+                    if (chosenGroup.HasValue)
                     {
-                        setStatus($"Error: Episode Group {groupInfo.Name} is not containing Seasons or Volumes! ", MessageType.Error);
-                        result.Success = false;
-                        return false;
+                        var groupInfo = await _tmdb.GetTvEpisodeGroupsAsync(groups.Results[chosenGroup.Value].Id, config.Language);
+                        if (!seriesResult.AddEpisodeGroup(groupInfo))
+                        {
+                            setStatus($"Error: Unable to parse required information from episode group {groupInfo.Name}", MessageType.Error);
+                            result.Success = false;
+                            return false;
+                        }
+                    }
+                    else
+                    {
+                        setStatus("File skipped", MessageType.Warning);
+                        return true;
                     }
                 }
                 else
                 {
-                    setStatus("File skipped", MessageType.Warning);
-                    return true;
+                    setStatus($"No episode groups found for series", MessageType.Warning);
                 }
             }
         }
-        
 
         // try searching for each series search result
         foreach (var show in _shows[episodeData.SeriesName])
@@ -157,8 +163,8 @@ public class TVProcessor : IProcessor
 
             var lookupSeason = episodeData.Season;
             var lookupEpisode = episodeData.Episode;
-            
-            if(config.EpisodeGroup)
+
+            if (show.EpisodeGroupMappingTable != null)
             {
                 if (!show.TryGetMapping(episodeData.Season, episodeData.Episode, out var groupNumbering))
                 {
@@ -168,7 +174,7 @@ public class TVProcessor : IProcessor
                 lookupSeason = groupNumbering!.Value.season;
                 lookupEpisode = groupNumbering.Value.episode;
             }
-            
+
             result.Id = showData.Id;
             result.SeriesName = showData.Name;
 
@@ -242,7 +248,7 @@ public class TVProcessor : IProcessor
                 if (seriesImages.Posters.Any())
                 {
                     var bestVotedImage = seriesImages.Posters.OrderByDescending(p => p.VoteAverage).First();
-                    
+
                     result.CoverURL = $"https://image.tmdb.org/t/p/original/{bestVotedImage.FilePath}";
                     _seasonPosters.Add((result.SeriesName, result.Season), result.CoverURL);
                 }
@@ -255,13 +261,13 @@ public class TVProcessor : IProcessor
         }
         #endregion
 
-        result.CoverFilename = result.CoverURL?.Split('/')[-1];
+        result.CoverFilename = result.CoverURL?.Split('/')[^1];
 
         var taggingSuccess = await writer.WriteAsync(file, result, setPath, setStatus, config);
 
         return taggingSuccess && result.Success && result.Complete;
     }
-    
+
     private static double SeriesNameSimilarity(string parsedName, string seriesName)
     {
         if (seriesName.ToLower().Contains(parsedName.ToLower()))

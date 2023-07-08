@@ -31,7 +31,7 @@ public partial class ShowResults
     public static implicit operator ShowResults(SearchTv tv) => new(tv);
 
     /// <summary>
-    /// Generates <see cref="ShowResults"/> list from any <see cref="SearchTv"/> enumerable 
+    /// Generates <see cref="ShowResults"/> list from any <see cref="SearchTv"/> enumerable
     /// </summary>
     /// <param name="results">Result from tmdb client</param>
     public static List<ShowResults> FromSearchResults(IEnumerable<SearchTv> results)
@@ -39,7 +39,7 @@ public partial class ShowResults
         return results.Select(result => (ShowResults)result).ToList();
     }
 
-    
+
     /// <summary>
     /// Add optional episode group to tv result
     /// </summary>
@@ -71,7 +71,7 @@ public partial class ShowResults
 
         return false;
     }
-    
+
     /// <summary>
     /// Tries to generate mapping table between TMDB standard sorting of show
     /// and the given Episode Group
