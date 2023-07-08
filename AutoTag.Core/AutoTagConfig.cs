@@ -2,7 +2,7 @@ namespace AutoTag.Core;
 public class AutoTagConfig
 {
     public enum Modes { TV, Movie };
-    public const int CurrentVer = 9;
+    public const int CurrentVer = 10;
     public int ConfigVer { get; set; } = CurrentVer;
     public Modes Mode { get; set; } = Modes.TV;
     public bool ManualMode { get; set; } = false;
@@ -18,6 +18,7 @@ public class AutoTagConfig
     public bool AppleTagging { get; set; } = false;
     public bool RenameSubtitles { get; set; } = false;
     public string Language { get; set; } = "en";
+    public bool EpisodeGroup { get; set; }
     public IEnumerable<FileNameReplace> FileNameReplaces { get; set; } = Enumerable.Empty<FileNameReplace>();
 
     public bool IsTVMode() => Mode == Modes.TV;

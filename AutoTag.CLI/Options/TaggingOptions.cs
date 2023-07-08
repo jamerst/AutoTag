@@ -23,6 +23,9 @@ public class TaggingOptions : OptionsBase<TaggingOptions>, IOptionsBase<TaggingO
 
     [CommandLineOption<string>("--language", "-l", "Metadata language")]
     public string? Language { get; set; }
+    
+    [CommandLineOption<bool?>("--episode-group", "-g", "Manually choose the Episode Group for a TV episode. Enables manual mode.")] 
+    public bool? EpisodeGroup { get; set; }
 
     public static IEnumerable<Option> GetOptions()
     {
@@ -34,6 +37,7 @@ public class TaggingOptions : OptionsBase<TaggingOptions>, IOptionsBase<TaggingO
         yield return GetOption(o => o.ExtendedTagging);
         yield return GetOption(o => o.AppleTagging);
         yield return GetOption(o => o.Language);
+        yield return GetOption(o => o.EpisodeGroup);
     }
 
     public static TaggingOptions GetBoundValues(BindingContext context) =>
@@ -47,6 +51,7 @@ public class TaggingOptions : OptionsBase<TaggingOptions>, IOptionsBase<TaggingO
             ExtendedTagging = GetValueForProperty(o => o.ExtendedTagging, context),
             AppleTagging = GetValueForProperty(o => o.AppleTagging, context),
             Language = GetValueForProperty(o => o.Language, context),
+            EpisodeGroup = GetValueForProperty(o => o.EpisodeGroup, context),
         };
 
     public void UpdateConfig(AutoTagConfig config)
@@ -89,6 +94,11 @@ public class TaggingOptions : OptionsBase<TaggingOptions>, IOptionsBase<TaggingO
         if (!string.IsNullOrWhiteSpace(Language))
         {
             config.Language = Language;
+        }
+
+        if (EpisodeGroup.HasValue)
+        {
+            config.EpisodeGroup = EpisodeGroup.Value;
         }
     }
 }

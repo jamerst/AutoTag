@@ -41,7 +41,7 @@ public abstract class FileMetadata
 
     public abstract string GetFileName(AutoTagConfig config);
 
-    protected readonly static Regex _renameRegex = new Regex(@"%(?<num>\d+)(?:\:(?<format>[0#]+))?");
+    protected static readonly Regex _renameRegex = new Regex(@"%(?<num>\d+)(?:\:(?<format>[0#]+))?");
 
     protected static string FormatRenameNumber(Match match, int value)
     {
@@ -55,5 +55,5 @@ public abstract class FileMetadata
         }
     }
 
-    public override abstract string ToString();
+    public abstract override string ToString();
 }
