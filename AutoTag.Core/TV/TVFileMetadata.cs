@@ -11,20 +11,30 @@ public class TVFileMetadata : FileMetadata
     {
         base.WriteToFile(file, config, setStatus);
 
-        if (config.ExtendedTagging && file.MimeType == "video/x-matroska")
+        if ((file.TagTypes & TagLib.TagTypes.Matroska) == TagLib.TagTypes.Matroska)
         {
-            var custom = (TagLib.Matroska.Tag) file.GetTag(TagLib.TagTypes.Matroska);
-            custom.Set("TMDB", "", $"tv/{Id}");
+            var custom = (TagLib.Matroska.Tag)file.GetTag(TagLib.TagTypes.Matroska);
+            // workaround for https://github.com/mono/taglib-sharp/issues/263 - Tag.Album property writes to TITLE tag instead of ALBUM
+            // how has this still not been fixed??
+            custom.Set("ALBUM", null, SeriesName);
+
+            if (config.ExtendedTagging)
+            {
+                custom.Set("TMDB", null, $"tv/{Id}");
+            }
+        }
+        else
+        {
+            file.Tag.Album = SeriesName;
         }
 
-        file.Tag.Album = SeriesName;
         file.Tag.Disc = (uint) Season;
         file.Tag.Track = (uint) Episode;
         file.Tag.TrackCount = (uint) SeasonEpisodes;
 
         // set extra tags because Apple is stupid and uses different tags for some reason
         // for a list of tags see https://kdenlive.org/en/project/adding-meta-data-to-mp4-video/
-        if (config.AppleTagging && file.MimeType.EndsWith("/mp4"))
+        if (config.AppleTagging && (file.TagTypes & TagLib.TagTypes.Apple) == TagLib.TagTypes.Apple)
         {
             var appleTags = (TagLib.Mpeg4.AppleTag) file.GetTag(TagLib.TagTypes.Apple);
 

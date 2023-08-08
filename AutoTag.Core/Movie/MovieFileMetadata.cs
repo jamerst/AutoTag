@@ -13,7 +13,7 @@ public class MovieFileMetadata : FileMetadata
             file.Tag.Year = (uint) Date.Value.Year;
         }
 
-        if (config.AppleTagging && file.MimeType.EndsWith("/mp4"))
+        if (config.AppleTagging && (file.TagTypes & TagLib.TagTypes.Apple) == TagLib.TagTypes.Apple)
         {
             var appleTags = (TagLib.Mpeg4.AppleTag) file.GetTag(TagLib.TagTypes.Apple);
 
