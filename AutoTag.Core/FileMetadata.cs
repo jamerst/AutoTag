@@ -31,7 +31,7 @@ public abstract class FileMetadata
             file.Tag.Genres = Genres.ToArray();
         }
 
-        if (config.ExtendedTagging && file.MimeType == "video/x-matroska")
+        if (config.ExtendedTagging && (file.TagTypes & TagLib.TagTypes.Matroska) == TagLib.TagTypes.Matroska)
         {
             file.Tag.Conductor = Director;
             file.Tag.Performers = Actors?.ToArray();
