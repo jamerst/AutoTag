@@ -29,7 +29,7 @@ public class FileWriter : IDisposable
                     if (!string.IsNullOrEmpty(metadata.CoverURL) && config.AddCoverArt == true)
                     {
                         byte[] imgBytes;
-                        if (!_cache.TryGetValue<byte[]>(metadata.CoverURL, out imgBytes!))
+                        if (!_cache.TryGetValue(metadata.CoverURL, out imgBytes!))
                         {
                             var response = await _client.GetAsync(metadata.CoverURL, HttpCompletionOption.ResponseHeadersRead);
                             if (response.IsSuccessStatusCode)

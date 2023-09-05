@@ -64,6 +64,9 @@ public class TVFileMetadata : FileMetadata
             {
                 setStatus($"Warning: cannot add Apple tag for episode number - value out of range", MessageType.Warning);
             }
+
+            // Sort name - allows older Apple software to sort correctly (sorts by title instead of season and episode on older devices)
+            appleTags.SetText("sonm", $"S{Season:00}E{Episode:00}");
         }
     }
 
