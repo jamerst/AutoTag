@@ -12,7 +12,7 @@ public class TVProcessor : IProcessor
     private readonly Dictionary<string, List<ShowResults>> _shows = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<(int, int), TvSeason> _seasons = new();
     private readonly Dictionary<(string, int), string> _seasonPosters = new();
-    private IEnumerable<Genre> _genres = Enumerable.Empty<Genre>();
+    private IEnumerable<Genre> _genres = [];
 
     public TVProcessor(string apiKey, AutoTagConfig config)
     {
@@ -90,7 +90,7 @@ public class TVProcessor : IProcessor
             SearchContainer<SearchTv> searchResults = await _tmdb.SearchTvShowAsync(episodeData.SeriesName);
 
             var seriesResults = searchResults.Results
-                .OrderByDescending(result => SeriesNameSimilarity(episodeData.SeriesName, result.Name))
+                .OrderByDescending(searchResult => SeriesNameSimilarity(episodeData.SeriesName, searchResult.Name))
                 .ToList();
 
             // using episode groups, requires the manual selection of a show
@@ -103,7 +103,7 @@ public class TVProcessor : IProcessor
 
                 if (chosen.HasValue)
                 {
-                    _shows.Add(episodeData.SeriesName, new List<ShowResults> { seriesResults[chosen.Value] });
+                    _shows.Add(episodeData.SeriesName, [seriesResults[chosen.Value]]);
                 }
                 else
                 {
@@ -111,7 +111,7 @@ public class TVProcessor : IProcessor
                     return true;
                 }
             }
-            else if (!seriesResults.Any())
+            else if (seriesResults.Count == 0)
             {
                 setStatus($"Error: Cannot find series {episodeData.SeriesName} on TheMovieDB", MessageType.Error);
                 result.Success = false;
@@ -128,7 +128,7 @@ public class TVProcessor : IProcessor
                 var tvShow = await _tmdb.GetTvShowAsync(seriesResult.TvSearchResult.Id, TvShowMethods.EpisodeGroups);
                 var groups = tvShow.EpisodeGroups;
 
-                if (groups.Results.Any())
+                if (groups.Results.Count != 0)
                 {
                     var chosenGroup = selectResult(groups.Results.Select(group =>
                         ($"[{group.Type}] {group.Name}", $"{group.GroupCount} seasons, {group.EpisodeCount} episodes")).ToList());
@@ -136,9 +136,16 @@ public class TVProcessor : IProcessor
                     if (chosenGroup.HasValue)
                     {
                         var groupInfo = await _tmdb.GetTvEpisodeGroupsAsync(groups.Results[chosenGroup.Value].Id, config.Language);
+                        if (groupInfo is null)
+                        {
+                            setStatus($"Error: Could not retrieve TV episode groups for show {tvShow.Name}", MessageType.Error);
+                            result.Success = false;
+                            return false;
+                        }
+                        
                         if (!seriesResult.AddEpisodeGroup(groupInfo))
                         {
-                            setStatus($"Error: Unable to parse required information from episode group {groupInfo.Name}", MessageType.Error);
+                            setStatus($"Error: Unable to generate a unique season-episode mapping for collection group {groupInfo.Name}", MessageType.Error);
                             result.Success = false;
                             return false;
                         }

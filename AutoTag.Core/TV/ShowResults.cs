@@ -10,7 +10,7 @@ namespace AutoTag.Core.TV;
 public partial class ShowResults
 {
     /* settings */
-    [GeneratedRegex("(volume|season)\\s(?<episode>\\d+)")]
+    [GeneratedRegex(@"^\S+\s+(?<episode>\d+)$")]
     private static partial Regex EpisodeRegex();
 
     /* vars */
@@ -87,7 +87,7 @@ public partial class ShowResults
         foreach (var tvGroup in collection.Groups)
         {
             // determine season number
-            var sanitizedGroupName = tvGroup.Name.Trim().ToLower();
+            var sanitizedGroupName = tvGroup.Name.Trim();
             int? seasonNumber = null;
 
             var seasonMatch = EpisodeRegex().Match(sanitizedGroupName);
@@ -105,9 +105,13 @@ public partial class ShowResults
             // create mapping
             foreach (var episode in tvGroup.Episodes)
             {
-                parsedTable.Add(
+                var mappingIsUnique = parsedTable.TryAdd(
                     (seasonNumber.Value, episode.Order + 1), // order starts at 0, episodes at 1
                     (episode.SeasonNumber, episode.EpisodeNumber));
+                if (!mappingIsUnique)
+                {
+                    return false;
+                }
             }
         }
 
