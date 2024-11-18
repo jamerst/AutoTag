@@ -2,7 +2,7 @@
   <PropertyGroup>
     <AssemblyName>autotag</AssemblyName>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net7.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <Version>3.7.0</Version>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -13,6 +13,8 @@
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <SelfContained>true</SelfContained>
     <PublishTrimmed>true</PublishTrimmed>
+    <!-- needed to serialze config. see https://devblogs.microsoft.com/dotnet/system-text-json-in-dotnet-8/#disabling-reflection-defaults -->
+    <JsonSerializerIsReflectionEnabledByDefault>true</JsonSerializerIsReflectionEnabledByDefault>
     <TrimMode>partial</TrimMode>
   </PropertyGroup>
 
