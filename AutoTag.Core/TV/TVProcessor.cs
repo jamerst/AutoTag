@@ -138,14 +138,14 @@ public class TVProcessor : IProcessor
                         var groupInfo = await _tmdb.GetTvEpisodeGroupsAsync(groups.Results[chosenGroup.Value].Id, config.Language);
                         if (groupInfo is null)
                         {
-                            setStatus($"Error: Could not retrieve TV episode groups for show {tvShow.Name}", MessageType.Error);
+                            setStatus($"Error: Could not retrieve TV episode groups for show \"{tvShow.Name}\"", MessageType.Error);
                             result.Success = false;
                             return false;
                         }
                         
                         if (!seriesResult.AddEpisodeGroup(groupInfo))
                         {
-                            setStatus($"Error: Unable to generate a unique season-episode mapping for collection group {groupInfo.Name}", MessageType.Error);
+                            setStatus($"Error: Unable to generate a unique season-episode mapping for collection group \"{groupInfo.Name}\"", MessageType.Error);
                             result.Success = false;
                             return false;
                         }

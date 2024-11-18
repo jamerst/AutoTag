@@ -87,7 +87,7 @@ public partial class ShowResults
         foreach (var tvGroup in collection.Groups)
         {
             // determine season number
-            var sanitizedGroupName = tvGroup.Name.Trim();
+            var sanitizedGroupName = tvGroup.Name.ToLower().Trim();
             int? seasonNumber = null;
 
             var seasonMatch = EpisodeRegex().Match(sanitizedGroupName);
