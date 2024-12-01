@@ -14,7 +14,7 @@
             "args": ["/home/james/Desktop/test", "--extended-tagging"],
             "cwd": "${workspaceFolder}/AutoTag.CLI",
             // For more information about the 'console' field, see https://aka.ms/VSCode-CS-LaunchJson-Console
-            "console": "internalConsole",
+            "console": "externalTerminal",
             "stopAtEntry": false
         },
         {
