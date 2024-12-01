@@ -4,9 +4,9 @@ public class MovieFileMetadata : FileMetadata
 {
     public DateTime? Date;
 
-    public override void WriteToFile(TagLib.File file, AutoTagConfig config, Action<string, MessageType> setStatus)
+    public override void WriteToFile(TagLib.File file, AutoTagConfig config, IUserInterface ui)
     {
-        base.WriteToFile(file, config, setStatus);
+        base.WriteToFile(file, config, ui);
 
         if (Date.HasValue)
         {
@@ -28,12 +28,12 @@ public class MovieFileMetadata : FileMetadata
     {
         return _renameRegex.Replace(config.MovieRenamePattern, (m) =>
         {
-            switch (m.Groups["num"].Value)
+            return m.Groups["num"].Value switch
             {
-                case "1": return Title;
-                case "2": return Date.HasValue ? FormatRenameNumber(m, Date.Value.Year) : "";
-                default: return m.Value;
-            }
+                "1" => Title!,
+                "2" => Date.HasValue ? FormatRenameNumber(m, Date.Value.Year) : "",
+                _ => m.Value
+            };
         });
     }
 
@@ -45,7 +45,7 @@ public class MovieFileMetadata : FileMetadata
         }
         else
         {
-            return Title;
+            return Title!;
         }
     }
 }

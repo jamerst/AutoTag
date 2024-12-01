@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text.RegularExpressions;
 using TMDbLib.Objects.Search;
 using TMDbLib.Objects.TvShows;
@@ -60,7 +61,8 @@ public partial class ShowResults
     /// <param name="episodeNumber">Episode number as defined in episode group</param>
     /// <param name="numbering">Matching episode number and season of "standard" order</param>
     /// <returns>True if mapping exists, false if not</returns>
-    public bool TryGetMapping(int seasonNumber, int episodeNumber, out (int season, int episode)? numbering)
+    public bool TryGetMapping(int seasonNumber, int episodeNumber,
+        [NotNullWhen(true)] out (int season, int episode)? numbering)
     {
         numbering = null;
         if (_episodeGroupMappingTable?.TryGetValue((seasonNumber, episodeNumber), out var result) ?? false)
@@ -80,9 +82,9 @@ public partial class ShowResults
     /// <param name="parsedTable">Filled parsing table. Only filled when method returns true</param>
     /// <returns>True if successful, false if not</returns>
     private static bool TryGenerateMappingTable(TvGroupCollection collection,
-        out Dictionary<(int season, int episode), (int season, int episode)>? parsedTable)
+        [NotNullWhen(true)] out Dictionary<(int season, int episode), (int season, int episode)>? parsedTable)
     {
-        parsedTable = new Dictionary<(int season, int episode), (int season, int episode)>();
+        parsedTable = [];
 
         foreach (var tvGroup in collection.Groups)
         {
@@ -107,9 +109,12 @@ public partial class ShowResults
             {
                 var mappingIsUnique = parsedTable.TryAdd(
                     (seasonNumber.Value, episode.Order + 1), // order starts at 0, episodes at 1
-                    (episode.SeasonNumber, episode.EpisodeNumber));
+                    (episode.SeasonNumber, episode.EpisodeNumber)
+                );
+
                 if (!mappingIsUnique)
                 {
+                    parsedTable = null;
                     return false;
                 }
             }

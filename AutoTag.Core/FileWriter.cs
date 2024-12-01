@@ -3,30 +3,31 @@ using Microsoft.Extensions.Caching.Memory;
 namespace AutoTag.Core;
 public class FileWriter : IDisposable
 {
-    private static readonly HttpClient _client = new HttpClient();
-    private static Dictionary<string, byte[]> _images = new Dictionary<string, byte[]>();
+    private static readonly HttpClient _client = new();
     private readonly IMemoryCache _cache;
+    private readonly AutoTagConfig _config;
 
-    public FileWriter()
+    public FileWriter(AutoTagConfig config)
     {
         _cache = new MemoryCache(new MemoryCacheOptions());
+        _config = config;
     }
 
-    public async Task<bool> WriteAsync(TaggingFile taggingFile, FileMetadata metadata, Action<string> setPath, Action<string, MessageType> setStatus, AutoTagConfig config)
+    public async Task<bool> WriteAsync(TaggingFile taggingFile, FileMetadata metadata, IUserInterface ui)
     {
         bool fileSuccess = true;
 
-        if (config.TagFiles && taggingFile.Taggable)
+        if (_config.TagFiles && taggingFile.Taggable)
         {
             TagLib.File? file = null;
             try
             {
                 using (file = TagLib.File.Create(taggingFile.Path))
                 {
-                    metadata.WriteToFile(file, config, setStatus);
+                    metadata.WriteToFile(file, _config, ui);
 
                     // if there is an image available and cover art is enabled
-                    if (!string.IsNullOrEmpty(metadata.CoverURL) && config.AddCoverArt == true)
+                    if (!string.IsNullOrEmpty(metadata.CoverURL) && _config.AddCoverArt == true)
                     {
                         byte[] imgBytes;
                         if (!_cache.TryGetValue(metadata.CoverURL, out imgBytes!))
@@ -39,78 +40,78 @@ public class FileWriter : IDisposable
                             }
                             else
                             {
-                                if (config.Verbose)
+                                if (_config.Verbose)
                                 {
-                                    setStatus($"Error: failed to download cover art ({(int) response.StatusCode}:{metadata.CoverURL})", MessageType.Error);
+                                    ui.SetStatus($"Error: failed to download cover art ({(int) response.StatusCode}:{metadata.CoverURL})", MessageType.Error);
                                 }
                                 else
                                 {
-                                    setStatus($"Error: failed to download cover art", MessageType.Error);
+                                    ui.SetStatus($"Error: failed to download cover art", MessageType.Error);
                                 }
                                 fileSuccess = false;
                             }
                         }
 
-                        file.Tag.Pictures = new[] { new TagLib.Picture(imgBytes) { Filename = "cover.jpg" } };
+                        file.Tag.Pictures = [new TagLib.Picture(imgBytes) { Filename = "cover.jpg" }];
                     }
-                    else if (string.IsNullOrEmpty(metadata.CoverURL) && config.AddCoverArt == true)
+                    else if (string.IsNullOrEmpty(metadata.CoverURL) && _config.AddCoverArt)
                     {
                         fileSuccess = false;
                     }
 
                     file.Save();
 
-                    if (fileSuccess == true)
+                    if (fileSuccess)
                     {
-                        setStatus($"Successfully tagged file as {metadata}", MessageType.Information);
+                        ui.SetStatus($"Successfully tagged file as {metadata}", MessageType.Information);
                     }
                 }
             }
             catch (Exception ex)
             {
-                if (config.Verbose)
+                if (_config.Verbose)
                 {
                     if (file != null && file.CorruptionReasons.Any())
                     {
-                        setStatus($"Error: Failed to write tags to file ({ex.GetType().Name}: {ex.Message}; CorruptionReasons: {string.Join(", ", file.CorruptionReasons)})", MessageType.Error);
+                        ui.SetStatus($"Error: Failed to write tags to file ({ex.GetType().Name}: {ex.Message}; CorruptionReasons: {string.Join(", ", file.CorruptionReasons)})", MessageType.Error);
                     }
                     else
                     {
-                        setStatus($"Error: Failed to write tags to file ({ex.GetType().Name}: {ex.Message}", MessageType.Error);
+                        ui.SetStatus($"Error: Failed to write tags to file ({ex.GetType().Name}: {ex.Message}", MessageType.Error);
                     }
                 }
                 else
                 {
-                    setStatus("Error: Failed to write tags to file", MessageType.Error);
+                    ui.SetStatus("Error: Failed to write tags to file", MessageType.Error);
                 }
                 fileSuccess = false;
             }
         }
 
-        if (config.RenameFiles)
+        if (_config.RenameFiles)
         {
             if (invalidFilenameChars == null)
             {
                 invalidFilenameChars = Path.GetInvalidFileNameChars();
 
-                if (config.WindowsSafe)
+                if (_config.WindowsSafe)
                 {
                     invalidFilenameChars = invalidFilenameChars.Union(invalidNtfsChars).ToArray();
                 }
             }
 
-            fileSuccess &= RenameFile(taggingFile.Path, metadata.GetFileName(config), setPath, setStatus, config, null);
+            fileSuccess &= RenameFile(taggingFile.Path, metadata.GetFileName(_config), null, ui);
 
             if (!string.IsNullOrEmpty(taggingFile.SubtitlePath))
             {
-                fileSuccess &= RenameFile(taggingFile.SubtitlePath, metadata.GetFileName(config), setPath, setStatus, config, "subtitle ");
+                fileSuccess &= RenameFile(taggingFile.SubtitlePath, metadata.GetFileName(_config), "subtitle ", ui);
             }
         }
 
         return fileSuccess;
     }
 
-    private static bool RenameFile(string path, string newName, Action<string> setPath, Action<string, MessageType> setStatus, AutoTagConfig config, string? prefix)
+    private bool RenameFile(string path, string newName, string? msgPrefix, IUserInterface ui)
     {
         bool fileSuccess = true;
         string newPath = Path.Combine(
@@ -118,8 +119,7 @@ public class FileWriter : IDisposable
             GetFileName(
                 newName,
                 Path.GetFileNameWithoutExtension(path),
-                setStatus,
-                config
+                ui
             )
             + Path.GetExtension(path)
         );
@@ -130,25 +130,25 @@ public class FileWriter : IDisposable
             {
                 if (File.Exists(newPath))
                 {
-                    setStatus($"Error: Could not rename - {prefix}file already exists", MessageType.Error);
+                    ui.SetStatus($"Error: Could not rename - {msgPrefix}file already exists", MessageType.Error);
                     fileSuccess = false;
                 }
                 else
                 {
                     File.Move(path, newPath);
-                    setPath(newPath);
-                    setStatus($"Successfully renamed {prefix}file to '{Path.GetFileName(newPath)}'", MessageType.Information);
+                    ui.SetFilePath(newPath);
+                    ui.SetStatus($"Successfully renamed {msgPrefix}file to '{Path.GetFileName(newPath)}'", MessageType.Information);
                 }
             }
             catch (Exception ex)
             {
-                if (config.Verbose)
+                if (_config.Verbose)
                 {
-                    setStatus($"Error: Failed to rename {prefix}file ({ex.GetType().Name}: {ex.Message})", MessageType.Error);
+                    ui.SetStatus($"Error: Failed to rename {msgPrefix}file ({ex.GetType().Name}: {ex.Message})", MessageType.Error);
                 }
                 else
                 {
-                    setStatus($"Error: Failed to rename {prefix}file", MessageType.Error);
+                    ui.SetStatus($"Error: Failed to rename {msgPrefix}file", MessageType.Error);
                 }
                 fileSuccess = false;
             }
@@ -157,10 +157,10 @@ public class FileWriter : IDisposable
         return fileSuccess;
     }
 
-    private static string GetFileName(string fileName, string oldFileName, Action<string, MessageType> setStatus, AutoTagConfig config)
+    private string GetFileName(string fileName, string oldFileName, IUserInterface ui)
     {
         string result = fileName;
-        foreach (var replace in config.FileNameReplaces)
+        foreach (var replace in _config.FileNameReplaces)
         {
             result = replace.Apply(result);
         }
@@ -168,17 +168,14 @@ public class FileWriter : IDisposable
         string escapedResult = String.Concat(result.Split(invalidFilenameChars));
         if (escapedResult != oldFileName && escapedResult.Length != fileName.Length)
         {
-            setStatus("Warning: Invalid characters in file name, automatically removing", MessageType.Warning);
+            ui.SetStatus("Warning: Invalid characters in file name, automatically removing", MessageType.Warning);
         }
 
         return escapedResult;
     }
 
     private static char[]? invalidFilenameChars { get; set; }
-
-    private static readonly char[] invalidNtfsChars = { '<', '>', ':', '"', '/', '\\', '|', '?', '*' };
-
-    private static readonly string[] subtitleFileExtensions = { ".srt", ".vtt", ".sub", ".ssa" };
+    private static readonly char[] invalidNtfsChars = ['<', '>', ':', '"', '/', '\\', '|', '?', '*'];
 
     public void Dispose()
     {

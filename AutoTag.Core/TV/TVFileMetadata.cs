@@ -7,9 +7,9 @@ public class TVFileMetadata : FileMetadata
     public int Episode;
     public int SeasonEpisodes;
 
-    public override void WriteToFile(TagLib.File file, AutoTagConfig config, Action<string, MessageType> setStatus)
+    public override void WriteToFile(TagLib.File file, AutoTagConfig config, IUserInterface ui)
     {
-        base.WriteToFile(file, config, setStatus);
+        base.WriteToFile(file, config, ui);
 
         if ((file.TagTypes & TagLib.TagTypes.Matroska) == TagLib.TagTypes.Matroska)
         {
@@ -52,7 +52,7 @@ public class TVFileMetadata : FileMetadata
             }
             else
             {
-                setStatus($"Warning: cannot add Apple tag for season number - value out of range", MessageType.Warning);
+                ui.SetStatus($"Warning: cannot add Apple tag for season number - value out of range", MessageType.Warning);
             }
 
             if (Episode >= byte.MinValue && Episode <= byte.MaxValue)
@@ -62,7 +62,7 @@ public class TVFileMetadata : FileMetadata
             }
             else
             {
-                setStatus($"Warning: cannot add Apple tag for episode number - value out of range", MessageType.Warning);
+                ui.SetStatus($"Warning: cannot add Apple tag for episode number - value out of range", MessageType.Warning);
             }
 
             // Sort name - allows older Apple software to sort correctly (sorts by title instead of season and episode on older devices)
@@ -76,14 +76,14 @@ public class TVFileMetadata : FileMetadata
     {
         return _renameRegex.Replace(config.TVRenamePattern, (m) =>
         {
-            switch (m.Groups["num"].Value)
+            return m.Groups["num"].Value switch
             {
-                case "1": return SeriesName;
-                case "2": return FormatRenameNumber(m, Season);
-                case "3": return FormatRenameNumber(m, Episode);
-                case "4": return Title;
-                default: return m.Value;
-            }
+                "1" => SeriesName,
+                "2" => FormatRenameNumber(m, Season),
+                "3" => FormatRenameNumber(m, Episode),
+                "4" => Title!,
+                _ => m.Value
+            };
         });
     }
 
@@ -91,11 +91,11 @@ public class TVFileMetadata : FileMetadata
     {
         if (!string.IsNullOrEmpty(Title))
         {
-            return $"{SeriesName} S{Season.ToString("00")}E{Episode.ToString("00")} ({Title})";
+            return $"{SeriesName} S{Season:00}E{Episode:00} ({Title})";
         }
         else
         {
-            return $"{SeriesName} S{Season.ToString("00")}E{Episode.ToString("00")}";
+            return $"{SeriesName} S{Season:00}E{Episode:00}";
         }
     }
 }

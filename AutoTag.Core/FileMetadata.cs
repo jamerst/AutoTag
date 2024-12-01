@@ -3,17 +3,16 @@
 namespace AutoTag.Core;
 public abstract class FileMetadata
 {
-    public int Id;
-    public string Title = null!;
-    public string? Overview;
-    public string? CoverURL;
-    public string? CoverFilename;
-    public bool Success;
-    public bool Complete;
-    public string? Director;
-    public IEnumerable<string>? Actors;
-    public IEnumerable<string>? Characters;
-    public IEnumerable<string> Genres = null!;
+    public int Id { get; set; }
+    public string? Title { get; set; }
+    public string? Overview { get; set; }
+    public string? CoverURL { get; set; }
+    public bool Success { get; set; }
+    public bool Complete { get; set; }
+    public string? Director { get; set; }
+    public IEnumerable<string>? Actors { get; set; }
+    public IEnumerable<string>? Characters { get; set; }
+    public IEnumerable<string>? Genres { get; set; }
 
     public FileMetadata()
     {
@@ -21,7 +20,7 @@ public abstract class FileMetadata
         Complete = true;
     }
 
-    public virtual void WriteToFile(TagLib.File file, AutoTagConfig config, Action<string, MessageType> setStatus)
+    public virtual void WriteToFile(TagLib.File file, AutoTagConfig config, IUserInterface ui)
     {
         file.Tag.Title = Title;
         file.Tag.Description = Overview;
@@ -41,13 +40,13 @@ public abstract class FileMetadata
 
     public abstract string GetFileName(AutoTagConfig config);
 
-    protected static readonly Regex _renameRegex = new Regex(@"%(?<num>\d+)(?:\:(?<format>[0#]+))?");
+    protected static readonly Regex _renameRegex = new(@"%(?<num>\d+)(?:\:(?<format>[0#]+))?");
 
     protected static string FormatRenameNumber(Match match, int value)
     {
-        if (match.Groups.ContainsKey("format"))
+        if (match.Groups.TryGetValue("format", out var format))
         {
-            return value.ToString(match.Groups["format"].Value);
+            return value.ToString(format.Value);
         }
         else
         {

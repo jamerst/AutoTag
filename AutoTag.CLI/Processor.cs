@@ -40,22 +40,24 @@ public class Processor
 
         if (!files.Any())
         {
-            Console.Error.WriteLine("No files found");
+            Console.WriteLine("No files found");
             return 1;
         }
+        
+        var ui = new CLIInterface();
 
-        using (FileWriter writer = new FileWriter())
+        using (FileWriter writer = new FileWriter(Config))
         using (IProcessor processor = Config.IsTVMode()
             ? new TVProcessor(Keys.TMDBKey, Config)
             : new MovieProcessor(Keys.TMDBKey, Config)
         ) {
             foreach (var file in files)
             {
-                Console.ForegroundColor = ConsoleColor.Magenta;
-                Console.WriteLine($"\n{file.Path}:");
-                Console.ResetColor();
+                ui.SetCurrentFile(file);
+                
+                AnsiConsole.MarkupLineInterpolated($"[magenta]\n{file.Path}:[/]");
 
-                Success &= await processor.ProcessAsync(file, p => { }, (s, t) => SetStatus(file, s, t), ChooseResult, Config, writer);
+                Success &= await processor.ProcessAsync(file, writer, ui);
             }
         }
 
@@ -65,15 +67,13 @@ public class Processor
         {
             if (Warnings == 0)
             {
-                Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine($"\n\n{(fileCount > 1 ? $"All {fileCount} files" : "File")} successfully processed.");
+                AnsiConsole.MarkupLineInterpolated($"\n\n[green]{(fileCount > 1 ? $"All {fileCount} files" : "File")} successfully processed.[/]");
             }
             else
             {
-                Console.ForegroundColor = ConsoleColor.Yellow;
-                Console.WriteLine($"\n\n{(fileCount > 1 ? $"All {fileCount} files" : "File")} successfully processed with {Warnings} warning{(Warnings > 1 ? "s" : "")}.");
+                AnsiConsole.MarkupLineInterpolated($"[yellow]\n\n{(fileCount > 1 ? $"All {fileCount} files" : "File")} successfully processed with {Warnings} warning{(Warnings > 1 ? "s" : "")}.[/]");
             }
-            Console.ResetColor();
+
             return 0;
         }
         else
@@ -84,29 +84,24 @@ public class Processor
             {
                 if (Warnings == 0)
                 {
-                    Console.ForegroundColor = ConsoleColor.Green;
-                    Console.WriteLine($"\n\n{fileCount - failedFiles} file{(fileCount - failedFiles > 1 ? "s" : "")} successfully processed.");
+                    AnsiConsole.MarkupLineInterpolated($"[green]\n\n{fileCount - failedFiles} file{(fileCount - failedFiles > 1 ? "s" : "")} successfully processed.[/]");
                 }
                 else
                 {
-                    Console.ForegroundColor = ConsoleColor.Yellow;
-                    Console.WriteLine($"\n\n{fileCount - failedFiles} file{(fileCount - failedFiles > 1 ? "s" : "")} successfully processed with {Warnings} warning{(Warnings > 1 ? "s" : "")}.");
+                    AnsiConsole.MarkupLineInterpolated($"[yellow]\n\n{fileCount - failedFiles} file{(fileCount - failedFiles > 1 ? "s" : "")} successfully processed with {Warnings} warning{(Warnings > 1 ? "s" : "")}.[/]");
                 }
-
-                Console.ForegroundColor = ConsoleColor.DarkRed;
-                Console.Error.WriteLine($"Errors encountered for {failedFiles} file{(failedFiles > 1 ? "s" : "")}:");
+                
+                AnsiConsole.MarkupLineInterpolated($"[maroon]Errors encountered for {failedFiles} file{(failedFiles > 1 ? "s" : "")}:[/]");
             }
             else
             {
-                Console.Error.WriteLine("\n\nErrors encountered for all files:");
+                AnsiConsole.MarkupLine("[maroon]\n\nErrors encountered for all files:[/]");
             }
 
-            foreach (TaggingFile file in files.Where(f => !f.Success))
+            foreach (var file in files.Where(f => !f.Success))
             {
-                Console.ForegroundColor = ConsoleColor.Magenta;
-                Console.Error.WriteLine($"{file.Path}:");
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.Error.WriteLine($"    {file.Status}\n");
+                AnsiConsole.MarkupLineInterpolated($"[magenta]{file.Path}:[/]");
+                AnsiConsole.MarkupLineInterpolated($"[red]    {file.Status}\n[/]");
             }
 
             Console.ResetColor();

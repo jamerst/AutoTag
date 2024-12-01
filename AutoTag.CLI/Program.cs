@@ -1,9 +1,14 @@
+var app = new CommandApp<AutoTag.CLI.RootCommand>()
+    .WithDescription("Automatically tag and rename media files");
+
+return await app.RunAsync(args);
+
+/*
 using System.Reflection;
 using System.Text.Json;
-
-namespace AutoTag.CLI;
-
-class Program
+using AutoTag.CLI.Settings;
+ namespace AutoTag.CLI;
+ class Program
 {
     static async Task<int> Main(string[] args)
     {
@@ -57,4 +62,4 @@ class Program
 
         return await processor.ProcessAsync(paths);
     }
-}
+}*/

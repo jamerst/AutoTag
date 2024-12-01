@@ -33,4 +33,7 @@ public class FileNameReplace
             }
         }
     }
+
+    public static IEnumerable<FileNameReplace> FromDictionary(IDictionary<string, string> dict)
+        => dict.Select(x => new FileNameReplace { Replace = x.Key, Replacement = x.Value });
 }

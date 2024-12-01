@@ -4,57 +4,19 @@ using System.Text.Encodings.Web;
 namespace AutoTag.Core;
 public class AutoTagSettings
 {
-    public AutoTagConfig Config;
-    private string ConfigPath;
-    private static readonly JsonSerializerOptions jsonOptions = new JsonSerializerOptions
-    {
-        WriteIndented = true,
-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        PropertyNameCaseInsensitive = true
-    };
+    public AutoTagConfig Config { get; set; } = null!;
+    private string ConfigPath { get; set; } = null!;
+    
+    private AutoTagSettings() {}
 
-    public AutoTagSettings(string configPath)
+    public static async Task<AutoTagSettings> LoadConfigAsync(string configPath)
     {
-        ConfigPath = configPath;
-
-        if (File.Exists(configPath))
+        var settings = new AutoTagSettings
         {
-            try
-            {
-                Config = JsonSerializer.Deserialize<AutoTagConfig>(File.ReadAllText(configPath), jsonOptions)
-                    ?? new AutoTagConfig();
-            }
-            catch (JsonException)
-            {
-                Console.Error.WriteLine($"Error parsing config file '{configPath}'");
-            }
-            catch (UnauthorizedAccessException)
-            {
-                Console.Error.WriteLine($"Config file '{configPath}' not readable");
-            }
-            catch (Exception e)
-            {
-                Console.Error.WriteLine($"Error reading config file '{configPath}': {e.Message}");
-            }
-            finally
-            {
-                Config ??= new AutoTagConfig();
-            }
+            ConfigPath = configPath
+        };
 
-            if (Config.ConfigVer != AutoTagConfig.CurrentVer)
-            {
-                if (Config.ConfigVer < 5 && Config.TVRenamePattern == "%1 - %2x%3 - %4")
-                {
-                    Config.TVRenamePattern = "%1 - %2x%3:00 - %4";
-                }
-
-                // if config file outdated, update it with new options
-                Config.ConfigVer = AutoTagConfig.CurrentVer;
-                Save();
-            }
-        }
-        else
+        if (!File.Exists(configPath))
         {
             Console.WriteLine($"Generating new config file with default options: '{configPath}'");
             FileInfo configFile = new FileInfo(configPath);
@@ -63,54 +25,82 @@ public class AutoTagSettings
                 configFile.Directory.Create();
             }
 
-            try
-            {
-                File.WriteAllText(configPath, JsonSerializer.Serialize<AutoTagConfig>(new AutoTagConfig(), jsonOptions));
-            }
-            catch (UnauthorizedAccessException)
-            {
-                Console.Error.WriteLine($"Config file '{configPath}'not writeable");
-            }
-            catch (Exception e)
-            {
-                Console.Error.WriteLine($"Error writing config file '{configPath}': {e.Message}");
-            }
-
-            try
-            {
-                Config = JsonSerializer.Deserialize<AutoTagConfig>(File.ReadAllText(configPath), jsonOptions)
-                    ?? new AutoTagConfig();
-            }
-            catch (JsonException)
-            {
-                Console.Error.WriteLine($"Error parsing config file '{configPath}'");
-            }
-            catch (UnauthorizedAccessException)
-            {
-                Console.Error.WriteLine($"Config file '{configPath}' not readable");
-            }
-            catch (Exception e)
-            {
-                Console.Error.WriteLine($"Error reading config file '{configPath}': {e.Message}");
-            }
+            await WriteConfigToDiskAsync(configPath, new AutoTagConfig());
         }
 
-        Config ??= new AutoTagConfig();
+        var config = await ReadConfigFromDiskAsync(configPath);
+        settings.Config = config;
+
+        await MigrateConfigVersionAsync(configPath, config);
+
+        return settings;
     }
 
-    public void Save()
+    private static async Task<AutoTagConfig> ReadConfigFromDiskAsync(string configPath)
     {
+        AutoTagConfig? config = null;
         try
         {
-            File.WriteAllText(ConfigPath, JsonSerializer.Serialize<AutoTagConfig>(Config, jsonOptions));
+            config = JsonSerializer.Deserialize<AutoTagConfig>(await File.ReadAllTextAsync(configPath), _jsonOptions)
+                     ?? new AutoTagConfig();
+        }
+        catch (JsonException)
+        {
+           Console.WriteLine($"Error parsing config file '{configPath}'");
         }
         catch (UnauthorizedAccessException)
         {
-            Console.Error.WriteLine("Config file not writeable");
+            Console.WriteLine($"Config file '{configPath}' not readable");
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine($"Error reading config file '{configPath}': {e.Message}");
+        }
+        finally
+        {
+            config ??= new AutoTagConfig();
+        }
+
+        return config;
+    }
+
+    private static async Task MigrateConfigVersionAsync(string configPath, AutoTagConfig config)
+    {
+        if (config.ConfigVer != AutoTagConfig.CurrentVer)
+        {
+            if (config.ConfigVer < 5 && config.TVRenamePattern == "%1 - %2x%3 - %4")
+            {
+                config.TVRenamePattern = "%1 - %2x%3:00 - %4";
+            }
+
+            // if config file outdated, update it with new options
+            config.ConfigVer = AutoTagConfig.CurrentVer;
+            await WriteConfigToDiskAsync(configPath, config);
+        }
+    }
+
+    public Task SaveAsync() => WriteConfigToDiskAsync(ConfigPath, Config);
+
+    private static readonly JsonSerializerOptions _jsonOptions = new()
+    {
+        WriteIndented = true,
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        PropertyNameCaseInsensitive = true
+    };
+    private static async Task WriteConfigToDiskAsync(string configPath, AutoTagConfig config)
+    {
+        try
+        {
+            await File.WriteAllTextAsync(configPath, JsonSerializer.Serialize(config, _jsonOptions));
+        }
+        catch (UnauthorizedAccessException)
+        {
+            Console.WriteLine("Config file not writeable");
         }
         catch (Exception)
         {
-            Console.Error.WriteLine("Failed to write config file");
+            Console.WriteLine("Failed to write config file");
         }
     }
 }
