@@ -19,7 +19,7 @@ public class AutoTagConfig
     public bool RenameSubtitles { get; set; } = false;
     public string Language { get; set; } = "en";
     public bool EpisodeGroup { get; set; }
-    public IEnumerable<FileNameReplace> FileNameReplaces { get; set; } = Enumerable.Empty<FileNameReplace>();
+    public IEnumerable<FileNameReplace> FileNameReplaces { get; set; } = [];
 
     public bool IsTVMode() => Mode == Modes.TV;
 }

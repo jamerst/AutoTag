@@ -1,60 +1,43 @@
 using Microsoft.Extensions.Caching.Memory;
 
-namespace AutoTag.Core;
-public class FileWriter : IDisposable
+namespace AutoTag.Core.Files;
+
+public interface IFileWriter
 {
-    private static readonly HttpClient _client = new();
-    private readonly IMemoryCache _cache;
-    private readonly AutoTagConfig _config;
+    Task<bool> WriteAsync(TaggingFile taggingFile, FileMetadata metadata);
+}
 
-    public FileWriter(AutoTagConfig config)
-    {
-        _cache = new MemoryCache(new MemoryCacheOptions());
-        _config = config;
-    }
-
-    public async Task<bool> WriteAsync(TaggingFile taggingFile, FileMetadata metadata, IUserInterface ui)
+public class FileWriter(ICoverArtFetcher coverArtFetcher, AutoTagConfig config, IUserInterface ui) : IFileWriter
+{
+    public async Task<bool> WriteAsync(TaggingFile taggingFile, FileMetadata metadata)
     {
         bool fileSuccess = true;
 
-        if (_config.TagFiles && taggingFile.Taggable)
+        if (config.TagFiles && taggingFile.Taggable)
         {
             TagLib.File? file = null;
             try
             {
                 using (file = TagLib.File.Create(taggingFile.Path))
                 {
-                    metadata.WriteToFile(file, _config, ui);
+                    metadata.WriteToFile(file, config, ui);
 
                     // if there is an image available and cover art is enabled
-                    if (!string.IsNullOrEmpty(metadata.CoverURL) && _config.AddCoverArt == true)
+                    if (!string.IsNullOrEmpty(metadata.CoverURL) && config.AddCoverArt)
                     {
-                        byte[] imgBytes;
-                        if (!_cache.TryGetValue(metadata.CoverURL, out imgBytes!))
+                        var imgBytes = await coverArtFetcher.GetCoverArtAsync(metadata.CoverURL);
+                        if (imgBytes == null)
                         {
-                            var response = await _client.GetAsync(metadata.CoverURL, HttpCompletionOption.ResponseHeadersRead);
-                            if (response.IsSuccessStatusCode)
-                            {
-                                imgBytes = await response.Content.ReadAsByteArrayAsync();
-                                _cache.Set(metadata.CoverURL, imgBytes);
-                            }
-                            else
-                            {
-                                if (_config.Verbose)
-                                {
-                                    ui.SetStatus($"Error: failed to download cover art ({(int) response.StatusCode}:{metadata.CoverURL})", MessageType.Error);
-                                }
-                                else
-                                {
-                                    ui.SetStatus($"Error: failed to download cover art", MessageType.Error);
-                                }
-                                fileSuccess = false;
-                            }
+                            ui.SetStatus(
+                                $"Error: failed to download cover art{(config.Verbose ? $"({metadata.CoverURL})" : "")}",
+                                MessageType.Error
+                            );
+                            fileSuccess = false;
                         }
 
                         file.Tag.Pictures = [new TagLib.Picture(imgBytes) { Filename = "cover.jpg" }];
                     }
-                    else if (string.IsNullOrEmpty(metadata.CoverURL) && _config.AddCoverArt)
+                    else if (string.IsNullOrEmpty(metadata.CoverURL) && config.AddCoverArt)
                     {
                         fileSuccess = false;
                     }
@@ -69,7 +52,7 @@ public class FileWriter : IDisposable
             }
             catch (Exception ex)
             {
-                if (_config.Verbose)
+                if (config.Verbose)
                 {
                     if (file != null && file.CorruptionReasons.Any())
                     {
@@ -88,38 +71,37 @@ public class FileWriter : IDisposable
             }
         }
 
-        if (_config.RenameFiles)
+        if (config.RenameFiles)
         {
-            if (invalidFilenameChars == null)
+            if (InvalidFilenameChars == null)
             {
-                invalidFilenameChars = Path.GetInvalidFileNameChars();
+                InvalidFilenameChars = Path.GetInvalidFileNameChars();
 
-                if (_config.WindowsSafe)
+                if (config.WindowsSafe)
                 {
-                    invalidFilenameChars = invalidFilenameChars.Union(invalidNtfsChars).ToArray();
+                    InvalidFilenameChars = InvalidFilenameChars.Union(InvalidNtfsChars).ToArray();
                 }
             }
 
-            fileSuccess &= RenameFile(taggingFile.Path, metadata.GetFileName(_config), null, ui);
+            fileSuccess &= RenameFile(taggingFile.Path, metadata.GetFileName(config), null);
 
             if (!string.IsNullOrEmpty(taggingFile.SubtitlePath))
             {
-                fileSuccess &= RenameFile(taggingFile.SubtitlePath, metadata.GetFileName(_config), "subtitle ", ui);
+                fileSuccess &= RenameFile(taggingFile.SubtitlePath, metadata.GetFileName(config), "subtitle ");
             }
         }
 
         return fileSuccess;
     }
 
-    private bool RenameFile(string path, string newName, string? msgPrefix, IUserInterface ui)
+    private bool RenameFile(string path, string newName, string? msgPrefix)
     {
         bool fileSuccess = true;
         string newPath = Path.Combine(
             Path.GetDirectoryName(path)!,
             GetFileName(
                 newName,
-                Path.GetFileNameWithoutExtension(path),
-                ui
+                Path.GetFileNameWithoutExtension(path)
             )
             + Path.GetExtension(path)
         );
@@ -142,7 +124,7 @@ public class FileWriter : IDisposable
             }
             catch (Exception ex)
             {
-                if (_config.Verbose)
+                if (config.Verbose)
                 {
                     ui.SetStatus($"Error: Failed to rename {msgPrefix}file ({ex.GetType().Name}: {ex.Message})", MessageType.Error);
                 }
@@ -157,15 +139,15 @@ public class FileWriter : IDisposable
         return fileSuccess;
     }
 
-    private string GetFileName(string fileName, string oldFileName, IUserInterface ui)
+    private string GetFileName(string fileName, string oldFileName)
     {
         string result = fileName;
-        foreach (var replace in _config.FileNameReplaces)
+        foreach (var replace in config.FileNameReplaces)
         {
             result = replace.Apply(result);
         }
 
-        string escapedResult = String.Concat(result.Split(invalidFilenameChars));
+        string escapedResult = String.Concat(result.Split(InvalidFilenameChars));
         if (escapedResult != oldFileName && escapedResult.Length != fileName.Length)
         {
             ui.SetStatus("Warning: Invalid characters in file name, automatically removing", MessageType.Warning);
@@ -174,11 +156,6 @@ public class FileWriter : IDisposable
         return escapedResult;
     }
 
-    private static char[]? invalidFilenameChars { get; set; }
-    private static readonly char[] invalidNtfsChars = ['<', '>', ':', '"', '/', '\\', '|', '?', '*'];
-
-    public void Dispose()
-    {
-        _cache.Dispose();
-    }
+    private static char[]? InvalidFilenameChars { get; set; }
+    private static readonly char[] InvalidNtfsChars = ['<', '>', ':', '"', '/', '\\', '|', '?', '*'];
 }

@@ -6,15 +6,15 @@ public class EpisodeParser
     // Based on SubtitleFetcher's filename parsing
     // https://github.com/pheiberg/SubtitleFetcher
 
-    static RegexOptions _regexOptions = RegexOptions.IgnoreCase | RegexOptions.CultureInvariant;
-    static readonly Regex[] _patterns = {
-            new Regex(@"^((?<SeriesName>.+?)[\[. _-]+)?(?<Season>\d+)x(?<Episode>\d+)(([. _-]*x|-)(?<EndEpisode>(?!(1080|720)[pi])(?!(?<=x)264)\d+))*[\]. _-]*((?<ExtraInfo>.+?)((?<![. _-])-(?<ReleaseGroup>[^-]+))?)?$", _regexOptions),
-            new Regex(@"^((?<SeriesName>.+?)[. _-]+)?s(?<Season>\d+)[. _-]*e(?<Episode>\d+)(([. _-]*e|-)(?<EndEpisode>(?!(1080|720)[pi])\d+))*[. _-]*((?<ExtraInfo>.+?)((?<![. _-])-(?<ReleaseGroup>[^-]+))?)?$", _regexOptions)
+    static RegexOptions RegexOptions = RegexOptions.IgnoreCase | RegexOptions.CultureInvariant;
+    static readonly Regex[] Patterns = {
+            new Regex(@"^((?<SeriesName>.+?)[\[. _-]+)?(?<Season>\d+)x(?<Episode>\d+)(([. _-]*x|-)(?<EndEpisode>(?!(1080|720)[pi])(?!(?<=x)264)\d+))*[\]. _-]*((?<ExtraInfo>.+?)((?<![. _-])-(?<ReleaseGroup>[^-]+))?)?$", RegexOptions),
+            new Regex(@"^((?<SeriesName>.+?)[. _-]+)?s(?<Season>\d+)[. _-]*e(?<Episode>\d+)(([. _-]*e|-)(?<EndEpisode>(?!(1080|720)[pi])\d+))*[. _-]*((?<ExtraInfo>.+?)((?<![. _-])-(?<ReleaseGroup>[^-]+))?)?$", RegexOptions)
 
         };
     public static TVFileMetadata ParseEpisodeInfo(string fileName)
     {
-        foreach (var pattern in _patterns)
+        foreach (var pattern in Patterns)
         {
             var match = pattern.Match(fileName);
             if (!match.Success)

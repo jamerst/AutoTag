@@ -1,91 +1,166 @@
-using AutoTag.Core.Movie;
-using AutoTag.Core.TV;
+using System.Reflection;
+using AutoTag.Core.Files;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace AutoTag.CLI;
 
-public class CLIInterface : IUserInterface
+public class CLIInterface(IServiceProvider serviceProvider, AutoTagConfig config) : IUserInterface
 {
-    private TaggingFile _file = null!;
+    private List<TaggingFile> Files = null!;
+    private TaggingFile CurrentFile = null!;
 
-    private bool Success;
+    private bool Success = true;
     private int Warnings;
 
-    public void SetCurrentFile(TaggingFile file)
+    public async Task<int> RunAsync(IEnumerable<FileSystemInfo> entries)
     {
-        _file = file;
+        AnsiConsole.WriteLine($"AutoTag v{GetVersion()}");
+        AnsiConsole.MarkupLine("[link]https://jtattersall.net[/]");
+
+        Files = TaggingFile.FindTaggingFiles(entries, config, this);
+
+        int fileCount = Files.Count;
+        if (fileCount == 0)
+        {
+            Console.WriteLine("No files found");
+            return 1;
+        }
+
+        var processor = serviceProvider.GetRequiredService<IProcessor>();
+        foreach (var file in Files)
+        {
+            CurrentFile = file;
+            AnsiConsole.MarkupLineInterpolated($"[fuchsia]\n{file.Path}:[/]");
+
+            Success &= await processor.ProcessAsync(file);
+        }
+
+        return ReportResults(fileCount);
     }
-    
-    public void SetFilePath(string path)
+
+    private int ReportResults(int fileCount)
     {
+        if (Success)
+        {
+            if (Warnings == 0)
+            {
+                AnsiConsole.MarkupLineInterpolated(
+                    $"\n\n[green]{(fileCount > 1 ? $"All {fileCount} files" : "File")} successfully processed.[/]");
+            }
+            else
+            {
+                AnsiConsole.MarkupLineInterpolated(
+                    $"[yellow]\n\n{(fileCount > 1 ? $"All {fileCount} files" : "File")} successfully processed with {Warnings} warning{(Warnings > 1 ? "s" : "")}.[/]");
+            }
+
+            return 0;
+        }
+        else
+        {
+            int failedFiles = Files.Count(f => !f.Success);
+
+            if (failedFiles < fileCount)
+            {
+                if (Warnings == 0)
+                {
+                    AnsiConsole.MarkupLineInterpolated(
+                        $"[green]\n\n{fileCount - failedFiles} file{(fileCount - failedFiles > 1 ? "s" : "")} successfully processed.[/]");
+                }
+                else
+                {
+                    AnsiConsole.MarkupLineInterpolated(
+                        $"[yellow]\n\n{fileCount - failedFiles} file{(fileCount - failedFiles > 1 ? "s" : "")} successfully processed with {Warnings} warning{(Warnings > 1 ? "s" : "")}.[/]");
+                }
+
+                AnsiConsole.MarkupLineInterpolated(
+                    $"[maroon]Errors encountered for {failedFiles} file{(failedFiles > 1 ? "s" : "")}:[/]");
+            }
+            else
+            {
+                AnsiConsole.MarkupLine("[maroon]\n\nErrors encountered for all files:[/]");
+            }
+
+            foreach (var file in Files.Where(f => !f.Success))
+            {
+                AnsiConsole.MarkupLineInterpolated($"[magenta]{file.Path}:[/]");
+                AnsiConsole.MarkupLineInterpolated($"[red]    {file.Status}\n[/]");
+            }
+
+            Console.ResetColor();
+            return 1;
+        }
+    }
+
+    public void DisplayMessage(string message, MessageType type)
+    {
+        if (type.IsLog() && !config.Verbose)
+        {
+            return;
+        }
+
+        Color? colour = null;
+        if (type.IsError())
+        {
+            colour = Color.Red;
+        }
+        else if (type.IsWarning())
+        {
+            colour = Color.Yellow;
+        }
+
+        AnsiConsole.Write(new Text($"{message}\n", new Style(foreground: colour)));
     }
 
     public void SetStatus(string status, MessageType type)
     {
-        if (type == MessageType.Error && !_file.Success)
+        if (type.IsError())
         {
-            _file.Status += Environment.NewLine + status;
-        }
-        else if (type == MessageType.Error)
-        {
+            if (!CurrentFile.Success)
+            {
+                CurrentFile.Status += Environment.NewLine + status;
+            }
+            else
+            {
+                CurrentFile.Status = status;
+            }
+
             Success = false;
-            _file.Success = false;
-            Console.ForegroundColor = ConsoleColor.Red;
-            _file.Status = status;
+            CurrentFile.Success = false;
         }
-        else if (_file.Success)
+        else if (CurrentFile.Success)
         {
-            _file.Status = status;
+            CurrentFile.Status = status;
         }
 
-        if (type == MessageType.Warning)
+        if (type.IsWarning())
         {
-            Console.ForegroundColor = ConsoleColor.Yellow;
             Warnings++;
         }
 
-        Console.WriteLine($"    {_file.Status}");
-        Console.ResetColor();
+        DisplayMessage($"    {status}", type);
     }
 
-    public int? SelectOption(List<(string, string)> options)
+    public int? SelectOption(string message, List<string> options)
     {
-        Console.ForegroundColor = ConsoleColor.Yellow;
-        Console.WriteLine("    Please choose an option, or press enter to skip file:");
-        Console.ResetColor();
-        for (int i = 0; i < options.Count; i++)
-        {
-            Console.ForegroundColor = ConsoleColor.Cyan;
-            Console.WriteLine($"        {i}: {options[i].Item1} ({options[i].Item2})");
-        }
-        Console.ResetColor();
+        var choice = AnsiConsole.Prompt(
+            new SelectionPrompt<(int?, string)>()
+                .Title($"    [yellow]{Markup.Escape(message)}[/]")
+                .PageSize(10)
+                .AddChoices([
+                    ..options.Select((o, i) => (i, o)),
+                    (null, "(Skip file)")
+                ])
+                .UseConverter(o => $"  {o.Item2}")
+                .WrapAround()
+                .HighlightStyle(new Style(foreground: Color.Aqua))
+        );
 
-        int? choice = null;
-        bool inputSuccess = false;
-        while (!inputSuccess)
-        {
-            choice = InputResult(options.Count, out inputSuccess);
-        }
-
-        return choice;
+        return choice.Item1;
     }
-    
-    private int? InputResult(int count, out bool success)
+
+    public static string GetVersion() => Assembly.GetExecutingAssembly()?.GetName()?.Version?.ToString(3)!;
+
+    public void SetFilePath(string path)
     {
-        success = true;
-        Console.Write($"    Choose an option [0-{count - 1}]: ");
-        string? choice = Console.ReadLine();
-
-        int chosen;
-        if (int.TryParse(choice, out chosen) && chosen >= 0 && chosen < count)
-        {
-            return chosen;
-        }
-        else if (!string.IsNullOrEmpty(choice))
-        {
-            // if entry is either not a number or out of range
-            success = false;
-        }
-
-        return null;
     }
 }

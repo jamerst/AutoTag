@@ -40,7 +40,7 @@ public abstract class FileMetadata
 
     public abstract string GetFileName(AutoTagConfig config);
 
-    protected static readonly Regex _renameRegex = new(@"%(?<num>\d+)(?:\:(?<format>[0#]+))?");
+    protected static readonly Regex RenameRegex = new(@"%(?<num>\d+)(?:\:(?<format>[0#]+))?");
 
     protected static string FormatRenameNumber(Match match, int value)
     {

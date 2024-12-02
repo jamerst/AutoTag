@@ -41,7 +41,7 @@ public class AutoTagSettings
         AutoTagConfig? config = null;
         try
         {
-            config = JsonSerializer.Deserialize<AutoTagConfig>(await File.ReadAllTextAsync(configPath), _jsonOptions)
+            config = JsonSerializer.Deserialize<AutoTagConfig>(await File.ReadAllTextAsync(configPath), JsonOptions)
                      ?? new AutoTagConfig();
         }
         catch (JsonException)
@@ -81,7 +81,7 @@ public class AutoTagSettings
 
     public Task SaveAsync() => WriteConfigToDiskAsync(ConfigPath, Config);
 
-    private static readonly JsonSerializerOptions _jsonOptions = new()
+    private static readonly JsonSerializerOptions JsonOptions = new()
     {
         WriteIndented = true,
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
@@ -92,7 +92,7 @@ public class AutoTagSettings
     {
         try
         {
-            await File.WriteAllTextAsync(configPath, JsonSerializer.Serialize(config, _jsonOptions));
+            await File.WriteAllTextAsync(configPath, JsonSerializer.Serialize(config, JsonOptions));
         }
         catch (UnauthorizedAccessException)
         {

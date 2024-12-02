@@ -1,49 +1,29 @@
 ﻿using System.Text.RegularExpressions;
-
+using AutoTag.Core.Files;
 using TMDbLib.Client;
 using TMDbLib.Objects.General;
 using TMDbLib.Objects.Search;
 using TMDbLib.Objects.TvShows;
 
 namespace AutoTag.Core.TV;
-public class TVProcessor : IProcessor
+public class TVProcessor(TMDbClient tmdb, IFileWriter writer, IUserInterface ui, AutoTagConfig config) : IProcessor
 {
-    private readonly TMDbClient _tmdb;
-    private readonly AutoTagConfig _config;
-    
-    private readonly Dictionary<string, List<ShowResults>> _shows = new(StringComparer.OrdinalIgnoreCase);
-    private readonly Dictionary<(int, int), TvSeason> _seasons = new();
-    private readonly Dictionary<(string, int), string> _seasonPosters = new();
-    private IEnumerable<Genre> _genres = [];
-    
-    public TVProcessor(string apiKey, AutoTagConfig config)
-    {
-        _tmdb = new(apiKey)
-        {
-            DefaultLanguage = config.Language,
-            DefaultImageLanguage = config.Language
-        };
-        _config = config;
-    }
+    private readonly Dictionary<string, List<ShowResults>> CachedShows = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<(int, int), TvSeason> CachedSeasons = new();
+    private readonly Dictionary<(string, int), string> CachedSeasonPosters = new();
+    private IEnumerable<Genre> Genres = [];
 
-    public async Task<bool> ProcessAsync(
-        TaggingFile file,
-        FileWriter writer,
-        IUserInterface ui
-    )
+    public async Task<bool> ProcessAsync(TaggingFile file)
     {
-        var fileNameData = ParseFileName(file, ui);
+        var fileNameData = ParseFileName(file);
         if (fileNameData == null)
         {
             return false;
         }
 
-        if (_config.Verbose)
-        {
-            ui.SetStatus($"Parsed file as {fileNameData}", MessageType.Information);
-        }
+        ui.SetStatus($"Parsed file as {fileNameData}", MessageType.Log);
 
-        var findShowResult = await FindShowAsync(fileNameData.SeriesName, ui);
+        var findShowResult = await FindShowAsync(fileNameData.SeriesName);
         switch (findShowResult)
         {
             case FindResult.Fail:
@@ -59,9 +39,9 @@ public class TVProcessor : IProcessor
         };
         
         // try searching for each series search result
-        foreach (var show in _shows[fileNameData.SeriesName])
+        foreach (var show in CachedShows[fileNameData.SeriesName])
         {
-            var findEpisodeResult = await FindEpisodeAsync(fileNameData, show, result, file.Taggable, ui);
+            var findEpisodeResult = await FindEpisodeAsync(fileNameData, show, result, file.Taggable);
             if (findEpisodeResult == FindResult.Fail)
             {
                 return false;
@@ -74,21 +54,21 @@ public class TVProcessor : IProcessor
 
         ui.SetStatus($"Found {fileNameData} ({result.Title}) on TheMovieDB", MessageType.Information);
 
-        if (_config.AddCoverArt && string.IsNullOrEmpty(result.CoverURL) && file.Taggable)
+        if (config.AddCoverArt && string.IsNullOrEmpty(result.CoverURL) && file.Taggable)
         {
             await FindPosterAsync(result, ui);
         }
 
-        var taggingSuccess = await writer.WriteAsync(file, result, ui);
+        var taggingSuccess = await writer.WriteAsync(file, result);
 
         return taggingSuccess && result.Success && result.Complete;
     }
 
-    private TVFileMetadata? ParseFileName(TaggingFile file, IUserInterface ui)
+    private TVFileMetadata? ParseFileName(TaggingFile file)
     {
         TVFileMetadata episodeData;
 
-        if (string.IsNullOrEmpty(_config.ParsePattern))
+        if (string.IsNullOrEmpty(config.ParsePattern))
         {
             try
             {
@@ -104,7 +84,7 @@ public class TVProcessor : IProcessor
         {
             try
             {
-                var match = Regex.Match(Path.GetFullPath(file.Path), _config.ParsePattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+                var match = Regex.Match(Path.GetFullPath(file.Path), config.ParsePattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
                 episodeData = new TVFileMetadata
                 {
@@ -115,7 +95,7 @@ public class TVProcessor : IProcessor
             }
             catch (FormatException ex)
             {
-                if (_config.Verbose)
+                if (config.Verbose)
                 {
                     ui.SetStatus($"Error: Unable to parse required information from filename ({ex.GetType().Name}: {ex.Message})", MessageType.Error);
                 }
@@ -131,28 +111,32 @@ public class TVProcessor : IProcessor
         return episodeData;
     }
 
-    private async Task<FindResult> FindShowAsync(string seriesName, IUserInterface ui)
+    private async Task<FindResult> FindShowAsync(string seriesName)
     {
-        if (!_shows.ContainsKey(seriesName))
+        if (!CachedShows.ContainsKey(seriesName))
         {
             // if not already searched for series
-            SearchContainer<SearchTv> searchResults = await _tmdb.SearchTvShowAsync(seriesName);
+            SearchContainer<SearchTv> searchResults = await tmdb.SearchTvShowAsync(seriesName);
 
             var seriesResults = searchResults.Results
                 .OrderByDescending(searchResult => SeriesNameSimilarity(seriesName, searchResult.Name))
                 .ToList();
 
             // using episode groups, requires the manual selection of a show
-            if (_config.ManualMode || _config.EpisodeGroup)
+            if (config.ManualMode || config.EpisodeGroup)
             {
-                var chosen = ui.SelectOption(seriesResults
-                    .Select(t => (t.Name, t.FirstAirDate?.Year.ToString() ?? "Unknown"))
-                    .ToList()
+                var chosen = ui.SelectOption(
+                    "Please choose an option:",
+                    seriesResults
+                        .Select(t => $"{t.Name} ({t.FirstAirDate?.Year.ToString() ?? "Unknown"})")
+                        .ToList()
                 );
 
                 if (chosen.HasValue)
                 {
-                    _shows.Add(seriesName, [seriesResults[chosen.Value]]);
+                    var chosenSeries = seriesResults[chosen.Value];
+                    CachedShows.Add(seriesName, [chosenSeries]);
+                    ui.SetStatus($"Selected {chosenSeries.Name} ({chosenSeries.FirstAirDate?.Year.ToString() ?? "Unknown"})", MessageType.Information);
                 }
                 else
                 {
@@ -167,34 +151,44 @@ public class TVProcessor : IProcessor
             }
             else
             {
-                _shows.Add(seriesName, ShowResults.FromSearchResults(seriesResults));
+                CachedShows.Add(seriesName, ShowResults.FromSearchResults(seriesResults));
             }
 
-            if (_config.EpisodeGroup)
+            if (config.EpisodeGroup)
             {
-                var seriesResult = _shows[seriesName][0];
-                var tvShow = await _tmdb.GetTvShowAsync(seriesResult.TvSearchResult.Id, TvShowMethods.EpisodeGroups);
+                var seriesResult = CachedShows[seriesName][0];
+                var tvShow = await tmdb.GetTvShowAsync(seriesResult.TvSearchResult.Id, TvShowMethods.EpisodeGroups);
                 var groups = tvShow.EpisodeGroups;
 
                 if (groups.Results.Count != 0)
                 {
-                    var chosenGroup = ui.SelectOption(groups.Results.Select(group =>
-                        ($"[{group.Type}] {group.Name}", $"{group.GroupCount} seasons, {group.EpisodeCount} episodes")).ToList());
+                    var chosenGroup = ui.SelectOption(
+                        "Please choose an episode ordering:",
+                        groups.Results
+                            .Select(g => $"[{g.Type}] {g.Name} ({g.GroupCount} seasons, {g.EpisodeCount} episodes)")
+                            .ToList()
+                    );
 
                     if (chosenGroup.HasValue)
                     {
-                        var groupInfo = await _tmdb.GetTvEpisodeGroupsAsync(groups.Results[chosenGroup.Value].Id, _config.Language);
+                        var groupInfo = await tmdb.GetTvEpisodeGroupsAsync(groups.Results[chosenGroup.Value].Id, config.Language);
                         if (groupInfo is null)
                         {
                             ui.SetStatus($@"Error: Could not retrieve TV episode groups for show ""{tvShow.Name}""", MessageType.Error);
                             return FindResult.Fail;
                         }
 
-                        if (!seriesResult.AddEpisodeGroup(groupInfo))
+                        if (seriesResult.AddEpisodeGroup(groupInfo))
+                        {
+                            ui.SetStatus($"Selected {groupInfo.Name} episode ordering", MessageType.Information);
+                        }
+                        else
                         {
                             ui.SetStatus($@"Error: Unable to generate a unique season-episode mapping for collection group ""{groupInfo.Name}""", MessageType.Error);
                             return FindResult.Fail;
                         }
+                        
+                        
                     }
                     else
                     {
@@ -212,7 +206,7 @@ public class TVProcessor : IProcessor
         return FindResult.Success;
     }
 
-    private async Task<FindResult> FindEpisodeAsync(TVFileMetadata fileNameData, ShowResults show, TVFileMetadata result, bool fileIsTaggable, IUserInterface ui)
+    private async Task<FindResult> FindEpisodeAsync(TVFileMetadata fileNameData, ShowResults show, TVFileMetadata result, bool fileIsTaggable)
     {
         var showData = show.TvSearchResult;
         
@@ -236,13 +230,13 @@ public class TVProcessor : IProcessor
         result.Id = showData.Id;
         result.SeriesName = showData.Name;
 
-        if (!_seasons.TryGetValue((showData.Id, lookupSeason), out var seasonResult))
+        if (!CachedSeasons.TryGetValue((showData.Id, lookupSeason), out var seasonResult))
         {
-            seasonResult = await _tmdb.GetTvSeasonAsync(showData.Id, lookupSeason);
+            seasonResult = await tmdb.GetTvSeasonAsync(showData.Id, lookupSeason);
 
             if (seasonResult == null)
             {
-                if (showData.Id == _shows[fileNameData.SeriesName][^1].TvSearchResult.Id)
+                if (showData.Id == CachedShows[fileNameData.SeriesName][^1].TvSearchResult.Id)
                 {
                     ui.SetStatus($"Error: Cannot find {fileNameData} on TheMovieDB", MessageType.Error);
                     return FindResult.Fail;
@@ -251,7 +245,7 @@ public class TVProcessor : IProcessor
                 return FindResult.Skip;
             }
             
-            _seasons.Add((showData.Id, lookupSeason), seasonResult);
+            CachedSeasons.Add((showData.Id, lookupSeason), seasonResult);
         }
         
         result.SeasonEpisodes = seasonResult.Episodes.Count;
@@ -264,7 +258,7 @@ public class TVProcessor : IProcessor
         var episodeResult = seasonResult.Episodes.Find(e => e.EpisodeNumber == lookupEpisode);
         if (episodeResult == default)
         {
-            if (showData.Id == _shows[fileNameData.SeriesName][^1].TvSearchResult.Id)
+            if (showData.Id == CachedShows[fileNameData.SeriesName][^1].TvSearchResult.Id)
             {
                 ui.SetStatus($"Error: Cannot find {fileNameData} on TheMovieDB", MessageType.Error);
 
@@ -277,17 +271,17 @@ public class TVProcessor : IProcessor
         result.Title = episodeResult.Name;
         result.Overview = episodeResult.Overview;
         
-        if (!_genres.Any())
+        if (!Genres.Any())
         {
-            _genres = await _tmdb.GetTvGenresAsync();
+            Genres = await tmdb.GetTvGenresAsync();
         }
-        result.Genres = show.TvSearchResult.GenreIds.Select(gId => _genres.First(g => g.Id == gId).Name).ToArray();
+        result.Genres = show.TvSearchResult.GenreIds.Select(gId => Genres.First(g => g.Id == gId).Name).ToArray();
 
-        if (_config.ExtendedTagging && fileIsTaggable)
+        if (config.ExtendedTagging && fileIsTaggable)
         {
             result.Director = episodeResult.Crew.Find(c => c.Job == "Director")?.Name;
 
-            var credits = await _tmdb.GetTvEpisodeCreditsAsync(showData.Id, lookupSeason, lookupEpisode);
+            var credits = await tmdb.GetTvEpisodeCreditsAsync(showData.Id, lookupSeason, lookupEpisode);
             result.Actors = credits.Cast.Select(c => c.Name).ToArray();
             result.Characters = credits.Cast.Select(c => c.Character).ToArray();
         }
@@ -297,20 +291,20 @@ public class TVProcessor : IProcessor
 
     private async Task FindPosterAsync(TVFileMetadata result, IUserInterface ui)
     {
-        if (_seasonPosters.TryGetValue((result.SeriesName, result.Season), out var url))
+        if (CachedSeasonPosters.TryGetValue((result.SeriesName, result.Season), out var url))
         {
             result.CoverURL = url;
         }
         else
         {
-            var seriesImages = await _tmdb.GetTvShowImagesAsync(result.Id, $"{_config.Language},null");
+            var seriesImages = await tmdb.GetTvShowImagesAsync(result.Id, $"{config.Language},null");
 
             if (seriesImages.Posters.Count > 0)
             {
                 var bestVotedImage = seriesImages.Posters.OrderByDescending(p => p.VoteAverage).First();
 
                 result.CoverURL = $"https://image.tmdb.org/t/p/original/{bestVotedImage.FilePath}";
-                _seasonPosters.Add((result.SeriesName, result.Season), result.CoverURL);
+                CachedSeasonPosters.Add((result.SeriesName, result.Season), result.CoverURL);
             }
             else
             {
@@ -328,11 +322,5 @@ public class TVProcessor : IProcessor
         }
 
         return 0;
-    }
-
-    void IDisposable.Dispose()
-    {
-        _tmdb.Dispose();
-        GC.SuppressFinalize(this);
     }
 }

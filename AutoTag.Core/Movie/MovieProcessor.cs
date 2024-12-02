@@ -1,46 +1,26 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using System.Text.RegularExpressions;
-
+using AutoTag.Core.Files;
 using TMDbLib.Client;
 using TMDbLib.Objects.General;
 using TMDbLib.Objects.Search;
 
 namespace AutoTag.Core.Movie;
-public class MovieProcessor : IProcessor
+public class MovieProcessor(TMDbClient tmdb, IFileWriter writer, IUserInterface ui, AutoTagConfig config) : IProcessor
 {
-    private readonly TMDbClient _tmdb;
-    private readonly AutoTagConfig _config;
-    
-    private IEnumerable<Genre> _genres = Enumerable.Empty<Genre>();
+    private IEnumerable<Genre> Genres = [];
 
-    public MovieProcessor(string apiKey, AutoTagConfig config)
-    {
-        _tmdb = new(apiKey)
-        {
-            DefaultLanguage = config.Language,
-            DefaultImageLanguage = config.Language
-        };
-        _config = config;
-    }
-
-    public async Task<bool> ProcessAsync(
-        TaggingFile file,
-        FileWriter writer,
-        IUserInterface ui
-    )
+    public async Task<bool> ProcessAsync(TaggingFile file)
     {
         if (!TryParseFileName(Path.GetFileName(file.Path), out string? title, out int? year))
         {
             ui.SetStatus("Error: Failed to parse required information from filename", MessageType.Error);
             return false;
         }
+        
+        ui.SetStatus($"Parsed file as {title}", MessageType.Log);
 
-        if (_config.Verbose)
-        {
-            ui.SetStatus($"Parsed file as {title}", MessageType.Information);
-        }
-
-        var (findMovieResult, selectedResult) = await FindMovieAsync(title, year, ui);
+        var (findMovieResult, selectedResult) = await FindMovieAsync(title, year);
         switch (findMovieResult)
         {
             case FindResult.Fail:
@@ -51,14 +31,14 @@ public class MovieProcessor : IProcessor
 
         ui.SetStatus($"Found {selectedResult!.Title} ({selectedResult.ReleaseDate?.Year.ToString() ?? "unknown year"}) on TheMovieDB", MessageType.Information);
 
-        var result = await GetMovieMetadataAsync(selectedResult, file.Taggable, ui);
+        var result = await GetMovieMetadataAsync(selectedResult, file.Taggable);
         
-        bool taggingSuccess = await writer.WriteAsync(file, result, ui);
+        bool taggingSuccess = await writer.WriteAsync(file, result);
 
         return taggingSuccess && result.Success && result.Complete;
     }
 
-    private static readonly Regex _fileNameRegex = new(
+    private static readonly Regex FileNameRegex = new(
         @"^((?<Title>.+?)[\\. _-]?)" + // get title by reading from start to a field (whichever field comes first)
         "?(" +
         @"([\(]?(?<Year>(19|20)[0-9]{2})[\)]?)|" + // year - extract for use in searching
@@ -72,7 +52,7 @@ public class MovieProcessor : IProcessor
     );
     private bool TryParseFileName(string fileName, [NotNullWhen(true)] out string? title, out int? year)
     {
-        Match match = _fileNameRegex.Match(fileName);
+        Match match = FileNameRegex.Match(fileName);
         if (match.Success)
         {
             title = match.Groups["Title"].Value.Replace('.', ' ');
@@ -91,33 +71,32 @@ public class MovieProcessor : IProcessor
         return !string.IsNullOrEmpty(title);
     }
 
-    private async Task<(FindResult, SearchMovie?)> FindMovieAsync(string title, int? year, IUserInterface ui)
+    private async Task<(FindResult, SearchMovie?)> FindMovieAsync(string title, int? year)
     {
         SearchContainer<SearchMovie> searchResults;
         if (year.HasValue)
         {
-            searchResults = await _tmdb.SearchMovieAsync(query: title, year: year.Value); // if year was parsed, use it to narrow down search further
+            searchResults = await tmdb.SearchMovieAsync(query: title, year: year.Value); // if year was parsed, use it to narrow down search further
         }
         else
         {
-            searchResults = await _tmdb.SearchMovieAsync(query: title);
+            searchResults = await tmdb.SearchMovieAsync(query: title);
         }
 
-        int selected = 0;
-
-        if (_config.ManualMode)
+        SearchMovie selected = searchResults.Results[0];
+        if (config.ManualMode)
         {
             int? selection = ui.SelectOption(
+                "Please choose an option",
                 searchResults.Results
-                    .Select(m => (
-                        m.Title,
-                        m.ReleaseDate?.Year.ToString() ?? "Unknown"
-                    )).ToList()
+                    .Select(m => $"{m.Title} ({m.ReleaseDate?.Year.ToString() ?? "Unknown"})")
+                    .ToList()
             );
 
             if (selection.HasValue)
             {
-                selected = selection.Value;
+                selected = searchResults.Results[selection.Value];
+                ui.SetStatus($"Selected {selected.Title} ({selected.ReleaseDate?.Year.ToString() ?? "Unknown"})", MessageType.Information);
             }
             else
             {
@@ -131,10 +110,10 @@ public class MovieProcessor : IProcessor
             return (FindResult.Fail, null);
         }
 
-        return (FindResult.Success, searchResults.Results[selected]);
+        return (FindResult.Success, selected);
     }
 
-    private async Task<MovieFileMetadata> GetMovieMetadataAsync(SearchMovie selectedResult, bool fileIsTaggable, IUserInterface ui)
+    private async Task<MovieFileMetadata> GetMovieMetadataAsync(SearchMovie selectedResult, bool fileIsTaggable)
     {
         var result = new MovieFileMetadata
         {
@@ -147,15 +126,15 @@ public class MovieProcessor : IProcessor
             Date = selectedResult.ReleaseDate
         };
 
-        if (!_genres.Any())
+        if (!Genres.Any())
         {
-            _genres = await _tmdb.GetMovieGenresAsync();
+            Genres = await tmdb.GetMovieGenresAsync();
         }
-        result.Genres = selectedResult.GenreIds.Select(gId => _genres.First(g => g.Id == gId).Name).ToList();
+        result.Genres = selectedResult.GenreIds.Select(gId => Genres.First(g => g.Id == gId).Name).ToList();
 
-        if (_config.ExtendedTagging && fileIsTaggable)
+        if (config.ExtendedTagging && fileIsTaggable)
         {
-            var credits = await _tmdb.GetMovieCreditsAsync(selectedResult.Id);
+            var credits = await tmdb.GetMovieCreditsAsync(selectedResult.Id);
 
             result.Director = credits.Crew.FirstOrDefault(c => c.Job == "Director")?.Name;
             result.Actors = credits.Cast.Select(c => c.Name).ToList();
@@ -169,11 +148,5 @@ public class MovieProcessor : IProcessor
         }
 
         return result;
-    }
-    
-    void IDisposable.Dispose()
-    {
-        _tmdb.Dispose();
-        GC.SuppressFinalize(this);
     }
 }

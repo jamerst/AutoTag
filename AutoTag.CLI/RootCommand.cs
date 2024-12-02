@@ -1,6 +1,9 @@
 using System.Reflection;
 using System.Text.Json;
 using AutoTag.CLI.Settings;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Spectre.Console.Json;
 
 namespace AutoTag.CLI;
 
@@ -8,12 +11,18 @@ public class RootCommand : AsyncCommand<RootCommandSettings>
 {
     public override async Task<int> ExecuteAsync(CommandContext context, RootCommandSettings cmdSettings)
     {
+        if (cmdSettings.PrintVersion)
+        {
+            AnsiConsole.WriteLine(CLIInterface.GetVersion());
+            return 0;
+        }
+
         AutoTagSettings settings = await AutoTagSettings.LoadConfigAsync(cmdSettings.ConfigPath);
         cmdSettings.UpdateConfig(settings.Config);
 
         if (cmdSettings.PrintConfig)
         {
-            Console.Write(JsonSerializer.Serialize(settings.Config, new JsonSerializerOptions() { WriteIndented = true }));
+            AnsiConsole.Write(new JsonText(JsonSerializer.Serialize(settings.Config, PrintJsonOptions)));
             return 0;
         }
 
@@ -22,13 +31,20 @@ public class RootCommand : AsyncCommand<RootCommandSettings>
             await settings.SaveAsync();
         }
 
-        Console.WriteLine($"AutoTag v{Assembly.GetEntryAssembly()?.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion}");
-        Console.WriteLine("https://jtattersall.net");
+        var builder = Host.CreateApplicationBuilder();
+        builder.Services.AddCoreServices(settings.Config, Keys.TMDBKey);
 
-        var processor = new Processor(settings.Config);
+        builder.Services.AddSingleton(settings.Config);
+        builder.Services.AddScoped<IUserInterface, CLIInterface>();
 
-        return await processor.ProcessAsync(cmdSettings.Paths);
+        using var host = builder.Build();
+
+        var ui = (CLIInterface)host.Services.GetRequiredService<IUserInterface>();
+        return await ui.RunAsync(cmdSettings.Paths);
     }
 
-
+    private static readonly JsonSerializerOptions PrintJsonOptions = new()
+    {
+        WriteIndented = true
+    };
 }

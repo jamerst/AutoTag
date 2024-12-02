@@ -2,6 +2,8 @@ namespace AutoTag.Core;
 
 public interface IUserInterface
 {
+    void DisplayMessage(string message, MessageType type);
+    
     /// <summary>
     /// Update the path displayed for the current file
     /// </summary>
@@ -20,5 +22,5 @@ public interface IUserInterface
     /// </summary>
     /// <param name="options">Options</param>
     /// <returns>Index of selected option, or <see langword="null"/> if none selected</returns>
-    int? SelectOption(List<(string, string)> options);
+    int? SelectOption(string message, List<string> options);
 }

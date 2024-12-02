@@ -18,15 +18,15 @@ public class MovieFileMetadata : FileMetadata
             var appleTags = (TagLib.Mpeg4.AppleTag) file.GetTag(TagLib.TagTypes.Apple);
 
             // Media Type - allows Apple software to recognise as a movie
-            appleTags.SetData("stik", new TagLib.ByteVector(_stikMovie), (uint) TagLib.Mpeg4.AppleDataBox.FlagType.ContainsData);
+            appleTags.SetData("stik", new TagLib.ByteVector(StikMovie), (uint) TagLib.Mpeg4.AppleDataBox.FlagType.ContainsData);
         }
     }
 
-    private const byte _stikMovie = 9;
+    private const byte StikMovie = 9;
 
     public override string GetFileName(AutoTagConfig config)
     {
-        return _renameRegex.Replace(config.MovieRenamePattern, (m) =>
+        return RenameRegex.Replace(config.MovieRenamePattern, (m) =>
         {
             return m.Groups["num"].Value switch
             {

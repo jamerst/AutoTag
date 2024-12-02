@@ -51,28 +51,6 @@ Options:
   -?, -h, --help                   Show help and usage information
 
 ```
-### ❗❗ Known Issue ❗❗
-**There is currently an issue with some options (#19) where the argument after will be consumed.**
-
-A common symptom of this is paths being missed by AutoTag when passed on the command line.
-
-The options affected are: 
-- `--verbose`
-- `--no-rename`
-- `--windows-safe`
-- `--rename-subs`
-- `--no-tag`
-- `--no-cover`
-- `--manual`
-- `--extended-tagging`
-- `--apple-tagging`
-  
-This is caused by an issue upstream in the command line library used by AutoTag, so you must use the following workarounds instead for the time being:
-- Put the affected options at the end of the argument/option list
-    - i.e. run `autotag file_a.mp4 file_b.mp4 --apple-tagging` instead of `autotag --apple-tagging file_a.mp4 file_b.mp4`
-- Use the config file to set options instead of setting them from the command line
-
-I am monitoring this issue, and will hopefully be able to resolve it in the near future.
 
 ### Rename Patterns
 The TV and movie rename patterns are strings used to create the new file name when renaming is enabled. They can use the following variables:

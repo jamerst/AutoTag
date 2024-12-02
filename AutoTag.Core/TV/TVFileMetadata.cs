@@ -40,7 +40,7 @@ public class TVFileMetadata : FileMetadata
 
             // Media Type - allows Apple software to recognise as a TV show
             // for a list of values see http://www.zoyinc.com/?p=1004
-            appleTags.SetData("stik", new TagLib.ByteVector(_stikTVShow), (uint) TagLib.Mpeg4.AppleDataBox.FlagType.ContainsData);
+            appleTags.SetData("stik", new TagLib.ByteVector(StikTVShow), (uint) TagLib.Mpeg4.AppleDataBox.FlagType.ContainsData);
 
             // Series
             appleTags.SetText("tvsh", SeriesName);
@@ -70,11 +70,11 @@ public class TVFileMetadata : FileMetadata
         }
     }
 
-    private const byte _stikTVShow = 10;
+    private const byte StikTVShow = 10;
 
     public override string GetFileName(AutoTagConfig config)
     {
-        return _renameRegex.Replace(config.TVRenamePattern, (m) =>
+        return RenameRegex.Replace(config.TVRenamePattern, (m) =>
         {
             return m.Groups["num"].Value switch
             {
