@@ -1,17 +1,15 @@
 ﻿using System.Text.RegularExpressions;
 using AutoTag.Core.Files;
-using TMDbLib.Client;
-using TMDbLib.Objects.General;
-using TMDbLib.Objects.Search;
+using AutoTag.Core.TMDB;
 using TMDbLib.Objects.TvShows;
 
 namespace AutoTag.Core.TV;
-public class TVProcessor(TMDbClient tmdb, IFileWriter writer, IUserInterface ui, AutoTagConfig config) : IProcessor
+public class TVProcessor(ITMDBService tmdb, IFileWriter writer, IUserInterface ui, AutoTagConfig config) : IProcessor
 {
     private readonly Dictionary<string, List<ShowResults>> CachedShows = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<(int, int), TvSeason> CachedSeasons = new();
     private readonly Dictionary<(string, int), string> CachedSeasonPosters = new();
-    private IEnumerable<Genre> Genres = [];
+    private Dictionary<int, string> Genres = [];
 
     public async Task<bool> ProcessAsync(TaggingFile file)
     {
@@ -56,7 +54,7 @@ public class TVProcessor(TMDbClient tmdb, IFileWriter writer, IUserInterface ui,
 
         if (config.AddCoverArt && string.IsNullOrEmpty(result.CoverURL) && file.Taggable)
         {
-            await FindPosterAsync(result, ui);
+            await FindPosterAsync(result);
         }
 
         var taggingSuccess = await writer.WriteAsync(file, result);
@@ -116,7 +114,7 @@ public class TVProcessor(TMDbClient tmdb, IFileWriter writer, IUserInterface ui,
         if (!CachedShows.ContainsKey(seriesName))
         {
             // if not already searched for series
-            SearchContainer<SearchTv> searchResults = await tmdb.SearchTvShowAsync(seriesName);
+            var searchResults = await tmdb.SearchTvShowAsync(seriesName);
 
             var seriesResults = searchResults.Results
                 .OrderByDescending(searchResult => SeriesNameSimilarity(seriesName, searchResult.Name))
@@ -157,7 +155,7 @@ public class TVProcessor(TMDbClient tmdb, IFileWriter writer, IUserInterface ui,
             if (config.EpisodeGroup)
             {
                 var seriesResult = CachedShows[seriesName][0];
-                var tvShow = await tmdb.GetTvShowAsync(seriesResult.TvSearchResult.Id, TvShowMethods.EpisodeGroups);
+                var tvShow = await tmdb.GetTvShowWithEpisodeGroupsAsync(seriesResult.TvSearchResult.Id);
                 var groups = tvShow.EpisodeGroups;
 
                 if (groups.Results.Count != 0)
@@ -171,7 +169,7 @@ public class TVProcessor(TMDbClient tmdb, IFileWriter writer, IUserInterface ui,
 
                     if (chosenGroup.HasValue)
                     {
-                        var groupInfo = await tmdb.GetTvEpisodeGroupsAsync(groups.Results[chosenGroup.Value].Id, config.Language);
+                        var groupInfo = await tmdb.GetTvEpisodeGroupsAsync(groups.Results[chosenGroup.Value].Id);
                         if (groupInfo is null)
                         {
                             ui.SetStatus($@"Error: Could not retrieve TV episode groups for show ""{tvShow.Name}""", MessageType.Error);
@@ -271,11 +269,11 @@ public class TVProcessor(TMDbClient tmdb, IFileWriter writer, IUserInterface ui,
         result.Title = episodeResult.Name;
         result.Overview = episodeResult.Overview;
         
-        if (!Genres.Any())
+        if (Genres.Count == 0)
         {
-            Genres = await tmdb.GetTvGenresAsync();
+            Genres = (await tmdb.GetTvGenresAsync()).ToDictionary(g => g.Id, g => g.Name);
         }
-        result.Genres = show.TvSearchResult.GenreIds.Select(gId => Genres.First(g => g.Id == gId).Name).ToArray();
+        result.Genres = show.TvSearchResult.GenreIds.Select(gId => Genres[gId]).ToArray();
 
         if (config.ExtendedTagging && fileIsTaggable)
         {
@@ -289,7 +287,7 @@ public class TVProcessor(TMDbClient tmdb, IFileWriter writer, IUserInterface ui,
         return FindResult.Success;
     }
 
-    private async Task FindPosterAsync(TVFileMetadata result, IUserInterface ui)
+    private async Task FindPosterAsync(TVFileMetadata result)
     {
         if (CachedSeasonPosters.TryGetValue((result.SeriesName, result.Season), out var url))
         {
@@ -297,7 +295,7 @@ public class TVProcessor(TMDbClient tmdb, IFileWriter writer, IUserInterface ui,
         }
         else
         {
-            var seriesImages = await tmdb.GetTvShowImagesAsync(result.Id, $"{config.Language},null");
+            var seriesImages = await tmdb.GetTvShowImagesAsync(result.Id);
 
             if (seriesImages.Posters.Count > 0)
             {

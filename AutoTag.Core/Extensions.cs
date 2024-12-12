@@ -1,5 +1,6 @@
 using AutoTag.Core.Files;
 using AutoTag.Core.Movie;
+using AutoTag.Core.TMDB;
 using AutoTag.Core.TV;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -25,13 +26,16 @@ public static class Extensions
         }
 
         services.AddMemoryCache();
+        
         services.AddHttpClient();
         services.RemoveAll<IHttpMessageHandlerBuilderFilter>(); // disable HttpClient logging - prints unwanted output to console
+        
         services.AddScoped<TMDbClient>((_) => new(apiKey)
         {
             DefaultLanguage = config.Language,
             DefaultImageLanguage = config.Language
         });
+        services.AddScoped<ITMDBService, TMDBService>();
     }
 
     public static bool IsError(this MessageType type)

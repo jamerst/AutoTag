@@ -1,14 +1,14 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using System.Text.RegularExpressions;
 using AutoTag.Core.Files;
-using TMDbLib.Client;
+using AutoTag.Core.TMDB;
 using TMDbLib.Objects.General;
 using TMDbLib.Objects.Search;
 
 namespace AutoTag.Core.Movie;
-public class MovieProcessor(TMDbClient tmdb, IFileWriter writer, IUserInterface ui, AutoTagConfig config) : IProcessor
+public class MovieProcessor(ITMDBService tmdb, IFileWriter writer, IUserInterface ui, AutoTagConfig config) : IProcessor
 {
-    private IEnumerable<Genre> Genres = [];
+    private Dictionary<int, string> Genres = [];
 
     public async Task<bool> ProcessAsync(TaggingFile file)
     {
@@ -76,11 +76,11 @@ public class MovieProcessor(TMDbClient tmdb, IFileWriter writer, IUserInterface 
         SearchContainer<SearchMovie> searchResults;
         if (year.HasValue)
         {
-            searchResults = await tmdb.SearchMovieAsync(query: title, year: year.Value); // if year was parsed, use it to narrow down search further
+            searchResults = await tmdb.SearchMovieAsync(title, year.Value); // if year was parsed, use it to narrow down search further
         }
         else
         {
-            searchResults = await tmdb.SearchMovieAsync(query: title);
+            searchResults = await tmdb.SearchMovieAsync(title);
         }
 
         SearchMovie selected = searchResults.Results[0];
@@ -126,11 +126,11 @@ public class MovieProcessor(TMDbClient tmdb, IFileWriter writer, IUserInterface 
             Date = selectedResult.ReleaseDate
         };
 
-        if (!Genres.Any())
+        if (Genres.Count == 0)
         {
-            Genres = await tmdb.GetMovieGenresAsync();
+            Genres = (await tmdb.GetMovieGenresAsync()).ToDictionary(g => g.Id, g => g.Name);
         }
-        result.Genres = selectedResult.GenreIds.Select(gId => Genres.First(g => g.Id == gId).Name).ToList();
+        result.Genres = selectedResult.GenreIds.Select(gId => Genres[gId]).ToList();
 
         if (config.ExtendedTagging && fileIsTaggable)
         {
