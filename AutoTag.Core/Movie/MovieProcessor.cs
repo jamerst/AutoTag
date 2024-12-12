@@ -39,7 +39,7 @@ public class MovieProcessor(ITMDBService tmdb, IFileWriter writer, IUserInterfac
     }
 
     private static readonly Regex FileNameRegex = new(
-        @"^((?<Title>.+?)[\\. _-]?)" + // get title by reading from start to a field (whichever field comes first)
+        @"^((?<Title>.+?)[\. _-]?)" + // get title by reading from start to a field (whichever field comes first)
         "?(" +
         @"([\(]?(?<Year>(19|20)[0-9]{2})[\)]?)|" + // year - extract for use in searching
         "([0-9]{3,4}(p|i))|" + // resolution (e.g. 1080p, 720i)
