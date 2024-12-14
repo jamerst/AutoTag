@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AutoTag.Core", "AutoTag.Cor
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AutoTag.cli", "AutoTag.CLI\AutoTag.CLI.csproj", "{3EB7244A-0C0C-4F74-9A0F-EBB2F63156B5}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AutoTag.Core.Test", "AutoTag.Core.Test\AutoTag.Core.Test.csproj", "{F68C84FA-E812-4D0E-9DDA-BCA5FC18D892}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -44,5 +46,17 @@ Global
 		{3EB7244A-0C0C-4F74-9A0F-EBB2F63156B5}.Release|x64.Build.0 = Release|Any CPU
 		{3EB7244A-0C0C-4F74-9A0F-EBB2F63156B5}.Release|x86.ActiveCfg = Release|Any CPU
 		{3EB7244A-0C0C-4F74-9A0F-EBB2F63156B5}.Release|x86.Build.0 = Release|Any CPU
+		{F68C84FA-E812-4D0E-9DDA-BCA5FC18D892}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F68C84FA-E812-4D0E-9DDA-BCA5FC18D892}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F68C84FA-E812-4D0E-9DDA-BCA5FC18D892}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{F68C84FA-E812-4D0E-9DDA-BCA5FC18D892}.Debug|x64.Build.0 = Debug|Any CPU
+		{F68C84FA-E812-4D0E-9DDA-BCA5FC18D892}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{F68C84FA-E812-4D0E-9DDA-BCA5FC18D892}.Debug|x86.Build.0 = Debug|Any CPU
+		{F68C84FA-E812-4D0E-9DDA-BCA5FC18D892}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F68C84FA-E812-4D0E-9DDA-BCA5FC18D892}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F68C84FA-E812-4D0E-9DDA-BCA5FC18D892}.Release|x64.ActiveCfg = Release|Any CPU
+		{F68C84FA-E812-4D0E-9DDA-BCA5FC18D892}.Release|x64.Build.0 = Release|Any CPU
+		{F68C84FA-E812-4D0E-9DDA-BCA5FC18D892}.Release|x86.ActiveCfg = Release|Any CPU
+		{F68C84FA-E812-4D0E-9DDA-BCA5FC18D892}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

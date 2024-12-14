@@ -1,5 +1,3 @@
-using Microsoft.Extensions.Caching.Memory;
-
 namespace AutoTag.Core.Files;
 
 public interface IFileWriter

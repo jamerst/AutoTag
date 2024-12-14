@@ -62,7 +62,7 @@ public class TVProcessor(ITMDBService tmdb, IFileWriter writer, IUserInterface u
         return taggingSuccess && result.Success && result.Complete;
     }
 
-    private TVFileMetadata? ParseFileName(TaggingFile file)
+    public TVFileMetadata? ParseFileName(TaggingFile file)
     {
         TVFileMetadata episodeData;
 
@@ -99,7 +99,7 @@ public class TVProcessor(ITMDBService tmdb, IFileWriter writer, IUserInterface u
                 }
                 else
                 {
-                    ui.SetStatus($"Error: Unable to parse required information from filename", MessageType.Error);
+                    ui.SetStatus("Error: Unable to parse required information from filename", MessageType.Error);
                 }
 
                 return null;
@@ -111,30 +111,85 @@ public class TVProcessor(ITMDBService tmdb, IFileWriter writer, IUserInterface u
 
     private async Task<FindResult> FindShowAsync(string seriesName)
     {
-        if (!CachedShows.ContainsKey(seriesName))
+        if (CachedShows.ContainsKey(seriesName))
         {
-            // if not already searched for series
-            var searchResults = await tmdb.SearchTvShowAsync(seriesName);
+            return FindResult.Success;
+        }
+        
+        // if not already searched for series
+        var searchResults = await tmdb.SearchTvShowAsync(seriesName);
 
-            var seriesResults = searchResults.Results
-                .OrderByDescending(searchResult => SeriesNameSimilarity(seriesName, searchResult.Name))
-                .ToList();
+        var seriesResults = searchResults.Results
+            .OrderByDescending(searchResult => SeriesNameSimilarity(seriesName, searchResult.Name))
+            .ToList();
 
-            // using episode groups, requires the manual selection of a show
-            if (config.ManualMode || config.EpisodeGroup)
+        // using episode groups, requires the manual selection of a show
+        if (config.ManualMode || config.EpisodeGroup)
+        {
+            var chosen = ui.SelectOption(
+                "Please choose an option:",
+                seriesResults
+                    .Select(t => $"{t.Name} ({t.FirstAirDate?.Year.ToString() ?? "Unknown"})")
+                    .ToList()
+            );
+
+            if (chosen.HasValue)
             {
-                var chosen = ui.SelectOption(
-                    "Please choose an option:",
-                    seriesResults
-                        .Select(t => $"{t.Name} ({t.FirstAirDate?.Year.ToString() ?? "Unknown"})")
+                var chosenSeries = seriesResults[chosen.Value];
+                CachedShows.Add(seriesName, [chosenSeries]);
+                ui.SetStatus($"Selected {chosenSeries.Name} ({chosenSeries.FirstAirDate?.Year.ToString() ?? "Unknown"})", MessageType.Information);
+            }
+            else
+            {
+                ui.SetStatus("File skipped", MessageType.Warning);
+                return FindResult.Skip;
+            }
+        }
+        else if (seriesResults.Count == 0)
+        {
+            ui.SetStatus($"Error: Cannot find series {seriesName} on TheMovieDB", MessageType.Error);
+            return FindResult.Fail;
+        }
+        else
+        {
+            CachedShows.Add(seriesName, ShowResults.FromSearchResults(seriesResults));
+        }
+
+        if (config.EpisodeGroup)
+        {
+            var seriesResult = CachedShows[seriesName][0];
+            var tvShow = await tmdb.GetTvShowWithEpisodeGroupsAsync(seriesResult.TvSearchResult.Id);
+            var groups = tvShow.EpisodeGroups;
+
+            if (groups.Results.Count != 0)
+            {
+                var chosenGroup = ui.SelectOption(
+                    "Please choose an episode ordering:",
+                    groups.Results
+                        .Select(g => $"[{g.Type}] {g.Name} ({g.GroupCount} seasons, {g.EpisodeCount} episodes)")
                         .ToList()
                 );
 
-                if (chosen.HasValue)
+                if (chosenGroup.HasValue)
                 {
-                    var chosenSeries = seriesResults[chosen.Value];
-                    CachedShows.Add(seriesName, [chosenSeries]);
-                    ui.SetStatus($"Selected {chosenSeries.Name} ({chosenSeries.FirstAirDate?.Year.ToString() ?? "Unknown"})", MessageType.Information);
+                    var groupInfo = await tmdb.GetTvEpisodeGroupsAsync(groups.Results[chosenGroup.Value].Id);
+                    if (groupInfo is null)
+                    {
+                        ui.SetStatus($@"Error: Could not retrieve TV episode groups for show ""{tvShow.Name}""", MessageType.Error);
+                        return FindResult.Fail;
+                    }
+
+                    if (seriesResult.AddEpisodeGroup(groupInfo))
+                    {
+                        ui.SetStatus($"Selected {groupInfo.Name} episode ordering", MessageType.Information);
+                    }
+                    else
+                    {
+                        ui.SetStatus($@"Error: Unable to generate a unique season-episode mapping for collection group ""{groupInfo.Name}""", MessageType.Error);
+                        return FindResult.Fail;
+                    }
+                        
+                        
                 }
                 else
                 {
@@ -142,62 +197,9 @@ public class TVProcessor(ITMDBService tmdb, IFileWriter writer, IUserInterface u
                     return FindResult.Skip;
                 }
             }
-            else if (seriesResults.Count == 0)
-            {
-                ui.SetStatus($"Error: Cannot find series {seriesName} on TheMovieDB", MessageType.Error);
-                return FindResult.Fail;
-            }
             else
             {
-                CachedShows.Add(seriesName, ShowResults.FromSearchResults(seriesResults));
-            }
-
-            if (config.EpisodeGroup)
-            {
-                var seriesResult = CachedShows[seriesName][0];
-                var tvShow = await tmdb.GetTvShowWithEpisodeGroupsAsync(seriesResult.TvSearchResult.Id);
-                var groups = tvShow.EpisodeGroups;
-
-                if (groups.Results.Count != 0)
-                {
-                    var chosenGroup = ui.SelectOption(
-                        "Please choose an episode ordering:",
-                        groups.Results
-                            .Select(g => $"[{g.Type}] {g.Name} ({g.GroupCount} seasons, {g.EpisodeCount} episodes)")
-                            .ToList()
-                    );
-
-                    if (chosenGroup.HasValue)
-                    {
-                        var groupInfo = await tmdb.GetTvEpisodeGroupsAsync(groups.Results[chosenGroup.Value].Id);
-                        if (groupInfo is null)
-                        {
-                            ui.SetStatus($@"Error: Could not retrieve TV episode groups for show ""{tvShow.Name}""", MessageType.Error);
-                            return FindResult.Fail;
-                        }
-
-                        if (seriesResult.AddEpisodeGroup(groupInfo))
-                        {
-                            ui.SetStatus($"Selected {groupInfo.Name} episode ordering", MessageType.Information);
-                        }
-                        else
-                        {
-                            ui.SetStatus($@"Error: Unable to generate a unique season-episode mapping for collection group ""{groupInfo.Name}""", MessageType.Error);
-                            return FindResult.Fail;
-                        }
-                        
-                        
-                    }
-                    else
-                    {
-                        ui.SetStatus("File skipped", MessageType.Warning);
-                        return FindResult.Skip;
-                    }
-                }
-                else
-                {
-                    ui.SetStatus("No episode groups found for series", MessageType.Warning);
-                }
+                ui.SetStatus("No episode groups found for series", MessageType.Warning);
             }
         }
 
