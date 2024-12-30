@@ -8,8 +8,6 @@ using TMDbLib.Objects.Search;
 namespace AutoTag.Core.Movie;
 public class MovieProcessor(ITMDBService tmdb, IFileWriter writer, IUserInterface ui, AutoTagConfig config) : IProcessor
 {
-    private Dictionary<int, string> Genres = [];
-
     public async Task<bool> ProcessAsync(TaggingFile file)
     {
         if (!TryParseFileName(Path.GetFileName(file.Path), out string? title, out int? year))
@@ -125,12 +123,8 @@ public class MovieProcessor(ITMDBService tmdb, IFileWriter writer, IUserInterfac
                 : $"https://image.tmdb.org/t/p/original{selectedResult.PosterPath}",
             Date = selectedResult.ReleaseDate
         };
-
-        if (Genres.Count == 0)
-        {
-            Genres = (await tmdb.GetMovieGenresAsync()).ToDictionary(g => g.Id, g => g.Name);
-        }
-        result.Genres = selectedResult.GenreIds.Select(gId => Genres[gId]).ToList();
+        
+        result.Genres = await tmdb.GetMovieGenreNamesAsync(selectedResult.GenreIds);
 
         if (config.ExtendedTagging && fileIsTaggable)
         {

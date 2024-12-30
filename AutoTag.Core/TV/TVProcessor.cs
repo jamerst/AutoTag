@@ -4,13 +4,8 @@ using AutoTag.Core.TMDB;
 using TMDbLib.Objects.TvShows;
 
 namespace AutoTag.Core.TV;
-public class TVProcessor(ITMDBService tmdb, IFileWriter writer, IUserInterface ui, AutoTagConfig config) : IProcessor
+public class TVProcessor(ITMDBService tmdb, IFileWriter writer, ITVCache cache, IUserInterface ui, AutoTagConfig config) : IProcessor
 {
-    private readonly Dictionary<string, List<ShowResults>> CachedShows = new(StringComparer.OrdinalIgnoreCase);
-    private readonly Dictionary<(int, int), TvSeason> CachedSeasons = new();
-    private readonly Dictionary<(string, int), string> CachedSeasonPosters = new();
-    private Dictionary<int, string> Genres = [];
-
     public async Task<bool> ProcessAsync(TaggingFile file)
     {
         var fileNameData = ParseFileName(file);
@@ -37,7 +32,7 @@ public class TVProcessor(ITMDBService tmdb, IFileWriter writer, IUserInterface u
         };
         
         // try searching for each series search result
-        foreach (var show in CachedShows[fileNameData.SeriesName])
+        foreach (var show in cache.GetShow(fileNameData.SeriesName))
         {
             var findEpisodeResult = await FindEpisodeAsync(fileNameData, show, result, file.Taggable);
             if (findEpisodeResult == FindResult.Fail)
@@ -109,9 +104,9 @@ public class TVProcessor(ITMDBService tmdb, IFileWriter writer, IUserInterface u
         return episodeData;
     }
 
-    private async Task<FindResult> FindShowAsync(string seriesName)
+    public async Task<FindResult> FindShowAsync(string seriesName)
     {
-        if (CachedShows.ContainsKey(seriesName))
+        if (cache.ShowIsCached(seriesName))
         {
             return FindResult.Success;
         }
@@ -123,6 +118,12 @@ public class TVProcessor(ITMDBService tmdb, IFileWriter writer, IUserInterface u
             .OrderByDescending(searchResult => SeriesNameSimilarity(seriesName, searchResult.Name))
             .ToList();
 
+        if (seriesResults.Count == 0)
+        {
+            ui.SetStatus($"Error: Cannot find series {seriesName} on TheMovieDB", MessageType.Error);
+            return FindResult.Fail;
+        }
+        
         // using episode groups, requires the manual selection of a show
         if (config.ManualMode || config.EpisodeGroup)
         {
@@ -136,7 +137,7 @@ public class TVProcessor(ITMDBService tmdb, IFileWriter writer, IUserInterface u
             if (chosen.HasValue)
             {
                 var chosenSeries = seriesResults[chosen.Value];
-                CachedShows.Add(seriesName, [chosenSeries]);
+                cache.AddShow(seriesName, [chosenSeries]);
                 ui.SetStatus($"Selected {chosenSeries.Name} ({chosenSeries.FirstAirDate?.Year.ToString() ?? "Unknown"})", MessageType.Information);
             }
             else
@@ -145,19 +146,14 @@ public class TVProcessor(ITMDBService tmdb, IFileWriter writer, IUserInterface u
                 return FindResult.Skip;
             }
         }
-        else if (seriesResults.Count == 0)
-        {
-            ui.SetStatus($"Error: Cannot find series {seriesName} on TheMovieDB", MessageType.Error);
-            return FindResult.Fail;
-        }
         else
         {
-            CachedShows.Add(seriesName, ShowResults.FromSearchResults(seriesResults));
+            cache.AddShow(seriesName, ShowResults.FromSearchResults(seriesResults));
         }
 
         if (config.EpisodeGroup)
         {
-            var seriesResult = CachedShows[seriesName][0];
+            var seriesResult = cache.GetShow(seriesName)[0];
             var tvShow = await tmdb.GetTvShowWithEpisodeGroupsAsync(seriesResult.TvSearchResult.Id);
             var groups = tvShow.EpisodeGroups;
 
@@ -230,13 +226,13 @@ public class TVProcessor(ITMDBService tmdb, IFileWriter writer, IUserInterface u
         result.Id = showData.Id;
         result.SeriesName = showData.Name;
 
-        if (!CachedSeasons.TryGetValue((showData.Id, lookupSeason), out var seasonResult))
+        if (!cache.TryGetSeason(showData.Id, lookupSeason, out var seasonResult))
         {
             seasonResult = await tmdb.GetTvSeasonAsync(showData.Id, lookupSeason);
 
             if (seasonResult == null)
             {
-                if (showData.Id == CachedShows[fileNameData.SeriesName][^1].TvSearchResult.Id)
+                if (showData.Id == cache.GetShow(fileNameData.SeriesName)[^1].TvSearchResult.Id)
                 {
                     ui.SetStatus($"Error: Cannot find {fileNameData} on TheMovieDB", MessageType.Error);
                     return FindResult.Fail;
@@ -245,7 +241,7 @@ public class TVProcessor(ITMDBService tmdb, IFileWriter writer, IUserInterface u
                 return FindResult.Skip;
             }
             
-            CachedSeasons.Add((showData.Id, lookupSeason), seasonResult);
+            cache.AddSeason(showData.Id, lookupSeason, seasonResult);
         }
         
         result.SeasonEpisodes = seasonResult.Episodes.Count;
@@ -258,7 +254,7 @@ public class TVProcessor(ITMDBService tmdb, IFileWriter writer, IUserInterface u
         var episodeResult = seasonResult.Episodes.Find(e => e.EpisodeNumber == lookupEpisode);
         if (episodeResult == default)
         {
-            if (showData.Id == CachedShows[fileNameData.SeriesName][^1].TvSearchResult.Id)
+            if (showData.Id == cache.GetShow(fileNameData.SeriesName)[^1].TvSearchResult.Id)
             {
                 ui.SetStatus($"Error: Cannot find {fileNameData} on TheMovieDB", MessageType.Error);
 
@@ -271,11 +267,7 @@ public class TVProcessor(ITMDBService tmdb, IFileWriter writer, IUserInterface u
         result.Title = episodeResult.Name;
         result.Overview = episodeResult.Overview;
         
-        if (Genres.Count == 0)
-        {
-            Genres = (await tmdb.GetTvGenresAsync()).ToDictionary(g => g.Id, g => g.Name);
-        }
-        result.Genres = show.TvSearchResult.GenreIds.Select(gId => Genres[gId]).ToArray();
+        result.Genres = await tmdb.GetTvGenreNamesAsync(show.TvSearchResult.GenreIds);
 
         if (config.ExtendedTagging && fileIsTaggable)
         {
@@ -291,7 +283,7 @@ public class TVProcessor(ITMDBService tmdb, IFileWriter writer, IUserInterface u
 
     private async Task FindPosterAsync(TVFileMetadata result)
     {
-        if (CachedSeasonPosters.TryGetValue((result.SeriesName, result.Season), out var url))
+        if (cache.TryGetSeasonPoster(result.Id, result.Season, out var url))
         {
             result.CoverURL = url;
         }
@@ -304,7 +296,7 @@ public class TVProcessor(ITMDBService tmdb, IFileWriter writer, IUserInterface u
                 var bestVotedImage = seriesImages.Posters.OrderByDescending(p => p.VoteAverage).First();
 
                 result.CoverURL = $"https://image.tmdb.org/t/p/original/{bestVotedImage.FilePath}";
-                CachedSeasonPosters.Add((result.SeriesName, result.Season), result.CoverURL);
+                cache.AddSeasonPoster(result.Id, result.Season, result.CoverURL);
             }
             else
             {
