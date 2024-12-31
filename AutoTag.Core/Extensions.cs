@@ -36,6 +36,8 @@ public static class Extensions
             DefaultImageLanguage = config.Language
         });
         services.AddScoped<ITMDBService, TMDBService>();
+
+        services.AddScoped<ITVCache, TVCache>();
     }
 
     public static bool IsError(this MessageType type)

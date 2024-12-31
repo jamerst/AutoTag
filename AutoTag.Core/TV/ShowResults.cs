@@ -11,13 +11,13 @@ namespace AutoTag.Core.TV;
 public partial class ShowResults
 {
     /* settings */
-    [GeneratedRegex(@"^\S+\s+(?<episode>\d+)$")]
+    [GeneratedRegex(@"^\S+\s+(?<episode>\d+)")]
     private static partial Regex EpisodeRegex();
 
     /* vars */
     public SearchTv TvSearchResult { get; }
-    private TvGroupCollection? GroupCollection { get; set; }
-    public IReadOnlyDictionary<(int season, int episode), (int season, int episode)>? EpisodeGroupMappingTable => _episodeGroupMappingTable;
+    
+    public bool HasEpisodeGroupMapping => _episodeGroupMappingTable is not null;
     private Dictionary<(int season, int episode), (int season, int episode)>? _episodeGroupMappingTable;
 
     /// <summary>
@@ -45,12 +45,12 @@ public partial class ShowResults
     /// Add optional episode group to tv result
     /// </summary>
     /// <param name="episodeGroup">Episode group fetched from tmdb api</param>
-    public bool AddEpisodeGroup(TvGroupCollection episodeGroup)
+    /// <param name="failureReason">Reason for failure (if returns <see langword="false" />)</param>
+    public bool AddEpisodeGroup(TvGroupCollection episodeGroup, [NotNullWhen(false)] out string? failureReason)
     {
-        if (!TryGenerateMappingTable(episodeGroup, out var mappingTable)) return false;
+        if (!TryGenerateMappingTable(episodeGroup, out var mappingTable, out failureReason)) return false;
 
         _episodeGroupMappingTable = mappingTable;
-        GroupCollection = episodeGroup;
         return true;
     }
 
@@ -80,9 +80,11 @@ public partial class ShowResults
     /// </summary>
     /// <param name="collection">Episode Group from TMDB</param>
     /// <param name="parsedTable">Filled parsing table. Only filled when method returns true</param>
+    /// <param name="failureReason">Reason for failure (if returns <see langword="false" />)</param>
     /// <returns>True if successful, false if not</returns>
     private static bool TryGenerateMappingTable(TvGroupCollection collection,
-        [NotNullWhen(true)] out Dictionary<(int season, int episode), (int season, int episode)>? parsedTable)
+        [NotNullWhen(true)] out Dictionary<(int season, int episode), (int season, int episode)>? parsedTable,
+        [NotNullWhen(false)] out string? failureReason)
     {
         parsedTable = [];
 
@@ -102,7 +104,11 @@ public partial class ShowResults
                 seasonNumber = 0;
             }
 
-            if (!seasonNumber.HasValue) return false;
+            if (!seasonNumber.HasValue)
+            {
+                failureReason = $@"Unable to parse season number from group name ""{tvGroup.Name}""";
+                return false;
+            }
 
             // create mapping
             foreach (var episode in tvGroup.Episodes)
@@ -115,11 +121,13 @@ public partial class ShowResults
                 if (!mappingIsUnique)
                 {
                     parsedTable = null;
+                    failureReason = $"Duplicate season-episode mapping for {tvGroup.Name} episode {episode.Order + 1}";
                     return false;
                 }
             }
         }
 
+        failureReason = null;
         return true;
     }
 }

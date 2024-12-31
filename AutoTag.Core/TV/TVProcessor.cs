@@ -1,6 +1,7 @@
 ﻿using System.Text.RegularExpressions;
 using AutoTag.Core.Files;
 using AutoTag.Core.TMDB;
+using TMDbLib.Objects.Search;
 using TMDbLib.Objects.TvShows;
 
 namespace AutoTag.Core.TV;
@@ -22,6 +23,7 @@ public class TVProcessor(ITMDBService tmdb, IFileWriter writer, ITVCache cache, 
             case FindResult.Fail:
                 return false;
             case FindResult.Skip:
+                ui.SetStatus("File skipped", MessageType.Warning);
                 return true;
         }
         
@@ -123,9 +125,9 @@ public class TVProcessor(ITMDBService tmdb, IFileWriter writer, ITVCache cache, 
             ui.SetStatus($"Error: Cannot find series {seriesName} on TheMovieDB", MessageType.Error);
             return FindResult.Fail;
         }
-        
-        // using episode groups, requires the manual selection of a show
-        if (config.ManualMode || config.EpisodeGroup)
+
+        List<ShowResults> resultsToCache;
+        if (config.ManualMode)
         {
             var chosen = ui.SelectOption(
                 "Please choose an option:",
@@ -137,69 +139,105 @@ public class TVProcessor(ITMDBService tmdb, IFileWriter writer, ITVCache cache, 
             if (chosen.HasValue)
             {
                 var chosenSeries = seriesResults[chosen.Value];
-                cache.AddShow(seriesName, [chosenSeries]);
+                resultsToCache = [chosenSeries];
                 ui.SetStatus($"Selected {chosenSeries.Name} ({chosenSeries.FirstAirDate?.Year.ToString() ?? "Unknown"})", MessageType.Information);
             }
             else
             {
-                ui.SetStatus("File skipped", MessageType.Warning);
                 return FindResult.Skip;
             }
         }
         else
         {
-            cache.AddShow(seriesName, ShowResults.FromSearchResults(seriesResults));
+            resultsToCache = ShowResults.FromSearchResults(seriesResults);
         }
 
         if (config.EpisodeGroup)
         {
-            var seriesResult = cache.GetShow(seriesName)[0];
+            var (result, newShow) = await FindEpisodeGroupAsync(resultsToCache);
+
+            if (result.HasValue)
+            {
+                return result.Value;
+            }
+
+            if (newShow != null)
+            {
+                resultsToCache = [newShow];
+            }
+        }
+        
+        cache.AddShow(seriesName, resultsToCache);
+        return FindResult.Success;
+    }
+
+    public async Task<(FindResult?, ShowResults?)> FindEpisodeGroupAsync(List<ShowResults> searchResults)
+    {
+        for (int i = 0; i < searchResults.Count; i++)
+        {
+            var seriesResult = searchResults[i];
             var tvShow = await tmdb.GetTvShowWithEpisodeGroupsAsync(seriesResult.TvSearchResult.Id);
             var groups = tvShow.EpisodeGroups;
 
             if (groups.Results.Count != 0)
             {
+                var options = groups.Results
+                    .Select(g => $"[{g.Type}] {g.Name} ({g.GroupCount} seasons, {g.EpisodeCount} episodes)")
+                    .ToList();
+
+                if (searchResults.Count > 1 && i < searchResults.Count - 1)
+                {
+                    options.Add("(Skip to next search result)");
+                }
+                
                 var chosenGroup = ui.SelectOption(
-                    "Please choose an episode ordering:",
-                    groups.Results
-                        .Select(g => $"[{g.Type}] {g.Name} ({g.GroupCount} seasons, {g.EpisodeCount} episodes)")
-                        .ToList()
+                    $"Please choose an episode ordering for {seriesResult.TvSearchResult.Name}:",
+                    options
                 );
 
                 if (chosenGroup.HasValue)
                 {
+                    if (chosenGroup > groups.Results.Count - 1)
+                    {
+                        // skip to next search result option was selected
+                        continue;
+                    }
+                    
                     var groupInfo = await tmdb.GetTvEpisodeGroupsAsync(groups.Results[chosenGroup.Value].Id);
                     if (groupInfo is null)
                     {
-                        ui.SetStatus($@"Error: Could not retrieve TV episode groups for show ""{tvShow.Name}""", MessageType.Error);
-                        return FindResult.Fail;
+                        ui.SetStatus($@"Error: Could not retrieve TV episode group for show ""{tvShow.Name}""",
+                            MessageType.Error);
+                        return (FindResult.Fail, null);
                     }
-
-                    if (seriesResult.AddEpisodeGroup(groupInfo))
+                    else if (seriesResult.AddEpisodeGroup(groupInfo, out string? failureReason))
                     {
                         ui.SetStatus($"Selected {groupInfo.Name} episode ordering", MessageType.Information);
+                        
+                        // override cache to force the show for the selected episode group when there were
+                        // multiple search results
+                        return (null, seriesResult);
                     }
                     else
                     {
-                        ui.SetStatus($@"Error: Unable to generate a unique season-episode mapping for collection group ""{groupInfo.Name}""", MessageType.Error);
-                        return FindResult.Fail;
+                        ui.SetStatus($@"Error: Cannot process episode group ""{groupInfo.Name}"" ({failureReason})", MessageType.Error);
+                        return (FindResult.Fail, null);
                     }
-                        
-                        
                 }
                 else
                 {
-                    ui.SetStatus("File skipped", MessageType.Warning);
-                    return FindResult.Skip;
+                    return (FindResult.Skip, null);
                 }
             }
             else
             {
-                ui.SetStatus("No episode groups found for series", MessageType.Warning);
+                ui.SetStatus($@"No episode groups found for show ""{tvShow.Name}"".", MessageType.Warning | MessageType.Log);
             }
         }
+        
+        ui.SetStatus("No episode groups found", MessageType.Warning);
 
-        return FindResult.Success;
+        return (null, null);
     }
 
     private async Task<FindResult> FindEpisodeAsync(TVFileMetadata fileNameData, ShowResults show, TVFileMetadata result, bool fileIsTaggable)
@@ -209,7 +247,7 @@ public class TVProcessor(ITMDBService tmdb, IFileWriter writer, ITVCache cache, 
         var lookupSeason = fileNameData.Season;
         var lookupEpisode = fileNameData.Episode;
 
-        if (show.EpisodeGroupMappingTable != null)
+        if (show.HasEpisodeGroupMapping)
         {
             if (show.TryGetMapping(fileNameData.Season, fileNameData.Episode, out var groupNumbering))
             {

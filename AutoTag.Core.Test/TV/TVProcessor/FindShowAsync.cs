@@ -22,7 +22,29 @@ public class FindShowAsync : TVProcessorTestBase
         result.Should().Be(FindResult.Success);
         mockTmdb.Verify(t => t.SearchTvShowAsync(It.IsAny<string>()), Times.Never);
     }
+    
+    [Fact]
+    public async Task Should_ReportError_When_NoTMDBSearchResults()
+    {
+        var mockTmdb = new Mock<ITMDBService>();
+        mockTmdb.Setup(tmdb => tmdb.SearchTvShowAsync(It.IsAny<string>()))
+            .ReturnsAsync(new SearchContainer<SearchTv>
+            {
+                Results = []
+            });
 
+        var mockUi = new Mock<IUserInterface>();
+
+        var tv = GetInstance(tmdb: mockTmdb.Object, ui: mockUi.Object);
+
+        var result = await tv.FindShowAsync("series name");
+
+        result.Should().Be(FindResult.Fail);
+        mockUi.Verify(ui => ui.SetStatus("Error: Cannot find series series name on TheMovieDB", MessageType.Error),
+            Times.Once
+        );
+    }
+    
     [Fact]
     public async Task Should_OnlyCacheSelectedResult_When_ManualModeEnabled()
     {
@@ -71,12 +93,12 @@ public class FindShowAsync : TVProcessorTestBase
         result.Should().Be(FindResult.Success);
         mockUi.Verify(ui => ui.SelectOption("Please choose an option:", It.IsAny<List<string>>()), Times.Once);
         mockCache.Verify(c => c.AddShow(
-            It.IsAny<string>(),
-            It.Is<List<ShowResults>>(s => s.Count == 1 && s[0].TvSearchResult.Id == selectedResult.Id)),
+                It.IsAny<string>(),
+                It.Is<List<ShowResults>>(s => s.Count == 1 && s[0].TvSearchResult.Id == selectedResult.Id)),
             Times.Once
         );
     }
-
+    
     [Fact]
     public async Task Should_SkipFile_When_SelectOptionReturnsNull()
     {
@@ -101,28 +123,5 @@ public class FindShowAsync : TVProcessorTestBase
         var result = await tv.FindShowAsync("");
         
         result.Should().Be(FindResult.Skip);
-        mockUi.Verify(ui => ui.SetStatus("File skipped", MessageType.Warning), Times.Once);
-    }
-
-    [Fact]
-    public async Task Should_ReportError_When_NoTMDBSearchResults()
-    {
-        var mockTmdb = new Mock<ITMDBService>();
-        mockTmdb.Setup(tmdb => tmdb.SearchTvShowAsync(It.IsAny<string>()))
-            .ReturnsAsync(new SearchContainer<SearchTv>
-            {
-                Results = []
-            });
-
-        var mockUi = new Mock<IUserInterface>();
-
-        var tv = GetInstance(tmdb: mockTmdb.Object, ui: mockUi.Object);
-
-        var result = await tv.FindShowAsync("series name");
-
-        result.Should().Be(FindResult.Fail);
-        mockUi.Verify(ui => ui.SetStatus("Error: Cannot find series series name on TheMovieDB", MessageType.Error),
-            Times.Once
-        );
     }
 }
