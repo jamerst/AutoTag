@@ -53,6 +53,26 @@ public class FindEpisodeGroupAsync : TVProcessorTestBase
     {
         var mockTmdb = new Mock<ITMDBService>();
         SetupGetTvShowWithEpisodeGroupsAsync(mockTmdb);
+        mockTmdb.Setup(tmdb => tmdb.GetTvEpisodeGroupsAsync(It.IsAny<string>()))
+            .ReturnsAsync(new TvGroupCollection
+            {
+                Groups =
+                [
+                    new TvGroup
+                    {
+                        Name = "Season 1",
+                        Episodes =
+                        [
+                            new TvGroupEpisode
+                            {
+                                Order = 0,
+                                SeasonNumber = 1,
+                                EpisodeNumber = 1
+                            }
+                        ]
+                    }
+                ]
+            });
         
         var mockUi = new Mock<IUserInterface>();
         mockUi.Setup(ui => ui.SelectOption(It.IsAny<string>(), It.IsAny<List<string>>()))
@@ -64,19 +84,22 @@ public class FindEpisodeGroupAsync : TVProcessorTestBase
 
         var (result, newShow) = await instance.FindEpisodeGroupAsync([new SearchTv { Name = "Show 1" }, show2]);
 
-        result.Should().Be(FindResult.Success);
-        newShow.Should().Be(show2);
+        result.Should().BeNull();
+        newShow!.TvSearchResult.Should().Be(show2);
         newShow!.HasEpisodeGroupMapping.Should().BeTrue();
     }
 
     [Fact]
-    public async Task Should_ReportError_When_GetTvShowWithEpisodeGroupsAsyncReturnsNull()
+    public async Task Should_ReportError_When_GetTvEpisodeGroupsAsyncReturnsNull()
     {
         var mockTmdb = new Mock<ITMDBService>();
-        mockTmdb.Setup(tmdb => tmdb.GetTvShowWithEpisodeGroupsAsync(It.IsAny<int>()))
-            .ReturnsAsync((TvShow)null!);
+        SetupGetTvShowWithEpisodeGroupsAsync(mockTmdb);
+        mockTmdb.Setup(tmdb => tmdb.GetTvEpisodeGroupsAsync(It.IsAny<string>()))
+            .ReturnsAsync((TvGroupCollection?)null);
 
         var mockUi = new Mock<IUserInterface>();
+        mockUi.Setup(ui => ui.SelectOption(It.IsAny<string>(), It.IsAny<List<string>>()))
+            .Returns(0);
         
         var instance = GetInstance(tmdb: mockTmdb.Object, ui: mockUi.Object);
 
@@ -151,5 +174,51 @@ public class FindEpisodeGroupAsync : TVProcessorTestBase
         var (result, _) = await instance.FindEpisodeGroupAsync([new SearchTv { Name = "Show 1" }]);
 
         result.Should().Be(FindResult.Skip);
+    }
+
+    [Fact]
+    public async Task Should_LogWarning_When_TVShowHasNoEpisodeGroups()
+    {
+        var mockTmdb = new Mock<ITMDBService>();
+        mockTmdb.Setup(tmdb => tmdb.GetTvShowWithEpisodeGroupsAsync(It.IsAny<int>()))
+            .ReturnsAsync(new TvShow
+            {
+                Name = "Show",
+                EpisodeGroups = new ResultContainer<TvGroupCollection>
+                {
+                    Results = []
+                }
+            });
+
+        var mockUi = new Mock<IUserInterface>();
+        
+        var instance = GetInstance(tmdb: mockTmdb.Object, ui: mockUi.Object);
+
+        await instance.FindEpisodeGroupAsync([new SearchTv()]);
+        
+        mockUi.Verify(ui => ui.SetStatus(@"No episode groups found for show ""Show""", MessageType.Warning | MessageType.Log));
+    }
+    
+    [Fact]
+    public async Task Should_ReportWarning_When_NoResultsHaveEpisodeGroups()
+    {
+        var mockTmdb = new Mock<ITMDBService>();
+        mockTmdb.Setup(tmdb => tmdb.GetTvShowWithEpisodeGroupsAsync(It.IsAny<int>()))
+            .ReturnsAsync(new TvShow
+            {
+                Name = "Show",
+                EpisodeGroups = new ResultContainer<TvGroupCollection>
+                {
+                    Results = []
+                }
+            });
+
+        var mockUi = new Mock<IUserInterface>();
+        
+        var instance = GetInstance(tmdb: mockTmdb.Object, ui: mockUi.Object);
+
+        await instance.FindEpisodeGroupAsync([new SearchTv(), new SearchTv()]);
+        
+        mockUi.Verify(ui => ui.SetStatus("No episode groups found", MessageType.Warning));
     }
 }

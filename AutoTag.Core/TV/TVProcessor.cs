@@ -231,7 +231,7 @@ public class TVProcessor(ITMDBService tmdb, IFileWriter writer, ITVCache cache, 
             }
             else
             {
-                ui.SetStatus($@"No episode groups found for show ""{tvShow.Name}"".", MessageType.Warning | MessageType.Log);
+                ui.SetStatus($@"No episode groups found for show ""{tvShow.Name}""", MessageType.Warning | MessageType.Log);
             }
         }
         
