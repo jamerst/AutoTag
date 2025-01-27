@@ -62,7 +62,7 @@ public partial class ShowResults
     /// <param name="numbering">Matching episode number and season of "standard" order</param>
     /// <returns>True if mapping exists, false if not</returns>
     public bool TryGetMapping(int seasonNumber, int episodeNumber,
-        [NotNullWhen(true)] out (int season, int episode)? numbering)
+        [NotNullWhen(true)] out (int Season, int Episode)? numbering)
     {
         numbering = null;
         if (_episodeGroupMappingTable?.TryGetValue((seasonNumber, episodeNumber), out var result) ?? false)

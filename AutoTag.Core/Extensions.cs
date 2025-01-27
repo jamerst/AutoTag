@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using AutoTag.Core.Files;
 using AutoTag.Core.Movie;
 using AutoTag.Core.TMDB;
@@ -51,4 +52,11 @@ public static class Extensions
 
     public static bool IsLog(this MessageType type)
         => (type & MessageType.Log) == MessageType.Log;
+
+    public static bool TryFind<T>(this List<T> list, Predicate<T> match, [NotNullWhen(true)] out T? item)
+    {
+        item = list.Find(match);
+
+        return item != null;
+    }
 }

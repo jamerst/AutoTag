@@ -2,10 +2,13 @@ namespace AutoTag.Core.TV;
 
 public class TVFileMetadata : FileMetadata
 {
-    public string SeriesName = null!;
-    public int Season;
-    public int Episode;
-    public int SeasonEpisodes;
+    public string SeriesName { get; set; } = null!;
+    
+    public int Season { get; set; }
+    
+    public int Episode { get; set; }
+    
+    public int SeasonEpisodes { get; set; }
 
     public override void WriteToFile(TagLib.File file, AutoTagConfig config, IUserInterface ui)
     {

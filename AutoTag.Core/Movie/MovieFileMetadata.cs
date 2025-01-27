@@ -2,7 +2,7 @@ namespace AutoTag.Core.Movie;
 
 public class MovieFileMetadata : FileMetadata
 {
-    public DateTime? Date;
+    public DateTime? Date { get; set; }
 
     public override void WriteToFile(TagLib.File file, AutoTagConfig config, IUserInterface ui)
     {

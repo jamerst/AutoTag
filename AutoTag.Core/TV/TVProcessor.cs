@@ -9,15 +9,15 @@ public class TVProcessor(ITMDBService tmdb, IFileWriter writer, ITVCache cache, 
 {
     public async Task<bool> ProcessAsync(TaggingFile file)
     {
-        var fileNameData = ParseFileName(file);
-        if (fileNameData == null)
+        var metadata = ParseFileName(file);
+        if (metadata == null)
         {
             return false;
         }
 
-        ui.SetStatus($"Parsed file as {fileNameData}", MessageType.Log);
+        ui.SetStatus($"Parsed file as {metadata}", MessageType.Log);
 
-        var findShowResult = await FindShowAsync(fileNameData.SeriesName);
+        var findShowResult = await FindShowAsync(metadata.SeriesName);
         switch (findShowResult)
         {
             case FindResult.Fail:
@@ -26,37 +26,44 @@ public class TVProcessor(ITMDBService tmdb, IFileWriter writer, ITVCache cache, 
                 ui.SetStatus("File skipped", MessageType.Warning);
                 return true;
         }
-        
-        var result = new TVFileMetadata
-        {
-            Season = fileNameData.Season,
-            Episode = fileNameData.Episode
-        };
+
+        string? lastResultMessage = null;
         
         // try searching for each series search result
-        foreach (var show in cache.GetShow(fileNameData.SeriesName))
+        foreach (var show in cache.GetShow(metadata.SeriesName))
         {
-            var findEpisodeResult = await FindEpisodeAsync(fileNameData, show, result, file.Taggable);
+            var (findEpisodeResult, _lastResultMessage) = await FindEpisodeAsync(metadata, show, file.Taggable);
+            lastResultMessage = _lastResultMessage;
+            
             if (findEpisodeResult == FindResult.Fail)
             {
                 return false;
             }
             else if (findEpisodeResult == FindResult.Success)
             {
+                lastResultMessage = null;
                 break;
             }
         }
 
-        ui.SetStatus($"Found {fileNameData} ({result.Title}) on TheMovieDB", MessageType.Information);
-
-        if (config.AddCoverArt && string.IsNullOrEmpty(result.CoverURL) && file.Taggable)
+        // if reached the end of the search results without finding the episode
+        if (lastResultMessage != null)
         {
-            await FindPosterAsync(result);
+            ui.SetStatus(lastResultMessage, MessageType.Error);
+
+            return false;
         }
 
-        var taggingSuccess = await writer.WriteAsync(file, result);
+        ui.SetStatus($"Found {metadata} ({metadata.Title}) on TheMovieDB", MessageType.Information);
 
-        return taggingSuccess && result.Success && result.Complete;
+        if (config.AddCoverArt && string.IsNullOrEmpty(metadata.CoverURL) && file.Taggable)
+        {
+            await FindPosterAsync(metadata);
+        }
+
+        var taggingSuccess = await writer.WriteAsync(file, metadata);
+
+        return taggingSuccess && metadata.Success && metadata.Complete;
     }
 
     public TVFileMetadata? ParseFileName(TaggingFile file)
@@ -240,83 +247,71 @@ public class TVProcessor(ITMDBService tmdb, IFileWriter writer, ITVCache cache, 
         return (null, null);
     }
 
-    private async Task<FindResult> FindEpisodeAsync(TVFileMetadata fileNameData, ShowResults show, TVFileMetadata result, bool fileIsTaggable)
+    public async Task<(FindResult Result, string? LastResultErrorMessage)> FindEpisodeAsync(TVFileMetadata metadata, ShowResults show, bool fileIsTaggable)
     {
         var showData = show.TvSearchResult;
         
-        var lookupSeason = fileNameData.Season;
-        var lookupEpisode = fileNameData.Episode;
+        // lookup season/episode is the episode number in the default ordering
+        // if episode groups are used we need to map from the ordering scheme used in the file name to the default
+        // ordering to find the episode details
+        var lookupSeason = metadata.Season;
+        var lookupEpisode = metadata.Episode;
 
         if (show.HasEpisodeGroupMapping)
         {
-            if (show.TryGetMapping(fileNameData.Season, fileNameData.Episode, out var groupNumbering))
+            if (show.TryGetMapping(metadata.Season, metadata.Episode, out var groupNumbering))
             {
-                lookupSeason = groupNumbering.Value.season;
-                lookupEpisode = groupNumbering.Value.episode;
+                lookupSeason = groupNumbering.Value.Season;
+                lookupEpisode = groupNumbering.Value.Episode;
             }
             else
             {
-                ui.SetStatus($"Error: Cannot find {fileNameData} in episode group on TheMovieDB", MessageType.Error);
-                return FindResult.Fail;
+                ui.SetStatus($"Error: Cannot find {metadata} in episode group on TheMovieDB", MessageType.Error);
+                return (FindResult.Fail, null);
             }
         }
 
-        result.Id = showData.Id;
-        result.SeriesName = showData.Name;
+        metadata.Id = showData.Id;
+        metadata.SeriesName = showData.Name;
 
         if (!cache.TryGetSeason(showData.Id, lookupSeason, out var seasonResult))
         {
             seasonResult = await tmdb.GetTvSeasonAsync(showData.Id, lookupSeason);
 
-            if (seasonResult == null)
+            if (seasonResult != null)
             {
-                if (showData.Id == cache.GetShow(fileNameData.SeriesName)[^1].TvSearchResult.Id)
-                {
-                    ui.SetStatus($"Error: Cannot find {fileNameData} on TheMovieDB", MessageType.Error);
-                    return FindResult.Fail;
-                }
-                
-                return FindResult.Skip;
+                cache.AddSeason(showData.Id, lookupSeason, seasonResult);
             }
-            
-            cache.AddSeason(showData.Id, lookupSeason, seasonResult);
+        }
+
+        if (seasonResult == null ||
+            !seasonResult.Episodes.TryFind(e => e.EpisodeNumber == lookupEpisode, out var episodeResult))
+        {
+            return (FindResult.Skip, $"Error: Cannot find {metadata} on TheMovieDB");
         }
         
-        result.SeasonEpisodes = seasonResult.Episodes.Count;
+        metadata.SeasonEpisodes = seasonResult.Episodes.Count;
 
         if (!string.IsNullOrEmpty(seasonResult.PosterPath))
         {
-            result.CoverURL = $"https://image.tmdb.org/t/p/original/{seasonResult.PosterPath}";
+            metadata.CoverURL = $"https://image.tmdb.org/t/p/original/{seasonResult.PosterPath}";
         }
 
-        var episodeResult = seasonResult.Episodes.Find(e => e.EpisodeNumber == lookupEpisode);
-        if (episodeResult == default)
-        {
-            if (showData.Id == cache.GetShow(fileNameData.SeriesName)[^1].TvSearchResult.Id)
-            {
-                ui.SetStatus($"Error: Cannot find {fileNameData} on TheMovieDB", MessageType.Error);
-
-                return FindResult.Fail;
-            }
-            
-            return FindResult.Skip;
-        }
-
-        result.Title = episodeResult.Name;
-        result.Overview = episodeResult.Overview;
+        metadata.Title = episodeResult.Name;
+        metadata.Overview = episodeResult.Overview;
         
-        result.Genres = await tmdb.GetTvGenreNamesAsync(show.TvSearchResult.GenreIds);
+        metadata.Genres = await tmdb.GetTvGenreNamesAsync(show.TvSearchResult.GenreIds);
 
         if (config.ExtendedTagging && fileIsTaggable)
         {
-            result.Director = episodeResult.Crew.Find(c => c.Job == "Director")?.Name;
+            metadata.Director = episodeResult.Crew.Find(c => c.Job == "Director")?.Name;
 
             var credits = await tmdb.GetTvEpisodeCreditsAsync(showData.Id, lookupSeason, lookupEpisode);
-            result.Actors = credits.Cast.Select(c => c.Name).ToArray();
-            result.Characters = credits.Cast.Select(c => c.Character).ToArray();
+            metadata.Actors = credits.Cast.Select(c => c.Name).ToArray();
+            metadata.Characters = credits.Cast.Select(c => c.Character).ToArray();
         }
 
-        return FindResult.Success;
+        return (FindResult.Success, null);
     }
 
     private async Task FindPosterAsync(TVFileMetadata result)
