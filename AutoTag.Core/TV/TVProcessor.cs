@@ -314,27 +314,27 @@ public class TVProcessor(ITMDBService tmdb, IFileWriter writer, ITVCache cache, 
         return (FindResult.Success, null);
     }
 
-    private async Task FindPosterAsync(TVFileMetadata result)
+    public async Task FindPosterAsync(TVFileMetadata metadata)
     {
-        if (cache.TryGetSeasonPoster(result.Id, result.Season, out var url))
+        if (cache.TryGetSeasonPoster(metadata.Id, metadata.Season, out var url))
         {
-            result.CoverURL = url;
+            metadata.CoverURL = url;
         }
         else
         {
-            var seriesImages = await tmdb.GetTvShowImagesAsync(result.Id);
+            var seriesImages = await tmdb.GetTvShowImagesAsync(metadata.Id);
 
             if (seriesImages.Posters.Count > 0)
             {
                 var bestVotedImage = seriesImages.Posters.OrderByDescending(p => p.VoteAverage).First();
 
-                result.CoverURL = $"https://image.tmdb.org/t/p/original/{bestVotedImage.FilePath}";
-                cache.AddSeasonPoster(result.Id, result.Season, result.CoverURL);
+                metadata.CoverURL = $"https://image.tmdb.org/t/p/original/{bestVotedImage.FilePath}";
+                cache.AddSeasonPoster(metadata.Id, metadata.Season, metadata.CoverURL);
             }
             else
             {
                 ui.SetStatus("Error: Failed to find episode cover", MessageType.Error);
-                result.Complete = false;
+                metadata.Complete = false;
             }
         }
     }
