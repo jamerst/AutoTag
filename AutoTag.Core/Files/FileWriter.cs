@@ -50,21 +50,12 @@ public class FileWriter(ICoverArtFetcher coverArtFetcher, AutoTagConfig config, 
             }
             catch (Exception ex)
             {
-                if (config.Verbose)
+                ui.SetStatus("Error: Failed to write tags to file", MessageType.Error, ex);
+                if (config.Verbose && file != null && file.CorruptionReasons.Any())
                 {
-                    if (file != null && file.CorruptionReasons.Any())
-                    {
-                        ui.SetStatus($"Error: Failed to write tags to file ({ex.GetType().Name}: {ex.Message}; CorruptionReasons: {string.Join(", ", file.CorruptionReasons)})", MessageType.Error);
-                    }
-                    else
-                    {
-                        ui.SetStatus($"Error: Failed to write tags to file ({ex.GetType().Name}: {ex.Message}", MessageType.Error);
-                    }
+                    ui.SetStatus($"File corruption reasons: {string.Join(", ", file.CorruptionReasons)})", MessageType.Error);
                 }
-                else
-                {
-                    ui.SetStatus("Error: Failed to write tags to file", MessageType.Error);
-                }
+                
                 fileSuccess = false;
             }
         }
@@ -122,14 +113,7 @@ public class FileWriter(ICoverArtFetcher coverArtFetcher, AutoTagConfig config, 
             }
             catch (Exception ex)
             {
-                if (config.Verbose)
-                {
-                    ui.SetStatus($"Error: Failed to rename {msgPrefix}file ({ex.GetType().Name}: {ex.Message})", MessageType.Error);
-                }
-                else
-                {
-                    ui.SetStatus($"Error: Failed to rename {msgPrefix}file", MessageType.Error);
-                }
+                ui.SetStatus($"Error: Failed to rename {msgPrefix}file", MessageType.Error, ex);
                 fileSuccess = false;
             }
         }

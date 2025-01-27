@@ -97,14 +97,7 @@ public class TVProcessor(ITMDBService tmdb, IFileWriter writer, ITVCache cache, 
             }
             catch (FormatException ex)
             {
-                if (config.Verbose)
-                {
-                    ui.SetStatus($"Error: Unable to parse required information from filename ({ex.GetType().Name}: {ex.Message})", MessageType.Error);
-                }
-                else
-                {
-                    ui.SetStatus("Error: Unable to parse required information from filename", MessageType.Error);
-                }
+                ui.SetStatus("Error: Unable to parse required information from filename", MessageType.Error, ex);
 
                 return null;
             }

@@ -66,7 +66,6 @@ public class ParseFileName : TVProcessorTestBase
     public void Should_ReportError_When_PartMissingFromFileName(string fileName, string expectedMessage)
     {
         var mockUi = new Mock<IUserInterface>();
-        mockUi.Setup(ui => ui.SetStatus(It.IsAny<string>(), It.IsAny<MessageType>()));
         
         var tv = GetInstance(ui: mockUi.Object);
 
@@ -83,7 +82,6 @@ public class ParseFileName : TVProcessorTestBase
     public void Should_ReportError_When_ParsePatternDoesNotMatch()
     {
         var mockUi = new Mock<IUserInterface>();
-        mockUi.Setup(ui => ui.SetStatus(It.IsAny<string>(), It.IsAny<MessageType>()));
         
         var config = new AutoTagConfig
         {
@@ -99,7 +97,7 @@ public class ParseFileName : TVProcessorTestBase
         
         tv.ParseFileName(file);
 
-        mockUi.Verify(ui => ui.SetStatus("Error: Unable to parse required information from filename", MessageType.Error),
+        mockUi.Verify(ui => ui.SetStatus("Error: Unable to parse required information from filename", MessageType.Error, It.IsAny<Exception>()),
             Times.Once
         );
     }

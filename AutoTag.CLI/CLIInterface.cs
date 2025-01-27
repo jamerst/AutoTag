@@ -140,6 +140,11 @@ public class CLIInterface(IServiceProvider serviceProvider, AutoTagConfig config
         DisplayMessage($"    {status}", type);
     }
 
+    public void SetStatus(string status, MessageType type, Exception ex)
+    {
+        SetStatus(config.Verbose ? $"{status} ({ex.GetType().Name}: {ex.Message})" : status, type);
+    }
+
     public int? SelectOption(string message, List<string> options)
     {
         var choice = AnsiConsole.Prompt(
