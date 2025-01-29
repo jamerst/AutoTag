@@ -19,11 +19,12 @@ public class CLIInterface(IServiceProvider serviceProvider) : IUserInterface
     {
         Config = serviceProvider.GetRequiredService<AutoTagConfig>();
         var processor = serviceProvider.GetRequiredKeyedService<IProcessor>(Config.Mode);
+        var fileFinder = serviceProvider.GetRequiredService<IFileFinder>();
         
         AnsiConsole.WriteLine($"AutoTag v{GetVersion()}");
         AnsiConsole.MarkupLine("[link]https://jtattersall.net[/]");
 
-        Files = TaggingFile.FindTaggingFiles(entries, Config, this);
+        Files = fileFinder.FindFilesToProcess(entries);
         
         if (Files.Count == 0)
         {

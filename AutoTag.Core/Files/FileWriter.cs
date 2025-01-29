@@ -7,7 +7,7 @@ public interface IFileWriter
     Task<bool> WriteAsync(TaggingFile taggingFile, FileMetadata metadata);
 }
 
-public class FileWriter(ICoverArtFetcher coverArtFetcher, AutoTagConfig config, IUserInterface ui) : IFileWriter
+public class FileWriter(ICoverArtFetcher coverArtFetcher, AutoTagConfig config, IFileSystem fs, IUserInterface ui) : IFileWriter
 {
     public async Task<bool> WriteAsync(TaggingFile taggingFile, FileMetadata metadata)
     {
@@ -15,71 +15,76 @@ public class FileWriter(ICoverArtFetcher coverArtFetcher, AutoTagConfig config, 
 
         if (config.TagFiles && taggingFile.Taggable)
         {
-            TagLib.File? file = null;
-            try
-            {
-                using (file = TagLib.File.Create(taggingFile.Path))
-                {
-                    metadata.WriteToFile(file, config, ui);
-
-                    // if there is an image available and cover art is enabled
-                    if (!string.IsNullOrEmpty(metadata.CoverURL) && config.AddCoverArt)
-                    {
-                        var imgBytes = await coverArtFetcher.GetCoverArtAsync(metadata.CoverURL);
-                        if (imgBytes == null)
-                        {
-                            ui.SetStatus(
-                                $"Error: failed to download cover art{(config.Verbose ? $"({metadata.CoverURL})" : "")}",
-                                MessageType.Error
-                            );
-                            fileSuccess = false;
-                        }
-
-                        file.Tag.Pictures = [new TagLib.Picture(imgBytes) { Filename = "cover.jpg" }];
-                    }
-                    else if (string.IsNullOrEmpty(metadata.CoverURL) && config.AddCoverArt)
-                    {
-                        fileSuccess = false;
-                    }
-
-                    file.Save();
-
-                    if (fileSuccess)
-                    {
-                        ui.SetStatus($"Successfully tagged file as {metadata}", MessageType.Information);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                ui.SetStatus("Error: Failed to write tags to file", MessageType.Error, ex);
-                if (config.Verbose && file != null && file.CorruptionReasons.Any())
-                {
-                    ui.SetStatus($"File corruption reasons: {string.Join(", ", file.CorruptionReasons)})", MessageType.Error);
-                }
-                
-                fileSuccess = false;
-            }
+            fileSuccess = await TagFileAsync(taggingFile, metadata);
         }
 
         if (config.RenameFiles)
         {
-            if (InvalidFilenameChars == null)
-            {
-                InvalidFilenameChars = Path.GetInvalidFileNameChars();
-
-                if (config.WindowsSafe)
-                {
-                    InvalidFilenameChars = InvalidFilenameChars.Union(InvalidNtfsChars).ToArray();
-                }
-            }
-
             fileSuccess &= RenameFile(taggingFile.Path, metadata.GetFileName(config), null);
 
             if (!string.IsNullOrEmpty(taggingFile.SubtitlePath))
             {
                 fileSuccess &= RenameFile(taggingFile.SubtitlePath, metadata.GetFileName(config), "subtitle ");
             }
+        }
+
+        return fileSuccess;
+    }
+
+    private async Task<bool> TagFileAsync(TaggingFile taggingFile, FileMetadata metadata)
+    {
+        bool fileSuccess = true;
+        
+        TagLib.File? file = null;
+        try
+        {
+            using (file = TagLib.File.Create(taggingFile.Path))
+            {
+                metadata.WriteToFile(file, config, ui);
+
+                // if there is an image available and cover art is enabled
+                if (!string.IsNullOrEmpty(metadata.CoverURL) && config.AddCoverArt)
+                {
+                    var imgBytes = await coverArtFetcher.GetCoverArtAsync(metadata.CoverURL);
+                    if (imgBytes == null)
+                    {
+                        ui.SetStatus(
+                            $"Error: failed to download cover art{(config.Verbose ? $"({metadata.CoverURL})" : "")}",
+                            MessageType.Error
+                        );
+                        
+                        fileSuccess = false;
+                    }
+                    else
+                    {
+                        file.Tag.Pictures = [new TagLib.Picture(imgBytes) { Filename = "cover.jpg" }];
+                    }
+
+                }
+                else if (string.IsNullOrEmpty(metadata.CoverURL) && config.AddCoverArt)
+                {
+                    fileSuccess = false;
+                }
+
+                file.Save();
+
+                if (fileSuccess)
+                {
+                    ui.SetStatus($"Successfully tagged file as {metadata}", MessageType.Information);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            ui.SetStatus("Error: Failed to write tags to file", MessageType.Error, ex);
+            if (file != null && file.CorruptionReasons.Any())
+            {
+                ui.SetStatus($"File corruption reasons: {string.Join(", ", file.CorruptionReasons)})",
+                    MessageType.Error | MessageType.Log
+                );
+            }
+            
+            fileSuccess = false;
         }
 
         return fileSuccess;
@@ -101,14 +106,14 @@ public class FileWriter(ICoverArtFetcher coverArtFetcher, AutoTagConfig config, 
         {
             try
             {
-                if (File.Exists(newPath))
+                if (fs.Exists(newPath))
                 {
                     ui.SetStatus($"Error: Could not rename - {msgPrefix}file already exists", MessageType.Error);
                     fileSuccess = false;
                 }
                 else
                 {
-                    File.Move(path, newPath);
+                    fs.Move(path, newPath);
                     ui.SetFilePath(newPath);
                     ui.SetStatus($"Successfully renamed {msgPrefix}file to '{Path.GetFileName(newPath)}'", MessageType.Information);
                 }
@@ -130,14 +135,29 @@ public class FileWriter(ICoverArtFetcher coverArtFetcher, AutoTagConfig config, 
         {
             result = replace.Apply(result);
         }
-
-        string escapedResult = String.Concat(result.Split(InvalidFilenameChars));
-        if (escapedResult != oldFileName && escapedResult.Length != fileName.Length)
+        
+        var sanitisedName = RemoveInvalidFileNameChars(result);
+        if (sanitisedName != oldFileName && sanitisedName.Length != fileName.Length)
         {
             ui.SetStatus("Warning: Invalid characters in file name, automatically removing", MessageType.Warning);
         }
 
-        return escapedResult;
+        return sanitisedName;
+    }
+
+    private string RemoveInvalidFileNameChars(string fileName)
+    {
+        if (InvalidFilenameChars == null)
+        {
+            InvalidFilenameChars = Path.GetInvalidFileNameChars();
+
+            if (config.WindowsSafe)
+            {
+                InvalidFilenameChars = InvalidFilenameChars.Union(InvalidNtfsChars).ToArray();
+            }
+        }
+
+        return string.Concat(fileName.Where(c => !InvalidFilenameChars.Contains(c)));
     }
 
     private static char[]? InvalidFilenameChars { get; set; }

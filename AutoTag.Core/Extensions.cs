@@ -18,8 +18,12 @@ public static class Extensions
         services.AddSingleton<IAutoTagConfigService, AutoTagConfigService>();
         services.AddSingleton<AutoTagConfig>(serviceProvider =>
             serviceProvider.GetRequiredService<IAutoTagConfigService>().GetConfig());
+
+        services.AddSingleton<IFileSystem, FileSystem>();
+        services.AddSingleton<IFileFinder, FileFinder>();
         
-        services.AddScoped<IFileWriter, FileWriter>();
+        services.AddSingleton<IFileWriter, FileWriter>();
+        
         services.AddScoped<ICoverArtFetcher, CoverArtFetcher>();
 
         services.AddKeyedScoped<IProcessor, TVProcessor>(Mode.TV);
@@ -30,7 +34,7 @@ public static class Extensions
         services.AddHttpClient();
         services.RemoveAll<IHttpMessageHandlerBuilderFilter>(); // disable HttpClient logging - prints unwanted output to console
         
-        services.AddScoped<TMDbClient>((serviceProvider) =>
+        services.AddScoped<TMDbClient>(serviceProvider =>
         {
             var configService = serviceProvider.GetRequiredService<IAutoTagConfigService>();
             var config = configService.GetConfig();
