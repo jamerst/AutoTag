@@ -146,7 +146,12 @@ public class CLIInterface(IServiceProvider serviceProvider) : IUserInterface
 
     public void SetStatus(string status, MessageType type, Exception ex)
     {
-        SetStatus(Config.Verbose ? $"{status} ({ex.GetType().Name}: {ex.Message})" : status, type);
+        SetStatus(status, type);
+
+        if (Config.Verbose)
+        {
+            AnsiConsole.WriteException(ex, ExceptionFormats.ShortenEverything);
+        }
     }
 
     public int? SelectOption(string message, List<string> options)
