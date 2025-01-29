@@ -121,7 +121,7 @@ public class CLIInterface(IServiceProvider serviceProvider) : IUserInterface
         {
             if (!CurrentFile.Success)
             {
-                CurrentFile.Status += Environment.NewLine + status;
+                CurrentFile.Status += $"{Environment.NewLine}    {status}";
             }
             else
             {
