@@ -7,37 +7,37 @@ public partial class RootCommandSettings
     [CommandOption("-t|--tv")]
     [Description("TV tagging mode")]
     public bool TVMode { get; init; }
-    
+
     [CommandOption("-m|--movie")]
     [Description("Movie tagging mode")]
     public bool MovieMode { get; init; }
-    
+
     [CommandOption("--no-tag")]
     [Description("Disable file tagging")]
     public bool? NoTag { get; init; }
-    
+
     [CommandOption("--no-cover")]
     [Description("Disable cover art tagging")]
     public bool? NoCover { get; init; }
-    
+
     [CommandOption("--manual")]
     [Description("Manually choose the TV series/movie for a file from search results")]
     public bool? Manual { get; init; }
-    
+
     [CommandOption("--extended-tagging")]
     [Description("Add more information to Matroska file tags. Reduces tagging speed.")]
     public bool? ExtendedTagging { get; init; }
-    
+
     [CommandOption("--apple-tagging")]
     [Description("Add extra tags to mp4 files for use with Apple devices and software")]
     public bool? AppleTagging { get; init; }
-    
+
     [CommandOption("-l|--language <language>")]
-    [Description("Metadata language")]
+    [Description("Metadata language (default: en)")]
     public string? Language { get; init; }
-    
+
     [CommandOption("-g|--episode-group")]
-    [Description("Manually choose the Episode Group for a TV episode. Also enables manual mode.")]
+    [Description("Manually choose alternate episode orderings for a TV show")]
     public bool? EpisodeGroup { get; init; }
 
     private void SetTaggingOptions(AutoTagConfig config)

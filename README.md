@@ -20,35 +20,35 @@ This is because building cross-platform user interfaces with .NET Core is still 
 
 ## Usage
 ```
-Usage:
-  autotag [<paths>...] [options]
+USAGE:
+  autotag [paths] [OPTIONS]
 
-Arguments:
-  <paths>  Files or directories to process
+ARGUMENTS:
+  [paths]    Files or directories to process
 
-Options:
-  -t, --tv                         TV tagging mode
-  -m, --movie                      Movie tagging mode
-  --no-tag                         Disable file tagging
-  --no-cover                       Disable cover art tagging
-  --manual                         Manually choose the TV series for a file from search results
-  --extended-tagging               Add more information to Matroska file tags. Reduces tagging speed.
-  --apple-tagging                  Add extra tags to mp4 files for use with Apple devices and software
-  -l, --language <language>        Metadata language [default: en]
-  -g, --episode-group              Manually choose the Episode Group for a TV episode. Enables manual mode.
-  --no-rename                      Disable file and subtitle renaming
-  --tv-pattern <tv-pattern>        Rename pattern for TV episodes
-  --movie-pattern <movie-pattern>  Rename pattern for movies
-  --windows-safe                   Remove invalid Windows file name characters when renaming
-  --rename-subs                    Rename subtitle files
-  --replace <replace replacement>  Replace <replace> with <replacement> in file names
-  -c, --config <config>            Config file path
-  -p, --pattern <pattern>          Custom regex to parse TV episode information
-  -v, --verbose                    Enable verbose output mode
-  --set-default                    Set the current arguments as the default
-  --print-config                   Print loaded configuration and exit
-  --version                        Show version information
-  -?, -h, --help                   Show help and usage information
+OPTIONS:
+  -h, --help                             Prints help information
+  -c, --config <PATH>                    Config file path
+  -p, --pattern <PATTERN>                Custom regex to parse TV episode information
+  -v, --verbose                          Enable verbose output mode
+      --set-default                      Set the current arguments as the default
+      --print-config                     Print loaded configuration and exit
+      --version                          Print version and exit
+      --no-rename                        Disable file and subtitle renaming
+      --tv-pattern <PATTERN>             Rename pattern for TV episodes
+      --movie-pattern <PATTERN>          Rename pattern for movies
+      --windows-safe                     Remove invalid Windows file name characters when renaming
+      --rename-subs                      Rename subtitle files
+      --replace <REPLACE=REPLACEMENT>    Replace <REPLACE> with <REPLACEMENT> in file names
+  -t, --tv                               TV tagging mode
+  -m, --movie                            Movie tagging mode
+      --no-tag                           Disable file tagging
+      --no-cover                         Disable cover art tagging
+      --manual                           Manually choose the TV series/movie for a file from search results
+      --extended-tagging                 Add more information to Matroska file tags. Reduces tagging speed
+      --apple-tagging                    Add extra tags to mp4 files for use with Apple devices and software
+  -l, --language <LANGUAGE>              Metadata language (default: en)
+  -g, --episode-group                    Manually choose alternate episode orderings for a TV show
 
 ```
 
@@ -76,7 +76,9 @@ Note that on Windows all directory separators (`\`) must be escaped as `\\`.
 The `--windows-safe` option is for use on Linux/macOS where the files written may be accessed by a Windows host, or are being written to an NTFS filesystem. It automatically removes any invalid NTFS file name characters.
 
 ### File Name Replacements
-The `--replace` option allows specific characters or strings in a file name to be replaced, e.g. `--replace a b` will replace all the `a` characters in the file name with `b`. This option can be used multiple times for multiple replacements, e.g. `--replace a b --replace foo bar --replace c ''`. **Note: the arguments for this option are case sensitive.**
+The `--replace` option allows specific characters or strings in a file name to be replaced, e.g. `--replace a=b` will replace all the `a` characters in the file name with `b`. This option can be used multiple times for multiple replacements, e.g. `--replace a=b --replace foo=bar --replace c=''`. **Note: the arguments for this option are case sensitive.**
+
+Any values for the replace option containing an equals (`=`) cannot be set via command line arguments currently. To use such values you can add them to the config file manually using a text editor.
 
 ### Extended Tagging
 The `--extended-tagging` option adds additional information to Matroska video files such as actors and their characters. This option is not enabled by default because it may reduce tagging speed significantly due to the additional API requests needed.
@@ -84,11 +86,13 @@ The `--extended-tagging` option adds additional information to Matroska video fi
 ### Language
 The language of the metadata can be set using the `-l` or `--language` option. This accepts a [ISO 639-1 language code](https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes) with optional [ISO 3166 alpha-2 country code](https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2) for regional variants. E.g., to get metadata in German use `-l de`, or for Brazilian Portuguese use `-l pt-BR`. Note that the data for other languages is probably less complete than it is for English. If data in a given language is not available it will fall back to some alternative, likely English.
 
-### Episode Groups / Alternate Ordering
+### Alternate Episode Orderings (Episode Groups)
 The `--episode-group` option allows you to choose one of the additional episodes group collections created on TMDB as source for the episode ordering. All contained episode groups must follow the naming scheme `<NAME> XX`. Episode groups whose names begin with `special` in their names are also valid and will be treated as `Season 0`.
 
-| Group Name      | Valid |
-|-----------------|-------|
+Enabling this option will prompt you to select the episode ordering for each show manually.
+
+| Group Name      | Valid  |
+|-----------------|--------|
 | Season 01       | ✅     |
 | Staffel 02      | ✅     |
 | Volume 9        | ✅     |
@@ -113,8 +117,9 @@ AutoTag creates a config file to store default preferences at `~/.config/autotag
 "extendedTagging": false,                 // Add more information to Matroska file tags
 "appleTagging": false,                    // Add extra tags to mp4 files for use with Apple devices and software
 "renameSubtitles": false,                 // Rename subtitle files
-"language": "en"                          // Metadata language,
-"fileNameReplaces": []                    // File name character replacements. Array of objects of the form { "replace": "", replacement: "" }
+"language": "en",                         // Metadata language,
+"episodeGroup": false,                     // Enable alternate episode ordering selection
+"fileNameReplaces": []                   // File name character replacements. Array of objects of the form { "replace": "", "replacement": "" }
 ```
 
 ## Moving away from TheTVDB
