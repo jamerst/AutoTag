@@ -118,8 +118,8 @@ AutoTag creates a config file to store default preferences at `~/.config/autotag
 "appleTagging": false,                    // Add extra tags to mp4 files for use with Apple devices and software
 "renameSubtitles": false,                 // Rename subtitle files
 "language": "en",                         // Metadata language,
-"episodeGroup": false,                     // Enable alternate episode ordering selection
-"fileNameReplaces": []                   // File name character replacements. Array of objects of the form { "replace": "", "replacement": "" }
+"episodeGroup": false,                    // Enable alternate episode ordering selection
+"fileNameReplaces": []                    // File name character replacements. Array of objects of the form { "replace": "", "replacement": "" }
 ```
 
 ## Moving away from TheTVDB
