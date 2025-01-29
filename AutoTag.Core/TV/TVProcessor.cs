@@ -30,7 +30,7 @@ public class TVProcessor(ITMDBService tmdb, IFileWriter writer, ITVCache cache, 
 
         string? lastResultMessage = null;
         
-        // try searching for each series search result
+        // try searching for episode in each series search result
         foreach (var show in cache.GetShow(metadata.SeriesName))
         {
             var (findEpisodeResult, _lastResultMessage) = await FindEpisodeAsync(metadata, show, file.Taggable);
