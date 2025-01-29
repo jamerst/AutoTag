@@ -1,3 +1,5 @@
+using AutoTag.Core.Config;
+
 namespace AutoTag.Core.Movie;
 
 public class MovieFileMetadata : FileMetadata

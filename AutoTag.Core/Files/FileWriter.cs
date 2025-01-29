@@ -1,3 +1,5 @@
+using AutoTag.Core.Config;
+
 namespace AutoTag.Core.Files;
 
 public interface IFileWriter

@@ -1,6 +1,6 @@
-using System.Reflection;
 using System.Text.Json;
 using AutoTag.CLI.Settings;
+using AutoTag.Core.Config;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Spectre.Console.Json;
@@ -16,28 +16,28 @@ public class RootCommand : AsyncCommand<RootCommandSettings>
             AnsiConsole.WriteLine(CLIInterface.GetVersion());
             return 0;
         }
+        
+        var builder = Host.CreateApplicationBuilder();
+        builder.Services.AddCoreServices(Keys.TMDBKey);
+        builder.Services.AddScoped<IUserInterface, CLIInterface>();
 
-        AutoTagSettings settings = await AutoTagSettings.LoadConfigAsync(cmdSettings.ConfigPath);
-        cmdSettings.UpdateConfig(settings.Config);
+        using var host = builder.Build();
+
+        var configService = host.Services.GetRequiredService<IAutoTagConfigService>();
+        var config = await configService.LoadOrGenerateConfigAsync(cmdSettings.ConfigPath);
+        
+        cmdSettings.UpdateConfig(config);
 
         if (cmdSettings.PrintConfig)
         {
-            AnsiConsole.Write(new JsonText(JsonSerializer.Serialize(settings.Config, PrintJsonOptions)));
+            AnsiConsole.Write(new JsonText(JsonSerializer.Serialize(config, PrintJsonOptions)));
             return 0;
         }
 
         if (cmdSettings.SetDefault)
         {
-            await settings.SaveAsync();
+            await configService.SaveToDiskAsync();
         }
-
-        var builder = Host.CreateApplicationBuilder();
-        builder.Services.AddCoreServices(settings.Config, Keys.TMDBKey);
-
-        builder.Services.AddSingleton(settings.Config);
-        builder.Services.AddScoped<IUserInterface, CLIInterface>();
-
-        using var host = builder.Build();
 
         var ui = (CLIInterface)host.Services.GetRequiredService<IUserInterface>();
         return await ui.RunAsync(cmdSettings.Paths);

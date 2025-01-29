@@ -1,3 +1,5 @@
+using AutoTag.Core.Config;
+
 namespace AutoTag.Core.TV;
 
 public class TVFileMetadata : FileMetadata

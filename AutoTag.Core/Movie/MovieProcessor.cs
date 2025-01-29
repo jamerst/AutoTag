@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using System.Text.RegularExpressions;
+using AutoTag.Core.Config;
 using AutoTag.Core.Files;
 using AutoTag.Core.TMDB;
 using TMDbLib.Objects.General;

@@ -1,4 +1,5 @@
 ﻿using System.Text.RegularExpressions;
+using AutoTag.Core.Config;
 
 namespace AutoTag.Core;
 public abstract class FileMetadata

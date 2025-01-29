@@ -1,3 +1,4 @@
+using AutoTag.Core.Config;
 using AutoTag.Core.TMDB;
 using AutoTag.Core.TV;
 using TMDbLib.Objects.General;

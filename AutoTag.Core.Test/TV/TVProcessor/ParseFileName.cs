@@ -1,3 +1,4 @@
+using AutoTag.Core.Config;
 using AutoTag.Core.Files;
 using AutoTag.Core.TV;
 

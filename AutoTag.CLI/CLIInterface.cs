@@ -1,10 +1,11 @@
 using System.Reflection;
+using AutoTag.Core.Config;
 using AutoTag.Core.Files;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace AutoTag.CLI;
 
-public class CLIInterface(IServiceProvider serviceProvider, AutoTagConfig config) : IUserInterface
+public class CLIInterface(IServiceProvider serviceProvider) : IUserInterface
 {
     private List<TaggingFile> Files = null!;
     private TaggingFile CurrentFile = null!;
@@ -12,21 +13,24 @@ public class CLIInterface(IServiceProvider serviceProvider, AutoTagConfig config
     private bool Success = true;
     private int Warnings;
 
+    private AutoTagConfig Config = null!;
+
     public async Task<int> RunAsync(IEnumerable<FileSystemInfo> entries)
     {
+        Config = serviceProvider.GetRequiredService<AutoTagConfig>();
+        var processor = serviceProvider.GetRequiredKeyedService<IProcessor>(Config.Mode);
+        
         AnsiConsole.WriteLine($"AutoTag v{GetVersion()}");
         AnsiConsole.MarkupLine("[link]https://jtattersall.net[/]");
 
-        Files = TaggingFile.FindTaggingFiles(entries, config, this);
-
-        int fileCount = Files.Count;
-        if (fileCount == 0)
+        Files = TaggingFile.FindTaggingFiles(entries, Config, this);
+        
+        if (Files.Count == 0)
         {
-            Console.WriteLine("No files found");
+            DisplayMessage("No files found", MessageType.Error);
             return 1;
         }
 
-        var processor = serviceProvider.GetRequiredService<IProcessor>();
         foreach (var file in Files)
         {
             CurrentFile = file;
@@ -35,7 +39,7 @@ public class CLIInterface(IServiceProvider serviceProvider, AutoTagConfig config
             Success &= await processor.ProcessAsync(file);
         }
 
-        return ReportResults(fileCount);
+        return ReportResults(Files.Count);
     }
 
     private int ReportResults(int fileCount)
@@ -85,15 +89,14 @@ public class CLIInterface(IServiceProvider serviceProvider, AutoTagConfig config
                 AnsiConsole.MarkupLineInterpolated($"[magenta]{file.Path}:[/]");
                 AnsiConsole.MarkupLineInterpolated($"[red]    {file.Status}\n[/]");
             }
-
-            Console.ResetColor();
+            
             return 1;
         }
     }
 
     public void DisplayMessage(string message, MessageType type)
     {
-        if (type.IsLog() && !config.Verbose)
+        if (type.IsLog() && !Config.Verbose)
         {
             return;
         }
@@ -142,7 +145,7 @@ public class CLIInterface(IServiceProvider serviceProvider, AutoTagConfig config
 
     public void SetStatus(string status, MessageType type, Exception ex)
     {
-        SetStatus(config.Verbose ? $"{status} ({ex.GetType().Name}: {ex.Message})" : status, type);
+        SetStatus(Config.Verbose ? $"{status} ({ex.GetType().Name}: {ex.Message})" : status, type);
     }
 
     public int? SelectOption(string message, List<string> options)

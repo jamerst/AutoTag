@@ -1,3 +1,4 @@
+using AutoTag.Core.Config;
 using TMDbLib.Client;
 using TMDbLib.Objects.General;
 using TMDbLib.Objects.Search;

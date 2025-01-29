@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using AutoTag.Core.Config;
 using AutoTag.Core.Files;
 using AutoTag.Core.Movie;
 using AutoTag.Core.TMDB;
@@ -12,29 +13,33 @@ namespace AutoTag.Core;
 
 public static class Extensions
 {
-    public static void AddCoreServices(this IServiceCollection services, AutoTagConfig config, string apiKey)
+    public static void AddCoreServices(this IServiceCollection services, string apiKey)
     {
+        services.AddSingleton<IAutoTagConfigService, AutoTagConfigService>();
+        services.AddSingleton<AutoTagConfig>(serviceProvider =>
+            serviceProvider.GetRequiredService<IAutoTagConfigService>().GetConfig());
+        
         services.AddScoped<IFileWriter, FileWriter>();
         services.AddScoped<ICoverArtFetcher, CoverArtFetcher>();
 
-        if (config.IsTVMode())
-        {
-            services.AddScoped<IProcessor, TVProcessor>();
-        }
-        else
-        {
-            services.AddScoped<IProcessor, MovieProcessor>();
-        }
+        services.AddKeyedScoped<IProcessor, TVProcessor>(Mode.TV);
+        services.AddKeyedScoped<IProcessor, MovieProcessor>(Mode.Movie);
 
         services.AddMemoryCache();
         
         services.AddHttpClient();
         services.RemoveAll<IHttpMessageHandlerBuilderFilter>(); // disable HttpClient logging - prints unwanted output to console
         
-        services.AddScoped<TMDbClient>((_) => new(apiKey)
+        services.AddScoped<TMDbClient>((serviceProvider) =>
         {
-            DefaultLanguage = config.Language,
-            DefaultImageLanguage = config.Language
+            var configService = serviceProvider.GetRequiredService<IAutoTagConfigService>();
+            var config = configService.GetConfig();
+            
+            return new(apiKey)
+            {
+                DefaultLanguage = config.Language,
+                DefaultImageLanguage = config.Language
+            };
         });
         services.AddScoped<ITMDBService, TMDBService>();
 

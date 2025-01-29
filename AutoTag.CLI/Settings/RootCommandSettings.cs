@@ -1,3 +1,5 @@
+using AutoTag.Core.Config;
+
 namespace AutoTag.CLI.Settings;
 
 public partial class RootCommandSettings : CommandSettings

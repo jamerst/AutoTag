@@ -1,3 +1,5 @@
+using AutoTag.Core.Config;
+
 namespace AutoTag.CLI.Settings;
 
 public partial class RootCommandSettings
@@ -42,12 +44,12 @@ public partial class RootCommandSettings
     {
         if (TVMode)
         {
-            config.Mode = AutoTagConfig.Modes.TV;
+            config.Mode = Mode.TV;
         }
 
         if (MovieMode)
         {
-            config.Mode = AutoTagConfig.Modes.Movie;
+            config.Mode = Mode.Movie;
         }
 
         if (NoTag.HasValue)
