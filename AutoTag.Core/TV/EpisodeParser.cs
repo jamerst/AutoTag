@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text.RegularExpressions;
 
 namespace AutoTag.Core.TV;
@@ -7,13 +8,18 @@ public class EpisodeParser
     // https://github.com/pheiberg/SubtitleFetcher
 
     static RegexOptions RegexOptions = RegexOptions.IgnoreCase | RegexOptions.CultureInvariant;
-    static readonly Regex[] Patterns = {
-            new Regex(@"^((?<SeriesName>.+?)[\[. _-]+)?(?<Season>\d+)x(?<Episode>\d+)(([. _-]*x|-)(?<EndEpisode>(?!(1080|720)[pi])(?!(?<=x)264)\d+))*[\]. _-]*((?<ExtraInfo>.+?)((?<![. _-])-(?<ReleaseGroup>[^-]+))?)?$", RegexOptions),
-            new Regex(@"^((?<SeriesName>.+?)[. _-]+)?s(?<Season>\d+)[. _-]*e(?<Episode>\d+)(([. _-]*e|-)(?<EndEpisode>(?!(1080|720)[pi])\d+))*[. _-]*((?<ExtraInfo>.+?)((?<![. _-])-(?<ReleaseGroup>[^-]+))?)?$", RegexOptions)
-
-        };
-    public static TVFileMetadata ParseEpisodeInfo(string fileName)
+    static readonly Regex[] Patterns =
+    [
+        new(@"^((?<SeriesName>.+?)[\[. _-]+)?(?<Season>\d+)x(?<Episode>\d+)(([. _-]*x|-)(?<EndEpisode>(?!(1080|720)[pi])(?!(?<=x)264)\d+))*[\]. _-]*((?<ExtraInfo>.+?)((?<![. _-])-(?<ReleaseGroup>[^-]+))?)?$", RegexOptions),
+        new(@"^((?<SeriesName>.+?)[. _-]+)?s(?<Season>\d+)[. _-]*e(?<Episode>\d+)(([. _-]*e|-)(?<EndEpisode>(?!(1080|720)[pi])\d+))*[. _-]*((?<ExtraInfo>.+?)((?<![. _-])-(?<ReleaseGroup>[^-]+))?)?$", RegexOptions)
+    ];
+    
+    public static bool TryParseEpisodeInfo(string fileName,
+        [NotNullWhen(true)] out TVFileMetadata? metadata,
+        [NotNullWhen(false)] out string? failureReason)
     {
+        metadata = null;
+        
         foreach (var pattern in Patterns)
         {
             var match = pattern.Match(fileName);
@@ -23,35 +29,35 @@ public class EpisodeParser
             var seriesName = match.Groups["SeriesName"].Value.Replace('.', ' ').Replace('_', ' ').Trim();
             var season = match.Groups["Season"].Value;
             var episode = match.Groups["Episode"].Value;
-            var endEpisode = ExtractEndEpisode(match.Groups["EndEpisode"], int.Parse(episode));
-            var releaseGroup = match.Groups["ReleaseGroup"].Value;
 
             if (string.IsNullOrWhiteSpace(seriesName))
             {
-                throw new FormatException("Unable to parse series name from filename");
+                failureReason = "Unable to parse series name from filename";
+                return false;
             }
             else if (string.IsNullOrWhiteSpace(season))
             {
-                throw new FormatException("Unable to parse season from filename");
+                failureReason = "Unable to parse season from filename";
+                return false;
             }
             else if (string.IsNullOrWhiteSpace(episode))
             {
-                throw new FormatException("Unable to parse episode from filename");
+                failureReason = "Unable to parse episode from filename";
+                return false;
             }
 
-            return new TVFileMetadata()
+            failureReason = null;
+            metadata = new  TVFileMetadata
             {
                 SeriesName = seriesName,
                 Season = int.Parse(season),
                 Episode = int.Parse(episode)
             };
+
+            return true;
         }
 
-        throw new FormatException("Unable to parse required information from filename");
-    }
-
-    private static int ExtractEndEpisode(Capture endEpisodeGroup, int episode)
-    {
-        return int.TryParse(endEpisodeGroup.Value, out int endEpisode) ? endEpisode : episode;
+        failureReason = "Unable to parse required information from filename";
+        return false;
     }
 }

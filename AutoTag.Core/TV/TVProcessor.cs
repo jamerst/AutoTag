@@ -68,17 +68,16 @@ public class TVProcessor(ITMDBService tmdb, IFileWriter writer, ITVCache cache, 
 
     public TVFileMetadata? ParseFileName(TaggingFile file)
     {
-        TVFileMetadata episodeData;
-
         if (string.IsNullOrEmpty(config.ParsePattern))
         {
-            try
+            if (EpisodeParser.TryParseEpisodeInfo(Path.GetFileName(file.Path), out var parsedMetadata,
+                    out string? failureReason))
             {
-                episodeData = EpisodeParser.ParseEpisodeInfo(Path.GetFileName(file.Path)); // Parse info from filename
+                return parsedMetadata;
             }
-            catch (FormatException ex)
+            else
             {
-                ui.SetStatus($"Error: {ex.Message}", MessageType.Error);
+                ui.SetStatus($"Error: {failureReason}", MessageType.Error);
                 return null;
             }
         }
@@ -88,7 +87,7 @@ public class TVProcessor(ITMDBService tmdb, IFileWriter writer, ITVCache cache, 
             {
                 var match = Regex.Match(Path.GetFullPath(file.Path), config.ParsePattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
-                episodeData = new TVFileMetadata
+                return new TVFileMetadata
                 {
                     SeriesName = match.Groups["SeriesName"].Value,
                     Season = int.Parse(match.Groups["Season"].Value),
@@ -98,12 +97,9 @@ public class TVProcessor(ITMDBService tmdb, IFileWriter writer, ITVCache cache, 
             catch (FormatException ex)
             {
                 ui.SetStatus("Error: Unable to parse required information from filename", MessageType.Error, ex);
-
                 return null;
             }
         }
-
-        return episodeData;
     }
 
     public async Task<FindResult> FindShowAsync(string seriesName)
