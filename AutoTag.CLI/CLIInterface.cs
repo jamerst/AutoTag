@@ -161,7 +161,7 @@ public class CLIInterface(IServiceProvider serviceProvider) : IUserInterface
                 .Title($"    [yellow]{Markup.Escape(message)}[/]")
                 .PageSize(10)
                 .AddChoices([
-                    ..options.Select((o, i) => (i, o)),
+                    ..options.Select((o, i) => (i, Markup.Escape(o))),
                     (null, "(Skip file)")
                 ])
                 .UseConverter(o => $"  {o.Item2}")
