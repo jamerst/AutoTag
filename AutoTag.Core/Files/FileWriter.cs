@@ -77,7 +77,7 @@ public class FileWriter(ICoverArtFetcher coverArtFetcher, AutoTagConfig config, 
         catch (Exception ex)
         {
             ui.SetStatus("Error: Failed to write tags to file", MessageType.Error, ex);
-            if (file != null && file.CorruptionReasons.Any())
+            if (file != null && file.CorruptionReasons?.Any() == true)
             {
                 ui.SetStatus($"File corruption reasons: {string.Join(", ", file.CorruptionReasons)})",
                     MessageType.Error | MessageType.Log
