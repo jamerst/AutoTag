@@ -179,7 +179,7 @@ public class TVProcessor(ITMDBService tmdb, IFileWriter writer, ITVCache cache, 
             if (groups.Results.Count != 0)
             {
                 var options = groups.Results
-                    .Select(g => $"[{g.Type}] {g.Name} ({g.GroupCount} seasons, {g.EpisodeCount} episodes)")
+                    .Select(g => $"[[{g.Type}]] {g.Name} ({g.GroupCount} seasons, {g.EpisodeCount} episodes)")
                     .ToList();
 
                 if (searchResults.Count > 1 && i < searchResults.Count - 1)
