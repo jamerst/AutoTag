@@ -68,7 +68,7 @@ public class AutoTagConfigService(IUserInterface ui, IFileSystem fs) : IAutoTagC
         try
         {
             await using var stream = fs.OpenReadStream(ConfigPath);
-            config = await JsonSerializer.DeserializeAsync<AutoTagConfig>(stream);
+            config = await JsonSerializer.DeserializeAsync<AutoTagConfig>(stream, JsonOptions);
         }
         catch (JsonException)
         {
