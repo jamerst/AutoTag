@@ -81,35 +81,35 @@ public class MovieProcessor(ITMDBService tmdb, IFileWriter writer, IUserInterfac
         {
             searchResults = await tmdb.SearchMovieAsync(title);
         }
-
-        SearchMovie selected = searchResults.Results[0];
-        if (config.ManualMode)
-        {
-            int? selection = ui.SelectOption(
-                "Please choose an option",
-                searchResults.Results
-                    .Select(m => $"{m.Title} ({m.ReleaseDate?.Year.ToString() ?? "Unknown"})")
-                    .ToList()
-            );
-
-            if (selection.HasValue)
-            {
-                selected = searchResults.Results[selection.Value];
-                ui.SetStatus($"Selected {selected.Title} ({selected.ReleaseDate?.Year.ToString() ?? "Unknown"})", MessageType.Information);
-            }
-            else
-            {
-                ui.SetStatus("File skipped", MessageType.Warning);
-                return (FindResult.Skip, null);
-            }
-        }
-        else if (!searchResults.Results.Any())
+        
+        if (searchResults.Results.Count == 0)
         {
             ui.SetStatus($"Error: failed to find title {title} on TheMovieDB", MessageType.Error);
             return (FindResult.Fail, null);
         }
 
-        return (FindResult.Success, selected);
+        if (!config.ManualMode)
+        {
+            return (FindResult.Success, searchResults.Results[0]);
+        }
+
+        var selection = ui.SelectOption(
+            "Please choose an option",
+            searchResults.Results
+                .Select(m => $"{m.Title} ({m.ReleaseDate?.Year.ToString() ?? "Unknown"})")
+                .ToList()
+        );
+        
+        if (selection.HasValue)
+        {
+            var selected = searchResults.Results[selection.Value];
+            ui.SetStatus($"Selected {selected.Title} ({selected.ReleaseDate?.Year.ToString() ?? "Unknown"})", MessageType.Information);
+            
+            return (FindResult.Success, selected);
+        }
+
+        ui.SetStatus("File skipped", MessageType.Warning);
+        return (FindResult.Skip, null);
     }
 
     private async Task<MovieFileMetadata> GetMovieMetadataAsync(SearchMovie selectedResult, bool fileIsTaggable)
