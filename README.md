@@ -86,6 +86,8 @@ The `--extended-tagging` option adds additional information to Matroska video fi
 ### Language
 The language of the metadata can be set using the `-l` or `--language` option. This accepts a [ISO 639-1 language code](https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes) with optional [ISO 3166 alpha-2 country code](https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2) for regional variants. E.g., to get metadata in German use `-l de`, or for Brazilian Portuguese use `-l pt-BR`. Note that the data for other languages is probably less complete than it is for English. If data in a given language is not available it will fall back to some alternative, likely English.
 
+Movie searching can optionally use additional fallback languages via the `searchLanguages` config setting. For example, with `"language": "pt-BR"` and `"searchLanguages": ["en-US"]`, AutoTag will still write metadata in Brazilian Portuguese but will retry movie searches in English if the Portuguese search fails.
+
 ### Alternate Episode Orderings (Episode Groups)
 The `--episode-group` option allows you to choose one of the additional episodes group collections created on TMDB as source for the episode ordering. All contained episode groups must follow the naming scheme `<NAME> XX`. Episode groups whose names begin with `special` in their names are also valid and will be treated as `Season 0`.
 
@@ -103,7 +105,7 @@ Enabling this option will prompt you to select the episode ordering for each sho
 ## Config
 AutoTag creates a config file to store default preferences at `~/.config/autotag/conf.json` or `%APPDATA%\Roaming\autotag\conf.json`. A different config file can be specified using the `-c` option. If the file does not exist, a file will be created with the default settings:
 ```
-"configVer": 9,                           // Internal use
+"configVer": 11,                          // Internal use
 "mode": 0,                                // Default tagging mode, 0 = TV, 1 = Movie
 "manualMode": false,                      // Manual tagging mode
 "verbose": false,                         // Verbose output
@@ -118,6 +120,7 @@ AutoTag creates a config file to store default preferences at `~/.config/autotag
 "appleTagging": false,                    // Add extra tags to mp4 files for use with Apple devices and software
 "renameSubtitles": false,                 // Rename subtitle files
 "language": "en",                         // Metadata language,
+"searchLanguages": [],                    // Additional fallback languages to use when searching movies on TMDB
 "episodeGroup": false,                    // Enable alternate episode ordering selection
 "fileNameReplaces": []                    // File name character replacements. Array of objects of the form { "replace": "", "replacement": "" }
 ```

@@ -8,6 +8,8 @@ using TMDbLib.Objects.TvShows;
 namespace AutoTag.Core.TV;
 public class TVProcessor(ITMDBService tmdb, IFileWriter writer, ITVCache cache, IUserInterface ui, AutoTagConfig config) : IProcessor
 {
+    private static readonly Regex SeriesYearSuffixRegex = new(@"\s+\((19|20)\d{2}\)$", RegexOptions.CultureInvariant);
+
     public async Task<bool> ProcessAsync(TaggingFile file)
     {
         var metadata = ParseFileName(file);
@@ -86,7 +88,13 @@ public class TVProcessor(ITMDBService tmdb, IFileWriter writer, ITVCache cache, 
         {
             try
             {
-                var match = Regex.Match(Path.GetFullPath(file.Path), config.ParsePattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+                var fullPath = Path.GetFullPath(file.Path);
+                var match = Regex.Match(fullPath, config.ParsePattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+                if (!match.Success && fullPath.Contains(Path.DirectorySeparatorChar))
+                {
+                    var normalisedPath = fullPath.Replace(Path.DirectorySeparatorChar, '/');
+                    match = Regex.Match(normalisedPath, config.ParsePattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+                }
 
                 return new TVFileMetadata
                 {
@@ -112,6 +120,14 @@ public class TVProcessor(ITMDBService tmdb, IFileWriter writer, ITVCache cache, 
         
         // if not already searched for series
         var searchResults = await tmdb.SearchTvShowAsync(seriesName);
+        if (searchResults.Results.Count == 0)
+        {
+            var normalisedSeriesName = NormaliseSeriesSearchName(seriesName);
+            if (normalisedSeriesName != seriesName)
+            {
+                searchResults = await tmdb.SearchTvShowAsync(normalisedSeriesName);
+            }
+        }
 
         var seriesResults = searchResults.Results
             .OrderByDescending(searchResult => SeriesNameSimilarity(seriesName, searchResult.Name))
@@ -338,4 +354,7 @@ public class TVProcessor(ITMDBService tmdb, IFileWriter writer, ITVCache cache, 
 
         return 0;
     }
+
+    internal static string NormaliseSeriesSearchName(string seriesName)
+        => SeriesYearSuffixRegex.Replace(seriesName.Trim(), "");
 }

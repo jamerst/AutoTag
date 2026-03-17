@@ -11,7 +11,8 @@ public class EpisodeParser
     static readonly Regex[] Patterns =
     [
         new(@"^((?<SeriesName>.+?)[\[. _-]+)?(?<Season>\d+)x(?<Episode>\d+)(([. _-]*x|-)(?<EndEpisode>(?!(1080|720)[pi])(?!(?<=x)264)\d+))*[\]. _-]*((?<ExtraInfo>.+?)((?<![. _-])-(?<ReleaseGroup>[^-]+))?)?$", RegexOptions),
-        new(@"^((?<SeriesName>.+?)[. _-]+)?s(?<Season>\d+)[. _-]*e(?<Episode>\d+)(([. _-]*e|-)(?<EndEpisode>(?!(1080|720)[pi])\d+))*[. _-]*((?<ExtraInfo>.+?)((?<![. _-])-(?<ReleaseGroup>[^-]+))?)?$", RegexOptions)
+        new(@"^((?<SeriesName>.+?)[. _-]+)?s(?<Season>\d+)[. _-]*e(?<Episode>\d+)(([. _-]*e|-)(?<EndEpisode>(?!(1080|720)[pi])\d+))*[. _-]*((?<ExtraInfo>.+?)((?<![. _-])-(?<ReleaseGroup>[^-]+))?)?$", RegexOptions),
+        new(@"^((?<SeriesName>.+?)[. _-]+)?e(?<Episode>\d+)(([. _-]*e|-)(?<EndEpisode>(?!(1080|720)[pi])\d+))*[. _-]*((?<ExtraInfo>.+?)((?<![. _-])-(?<ReleaseGroup>[^-]+))?)?$", RegexOptions)
     ];
     
     public static bool TryParseEpisodeInfo(string fileName,
@@ -35,11 +36,6 @@ public class EpisodeParser
                 failureReason = "Unable to parse series name from filename";
                 return false;
             }
-            else if (string.IsNullOrWhiteSpace(season))
-            {
-                failureReason = "Unable to parse season from filename";
-                return false;
-            }
             else if (string.IsNullOrWhiteSpace(episode))
             {
                 failureReason = "Unable to parse episode from filename";
@@ -50,7 +46,7 @@ public class EpisodeParser
             metadata = new  TVFileMetadata
             {
                 SeriesName = seriesName,
-                Season = int.Parse(season),
+                Season = string.IsNullOrWhiteSpace(season) ? 1 : int.Parse(season),
                 Episode = int.Parse(episode)
             };
 

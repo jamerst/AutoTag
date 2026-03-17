@@ -2,7 +2,7 @@ namespace AutoTag.Core.Config;
 
 public class AutoTagConfig
 {
-    public const int CurrentVer = 10;
+    public const int CurrentVer = 11;
     
     public int ConfigVer { get; set; } = CurrentVer;
     
@@ -33,6 +33,8 @@ public class AutoTagConfig
     public bool RenameSubtitles { get; set; } = false;
     
     public string Language { get; set; } = "en";
+
+    public List<string> SearchLanguages { get; set; } = [];
     
     public bool EpisodeGroup { get; set; }
     

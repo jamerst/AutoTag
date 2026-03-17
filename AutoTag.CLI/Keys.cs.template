@@ -1,5 +1,7 @@
 /*
-Copy this file to "Keys.cs" and add your API key
+Optional legacy override:
+- Preferred: set the TMDB_API_KEY environment variable
+- Alternative: copy this file to "Keys.cs" and replace the placeholder
 */
 
 namespace AutoTag.CLI {

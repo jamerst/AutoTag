@@ -14,6 +14,7 @@ public class ParseFileName : TVProcessorTestBase
     [InlineData("Alias.S02E01.The.Enemy.Walks.In.1080p.AMZN.WEB-DL.DDP5.1.H.264-LycanHD.mkv", "Alias", 2, 1)] // scene tags
     [InlineData("Warehouse 13 0x01 Episode Title.mp4", "Warehouse 13", 0, 1)] // season 0
     [InlineData("Doctor Who (2005) - 2x13 - Doomsday (2).mkv", "Doctor Who (2005)", 2, 13)] // symbols in series name
+    [InlineData("Serial Experiments Lain E12 Landscape 1080p BluRay FLAC 2.0 x264-Chotab.mkv", "Serial Experiments Lain", 1, 12)] // episode-only numbering defaults to season 1
     public void Should_ParseCommonNamingFormats(string fileName, string seriesName, int season, int episode)
     {
         var tv = GetInstance();
@@ -62,7 +63,7 @@ public class ParseFileName : TVProcessorTestBase
 
     [Theory]
     [InlineData("S01E05.mkv", "Error: Unable to parse series name from filename")]
-    [InlineData("Continuuim E03 Episode Title.mp4", "Error: Unable to parse required information from filename")]
+    [InlineData("Continuum Episode 03.mp4", "Error: Unable to parse required information from filename")]
     [InlineData("Utopia S01.mp4", "Error: Unable to parse required information from filename")]
     public void Should_ReportError_When_PartMissingFromFileName(string fileName, string expectedMessage)
     {

@@ -12,6 +12,13 @@ public class FileWriter(ICoverArtFetcher coverArtFetcher, AutoTagConfig config, 
     public async Task<bool> WriteAsync(TaggingFile taggingFile, FileMetadata metadata)
     {
         bool fileSuccess = true;
+        var targetFileName = GetFileName(metadata.GetFileName(config), Path.GetFileNameWithoutExtension(taggingFile.Path));
+
+        if (config.RenameFiles && IsAlreadyNamedCorrectly(taggingFile, targetFileName))
+        {
+            ui.SetStatus("File skipped - already named correctly", MessageType.Information);
+            return true;
+        }
 
         if (config.TagFiles && taggingFile.Taggable)
         {
@@ -20,11 +27,11 @@ public class FileWriter(ICoverArtFetcher coverArtFetcher, AutoTagConfig config, 
 
         if (config.RenameFiles)
         {
-            fileSuccess &= RenameFile(taggingFile.Path, metadata.GetFileName(config), null);
+            fileSuccess &= RenameFile(taggingFile.Path, targetFileName, null);
 
             if (!string.IsNullOrEmpty(taggingFile.SubtitlePath))
             {
-                fileSuccess &= RenameFile(taggingFile.SubtitlePath, metadata.GetFileName(config), "subtitle ");
+                fileSuccess &= RenameFile(taggingFile.SubtitlePath, targetFileName, "subtitle ");
             }
         }
 
@@ -93,14 +100,7 @@ public class FileWriter(ICoverArtFetcher coverArtFetcher, AutoTagConfig config, 
     private bool RenameFile(string path, string newName, string? msgPrefix)
     {
         bool fileSuccess = true;
-        string newPath = Path.Combine(
-            Path.GetDirectoryName(path)!,
-            GetFileName(
-                newName,
-                Path.GetFileNameWithoutExtension(path)
-            )
-            + Path.GetExtension(path)
-        );
+        string newPath = GetTargetPath(path, newName);
 
         if (path != newPath)
         {
@@ -127,6 +127,20 @@ public class FileWriter(ICoverArtFetcher coverArtFetcher, AutoTagConfig config, 
 
         return fileSuccess;
     }
+
+    private bool IsAlreadyNamedCorrectly(TaggingFile taggingFile, string targetFileName)
+    {
+        if (taggingFile.Path != GetTargetPath(taggingFile.Path, targetFileName))
+        {
+            return false;
+        }
+
+        return string.IsNullOrEmpty(taggingFile.SubtitlePath)
+               || taggingFile.SubtitlePath == GetTargetPath(taggingFile.SubtitlePath, targetFileName);
+    }
+
+    private string GetTargetPath(string path, string targetFileName)
+        => Path.Combine(Path.GetDirectoryName(path)!, targetFileName + Path.GetExtension(path));
 
     private string GetFileName(string fileName, string oldFileName)
     {
