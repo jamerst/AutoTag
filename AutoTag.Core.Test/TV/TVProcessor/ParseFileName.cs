@@ -35,7 +35,31 @@ public class ParseFileName : TVProcessorTestBase
             o => o.Using<string>(StringComparer.OrdinalIgnoreCase)
         );
     }
-    
+
+    [Fact]
+    public void Should_ParseAbsoluteEpisodeNamingFormat()
+    {
+        var tv = GetInstance();
+
+        var file = new TaggingFile
+        {
+            Path = "[Group] Series Dublado (35).AVI"
+        };
+
+        var result = tv.ParseFileName(file);
+
+        result.Should().BeEquivalentTo(
+            new TVFileMetadata
+            {
+                SeriesName = "Series",
+                Season = 0,
+                Episode = 35,
+                AbsoluteEpisode = 35
+            },
+            o => o.Using<string>(StringComparer.OrdinalIgnoreCase)
+        );
+    }
+
     [Fact]
     public void Should_ParseFromFullPath_When_ParsePatternProvided()
     {

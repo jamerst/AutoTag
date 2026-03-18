@@ -9,8 +9,39 @@ public interface IFileFinder
 
 public class FileFinder(AutoTagConfig config, IFileSystem fs, IUserInterface ui) : IFileFinder
 {
-    private static readonly string[] VideoExtensions = [".mp4", ".m4v", ".mkv"];
-    private static readonly string[] SubtitleExtensions = [".srt", ".vtt", ".sub", ".ssa"];
+    private static readonly HashSet<string> ProcessableVideoExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".mp4",
+        ".m4v",
+        ".mkv",
+        ".avi",
+        ".mov",
+        ".wmv",
+        ".mpg",
+        ".mpeg",
+        ".ts",
+        ".m2ts",
+        ".mts",
+        ".webm",
+        ".flv",
+        ".3gp",
+        ".ogv",
+        ".asf",
+        ".mxf"
+    };
+    private static readonly HashSet<string> TaggableVideoExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".mp4",
+        ".m4v",
+        ".mkv"
+    };
+    private static readonly HashSet<string> SubtitleExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".srt",
+        ".vtt",
+        ".sub",
+        ".ssa"
+    };
     
     public List<TaggingFile> FindFilesToProcess(IEnumerable<FileSystemInfo> entries)
     {
@@ -52,7 +83,7 @@ public class FileFinder(AutoTagConfig config, IFileSystem fs, IUserInterface ui)
                     yield return new TaggingFile
                     {
                         Path = file.FullName,
-                        Taggable = VideoExtensions.Contains(file.Extension)
+                        Taggable = IsTaggableVideoFile(file.Extension)
                     };
                 }
                 else
@@ -96,7 +127,8 @@ public class FileFinder(AutoTagConfig config, IFileSystem fs, IUserInterface ui)
                 yield return new TaggingFile
                 {
                     Path = videoPath,
-                    SubtitlePath = subPath
+                    SubtitlePath = subPath,
+                    Taggable = IsTaggableVideoFile(Path.GetExtension(videoPath))
                 };
             }
             else if (subPath != null)
@@ -114,7 +146,9 @@ public class FileFinder(AutoTagConfig config, IFileSystem fs, IUserInterface ui)
         => IsVideoFile(info.Extension)
            || config.RenameSubtitles && IsSubtitleFile(info.Extension);
 
-    private bool IsVideoFile(string extension) => VideoExtensions.Contains(extension);
+    private bool IsVideoFile(string extension) => ProcessableVideoExtensions.Contains(extension);
+
+    private bool IsTaggableVideoFile(string extension) => TaggableVideoExtensions.Contains(extension);
 
     private bool IsSubtitleFile(string extension) => SubtitleExtensions.Contains(extension);
 }

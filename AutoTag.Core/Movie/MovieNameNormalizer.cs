@@ -6,7 +6,11 @@ namespace AutoTag.Core.Movie;
 public static class MovieNameNormalizer
 {
     public static bool LooksLikeTvEpisode(string fileName)
-        => TVEpisodePatternRegex.IsMatch(Path.GetFileNameWithoutExtension(fileName));
+    {
+        var name = Path.GetFileNameWithoutExtension(fileName);
+        return TVEpisodePatternRegex.IsMatch(name)
+               || LooksLikeAbsoluteEpisodeCandidate(name);
+    }
 
     public static bool LooksLikeMovieCandidate(string fileName)
     {
@@ -161,6 +165,20 @@ public static class MovieNameNormalizer
     private static bool HasUsefulTitle(string title)
         => !string.IsNullOrWhiteSpace(MultiSpaceRegex.Replace(title, " ").Trim(TrimCharacters));
 
+    private static bool LooksLikeAbsoluteEpisodeCandidate(string fileNameWithoutExtension)
+    {
+        var match = AbsoluteEpisodePatternRegex.Match(fileNameWithoutExtension);
+        if (!match.Success
+            || !int.TryParse(match.Groups["Episode"].Value, out var episode)
+            || episode is >= 1900 and <= 2099)
+        {
+            return false;
+        }
+
+        return SquareBracketGroupRegex.IsMatch(fileNameWithoutExtension)
+               || LanguageTermPatterns.Any(pattern => Regex.IsMatch(fileNameWithoutExtension, pattern, SharedRegexOptions));
+    }
+
     private const RegexOptions SharedRegexOptions = RegexOptions.IgnoreCase | RegexOptions.CultureInvariant;
     private const RegexOptions DomainTailRegexOptions = RegexOptions.CultureInvariant;
     private static readonly Regex SiteMarkerDomainTailRegex = new(@"[._\-\s]+(?:dir|www\d?|site|blog)(?:[._\-\s]+[a-z0-9]{2,}){0,8}\.(?:com|net|org|info|biz|co|io|tv|me|cc|ws|lt|mx|am)$", DomainTailRegexOptions);
@@ -170,6 +188,7 @@ public static class MovieNameNormalizer
     private static readonly Regex ParenthesisedYearRegex = new(@"\((?:[^,)]*,\s*)?(?<Year>(19|20)\d{2})\)", SharedRegexOptions);
     private static readonly Regex BareYearRegex = new(@"\b(?<Year>(19|20)\d{2})\b", SharedRegexOptions);
     private static readonly Regex TVEpisodePatternRegex = new(@"\b(?:s\d{1,2}\s*e\d{1,3}|\d{1,2}x\d{1,3}|episode\s*\d{1,3}|e\d{1,3})\b", SharedRegexOptions);
+    private static readonly Regex AbsoluteEpisodePatternRegex = new(@"\((?<Episode>[1-9]\d{0,3})\)\s*$", SharedRegexOptions);
     private static readonly Regex SeparatorRegex = new(@"[._-]+", SharedRegexOptions);
     private static readonly Regex BracketCharacterRegex = new(@"[(){}\[\]]", SharedRegexOptions);
     private static readonly Regex MultiSpaceRegex = new(@"\s+", SharedRegexOptions);
