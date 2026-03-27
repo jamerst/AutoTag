@@ -8,6 +8,7 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    environment: publish
     strategy:
       matrix:
         dotnet-runtime: [ 'linux-x64', 'osx-arm64', 'osx-x64', 'win-x64' ]
