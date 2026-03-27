@@ -9,7 +9,7 @@
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
   </PropertyGroup>
 
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
     <PublishSingleFile>true</PublishSingleFile>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <SelfContained>true</SelfContained>
@@ -37,4 +37,8 @@
   <ItemGroup>
     <Constant Include="TMDBApiKey" Value="$(TMDB_API_KEY)" />
   </ItemGroup>
+
+  <Target Name="KeyCheck" BeforeTargets="PrepareForBuild" Condition="'$(Configuration)' == 'Release'">
+    <Error Condition="$(TMDB_API_KEY) == ''" Text="TMDB API key missing. Set TMDB_API_KEY environment variable before building." />
+  </Target>
 </Project>

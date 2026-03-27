@@ -1,0 +1,29 @@
+name: publish
+on:
+  release:
+  push:
+    branches:
+      - 'github-actions'
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        dotnet-runtime: [ 'linux-x64', 'osx-arm64', 'osx-x64', 'win-x64' ]
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore dependencies
+        run: dotnet restore --locked-mode
+
+      - name: Publish
+        env:
+          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+        run: dotnet publish AutoTag.CLI -r ${{ matrix.dotnet-runtime }} -c Release --no-restore
