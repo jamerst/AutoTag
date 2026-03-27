@@ -6,6 +6,7 @@
     <Version>4.0.3</Version>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
@@ -13,7 +14,7 @@
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <SelfContained>true</SelfContained>
     <PublishTrimmed>true</PublishTrimmed>
-    <!-- needed to serialze config. see https://devblogs.microsoft.com/dotnet/system-text-json-in-dotnet-8/#disabling-reflection-defaults -->
+    <!-- needed to serialize config. see https://devblogs.microsoft.com/dotnet/system-text-json-in-dotnet-8/#disabling-reflection-defaults -->
     <JsonSerializerIsReflectionEnabledByDefault>true</JsonSerializerIsReflectionEnabledByDefault>
     <TrimMode>partial</TrimMode>
   </PropertyGroup>
@@ -23,13 +24,17 @@
     <PackageReference Include="Spectre.Console" Version="0.54.0" />
     <PackageReference Include="Spectre.Console.Cli" Version="0.53.1" />
     <PackageReference Include="Spectre.Console.Json" Version="0.54.0" />
+    <PackageReference Include="ThisAssembly.Constants" Version="2.1.2">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\AutoTag.Core\AutoTag.Core.csproj" />
   </ItemGroup>
-
-  <Target Name="KeyCheck" BeforeTargets="PrepareForBuild">
-    <Error Condition="!Exists('$(MSBuildProjectDirectory)/Keys.cs')" Text="API keys file missing. Copy 'Keys.cs.template' to 'Keys.cs' and add your API keys before building." />
-  </Target>
+  
+  <ItemGroup>
+    <Constant Include="TMDBApiKey" Value="$(TMDB_API_KEY)" />
+  </ItemGroup>
 </Project>

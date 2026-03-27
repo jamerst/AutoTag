@@ -18,7 +18,7 @@ public class RootCommand : AsyncCommand<RootCommandSettings>
         }
         
         var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings { DisableDefaults = true });
-        builder.Services.AddCoreServices(Keys.TMDBKey);
+        builder.Services.AddCoreServices(ThisAssembly.Constants.TMDBApiKey);
         builder.Services.AddScoped<IUserInterface, CLIInterface>();
 
         using var host = builder.Build();
