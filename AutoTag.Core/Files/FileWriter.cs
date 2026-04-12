@@ -17,18 +17,18 @@ public class FileWriter(ICoverArtFetcher coverArtFetcher, AutoTagConfig config, 
         var targetFileName = GetFileName(metadata.GetFileName(config), Path.GetFileNameWithoutExtension(taggingFile.Path));
         var targetDirectory = GetTargetDirectory(taggingFile, metadata, targetFileName);
 
-        if (config.RenameFiles && IsAlreadyNamedCorrectly(taggingFile, targetFileName, targetDirectory))
-        {
-            ui.SetStatus("File skipped - already named correctly", MessageType.Information);
-            return true;
-        }
+        var alreadyNamedCorrectly = config.RenameFiles && IsAlreadyNamedCorrectly(taggingFile, targetFileName, targetDirectory);
 
         if (config.TagFiles && taggingFile.Taggable)
         {
             fileSuccess = await TagFileAsync(taggingFile, metadata);
         }
 
-        if (config.RenameFiles)
+        if (alreadyNamedCorrectly)
+        {
+            ui.SetStatus("Rename skipped - already named correctly", MessageType.Information);
+        }
+        else if (config.RenameFiles)
         {
             fileSuccess &= RenameFile(taggingFile.Path, targetFileName, targetDirectory, null);
 

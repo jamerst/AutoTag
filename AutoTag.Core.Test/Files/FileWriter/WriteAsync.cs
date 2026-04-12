@@ -8,7 +8,7 @@ namespace AutoTag.Core.Test.Files.FileWriter;
 public class WriteAsync
 {
     [Fact]
-    public async Task Should_Skip_When_Video_And_Subtitle_Are_Already_Correctly_Named()
+    public async Task Should_Skip_Rename_When_Video_And_Subtitle_Are_Already_Correctly_Named()
     {
         var config = new AutoTagConfig
         {
@@ -37,7 +37,7 @@ public class WriteAsync
 
         result.Should().BeTrue();
         mockFs.Verify(fs => fs.Move(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
-        mockUi.Verify(ui => ui.SetStatus("File skipped - already named correctly", MessageType.Information), Times.Once);
+        mockUi.Verify(ui => ui.SetStatus("Rename skipped - already named correctly", MessageType.Information), Times.Once);
     }
 
     [Fact]
@@ -74,6 +74,33 @@ public class WriteAsync
         result.Should().BeTrue();
         mockFs.Verify(fs => fs.Move(@"C:\Media\subtitle.srt", @"C:\Media\Movie (2020).srt"), Times.Once);
         mockUi.Verify(ui => ui.SetStatus("File skipped - already named correctly", MessageType.Information), Times.Never);
+    }
+
+    [Fact]
+    public async Task Should_Tag_File_When_Rename_Is_Skipped_Because_Name_Is_Already_Correct()
+    {
+        var config = new AutoTagConfig
+        {
+            RenameFiles = true,
+            TagFiles = true
+        };
+        var mockUi = new Mock<IUserInterface>();
+        var writer = new Core.Files.FileWriter(
+            new Mock<ICoverArtFetcher>().Object,
+            config,
+            new Mock<IFileSystem>().Object,
+            mockUi.Object
+        );
+        var metadata = new MovieFileMetadata
+        {
+            Title = "Movie",
+            Date = new DateTime(2020, 1, 1)
+        };
+
+        var result = await writer.WriteAsync(new TaggingFile { Path = @"C:\Media\Movie (2020).mkv" }, metadata);
+
+        result.Should().BeFalse();
+        mockUi.Verify(ui => ui.SetStatus("Error: Failed to write tags to file", MessageType.Error, It.IsAny<Exception>()), Times.Once);
     }
 
     [Fact]
