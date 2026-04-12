@@ -2,7 +2,9 @@ namespace AutoTag.Core.Files;
 public class TaggingFile
 {
     public string Path { get; set; } = null!;
+    public string? RootPath { get; set; }
     public string? SubtitlePath { get; set; }
+    public List<string> SubtitlePaths { get; set; } = [];
     public bool Taggable { get; set; } = true;
     public string Status { get; set; } = "";
     public bool Success { get; set; } = true;

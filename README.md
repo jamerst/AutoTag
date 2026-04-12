@@ -16,7 +16,7 @@ This is because building cross-platform user interfaces with .NET Core is still 
 - Manual tagging mode
 - Full Linux support (and presumably macOS?)
 - Supports mp4 and mkv containers
-- Subtitle file renaming
+- Subtitle file renaming for .srt, .vtt, .sub, .ssa and .ass files
 
 ## Requirements and running locally
 To run AutoTag from source, install the .NET 10 SDK and run commands from the repository root.
@@ -46,6 +46,21 @@ dotnet run --project AutoTag.CLI -- -t "path/to/tv/files"
 Include adult titles in TMDB searches:
 ```sh
 dotnet run --project AutoTag.CLI -- -t --include-adult "path/to/tv/files"
+```
+
+Move files into TV season folders or movie folders:
+```sh
+dotnet run --project AutoTag.CLI -- -t --organize-folders "path/to/tv/files"
+```
+
+Remove source folders after moving files if they are empty:
+```sh
+dotnet run --project AutoTag.CLI -- -t --organize-folders --remove-empty-folders "path/to/tv/files"
+```
+
+Rename and move subtitle files with matching videos:
+```sh
+dotnet run --project AutoTag.CLI -- -t --rename-subs --organize-folders "path/to/tv/files"
 ```
 
 Process movies:
@@ -85,6 +100,8 @@ OPTIONS:
   -l, --language <LANGUAGE>              Metadata language (default: en)
   -g, --episode-group                    Manually choose alternate episode orderings for a TV show
       --include-adult                    Include adult titles in TMDB searches
+      --organize-folders                 Move files into media folders after tagging
+      --remove-empty-folders             Remove source folders after moving files if they are empty
 
 ```
 
@@ -141,13 +158,15 @@ Enabling this option will prompt you to select the episode ordering for each sho
 ## Config
 AutoTag creates a config file to store default preferences at `~/.config/autotag/conf.json` or `%APPDATA%\Roaming\autotag\conf.json`. A different config file can be specified using the `-c` option. If the file does not exist, a file will be created with the default settings:
 ```
-"configVer": 12,                          // Internal use
+"configVer": 14,                          // Internal use
 "mode": 0,                                // Default tagging mode, 0 = TV, 1 = Movie
 "manualMode": false,                      // Manual tagging mode
 "verbose": false,                         // Verbose output
 "addCoverArt": true,                      // Add cover art to files
 "tagFiles": true,                         // Write tags to files
 "renameFiles": true,                      // Rename files
+"organizeFolders": false,                 // Move files into TV season folders or movie folders
+"removeEmptyFolders": false,              // Remove source folders after moving files if they are empty
 "tvRenamePattern": "%1 - %2x%3:00 - %4",  // Pattern to rename TV files, %1 = Series Name, %2 = Season, %3 = Episode, %4 = Episode Title
 "movieRenamePattern": "%1 (%2)",          // Pattern to rename movie files, %1 = Title, %2 = Year
 "parsePattern": "",                       // Custom regex to parse TV episode information
@@ -161,6 +180,8 @@ AutoTag creates a config file to store default preferences at `~/.config/autotag
 "episodeGroup": false,                    // Enable alternate episode ordering selection
 "fileNameReplaces": []                    // File name character replacements. Array of objects of the form { "replace": "", "replacement": "" }
 ```
+
+When `renameSubtitles` is enabled, AutoTag renames supported subtitle files along with matching videos. If multiple loose subtitle files match the same TV episode, AutoTag keeps them all and adds numbered suffixes such as `.1.ass` and `.2.ass`.
 
 ## Moving away from TheTVDB
 **v3.1.0 and above use TheMovieDB as the TV metadata source instead of TheTVDB.** This is due to the declining quality of metadata, and TheTVDB's free API being deprecated in favour of a paid model.

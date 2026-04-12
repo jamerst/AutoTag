@@ -44,6 +44,14 @@ public partial class RootCommandSettings
     [Description("Include adult titles in TMDB searches")]
     public bool? IncludeAdult { get; init; }
 
+    [CommandOption("--organize-folders")]
+    [Description("Move files into media folders after tagging")]
+    public bool? OrganizeFolders { get; init; }
+
+    [CommandOption("--remove-empty-folders")]
+    [Description("Remove source folders after moving files if they are empty")]
+    public bool? RemoveEmptyFolders { get; init; }
+
     private void SetTaggingOptions(AutoTagConfig config)
     {
         if (TVMode)
@@ -94,6 +102,16 @@ public partial class RootCommandSettings
         if (IncludeAdult.HasValue)
         {
             config.IncludeAdult = IncludeAdult.Value;
+        }
+
+        if (OrganizeFolders.HasValue)
+        {
+            config.OrganizeFolders = OrganizeFolders.Value;
+        }
+
+        if (RemoveEmptyFolders.HasValue)
+        {
+            config.RemoveEmptyFolders = RemoveEmptyFolders.Value;
         }
     }
 }

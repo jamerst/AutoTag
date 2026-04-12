@@ -1,4 +1,6 @@
 using AutoTag.Core.Config;
+using AutoTag.Core.Movie;
+using AutoTag.Core.TV;
 
 namespace AutoTag.Core.Files;
 
@@ -13,8 +15,9 @@ public class FileWriter(ICoverArtFetcher coverArtFetcher, AutoTagConfig config, 
     {
         bool fileSuccess = true;
         var targetFileName = GetFileName(metadata.GetFileName(config), Path.GetFileNameWithoutExtension(taggingFile.Path));
+        var targetDirectory = GetTargetDirectory(taggingFile, metadata, targetFileName);
 
-        if (config.RenameFiles && IsAlreadyNamedCorrectly(taggingFile, targetFileName))
+        if (config.RenameFiles && IsAlreadyNamedCorrectly(taggingFile, targetFileName, targetDirectory))
         {
             ui.SetStatus("File skipped - already named correctly", MessageType.Information);
             return true;
@@ -27,11 +30,17 @@ public class FileWriter(ICoverArtFetcher coverArtFetcher, AutoTagConfig config, 
 
         if (config.RenameFiles)
         {
-            fileSuccess &= RenameFile(taggingFile.Path, targetFileName, null);
+            fileSuccess &= RenameFile(taggingFile.Path, targetFileName, targetDirectory, null);
 
-            if (!string.IsNullOrEmpty(taggingFile.SubtitlePath))
+            var subtitlePaths = GetSubtitlePaths(taggingFile);
+            for (var i = 0; i < subtitlePaths.Count; i++)
             {
-                fileSuccess &= RenameFile(taggingFile.SubtitlePath, targetFileName, "subtitle ");
+                fileSuccess &= RenameFile(
+                    subtitlePaths[i],
+                    GetSubtitleTargetFileName(targetFileName, i, subtitlePaths.Count),
+                    targetDirectory,
+                    "subtitle "
+                );
             }
         }
 
@@ -97,13 +106,14 @@ public class FileWriter(ICoverArtFetcher coverArtFetcher, AutoTagConfig config, 
         return fileSuccess;
     }
 
-    private bool RenameFile(string path, string newName, string? msgPrefix)
+    private bool RenameFile(string path, string newName, string targetDirectory, string? msgPrefix)
     {
         bool fileSuccess = true;
-        string newPath = GetTargetPath(path, newName);
+        string newPath = GetTargetPath(path, newName, targetDirectory);
 
         if (path != newPath)
         {
+            var sourceDirectory = Path.GetDirectoryName(path);
             try
             {
                 if (fs.Exists(newPath))
@@ -113,9 +123,11 @@ public class FileWriter(ICoverArtFetcher coverArtFetcher, AutoTagConfig config, 
                 }
                 else
                 {
+                    fs.CreateDirectory(new DirectoryInfo(targetDirectory));
                     fs.Move(path, newPath);
                     ui.SetFilePath(newPath);
                     ui.SetStatus($"Successfully renamed {msgPrefix}file to '{Path.GetFileName(newPath)}'", MessageType.Information);
+                    RemoveSourceDirectoryIfEmpty(sourceDirectory, targetDirectory);
                 }
             }
             catch (Exception ex)
@@ -128,19 +140,93 @@ public class FileWriter(ICoverArtFetcher coverArtFetcher, AutoTagConfig config, 
         return fileSuccess;
     }
 
-    private bool IsAlreadyNamedCorrectly(TaggingFile taggingFile, string targetFileName)
+    private void RemoveSourceDirectoryIfEmpty(string? sourceDirectory, string targetDirectory)
     {
-        if (taggingFile.Path != GetTargetPath(taggingFile.Path, targetFileName))
+        if (!config.OrganizeFolders
+            || !config.RemoveEmptyFolders
+            || string.IsNullOrEmpty(sourceDirectory)
+            || Path.GetFullPath(sourceDirectory) == Path.GetFullPath(targetDirectory)
+            || !fs.DirectoryExists(sourceDirectory)
+            || !fs.DirectoryIsEmpty(sourceDirectory))
+        {
+            return;
+        }
+
+        fs.DeleteDirectory(sourceDirectory);
+        ui.SetStatus($"Removed empty folder '{sourceDirectory}'", MessageType.Information);
+    }
+
+    private bool IsAlreadyNamedCorrectly(TaggingFile taggingFile, string targetFileName, string targetDirectory)
+    {
+        if (taggingFile.Path != GetTargetPath(taggingFile.Path, targetFileName, targetDirectory))
         {
             return false;
         }
 
-        return string.IsNullOrEmpty(taggingFile.SubtitlePath)
-               || taggingFile.SubtitlePath == GetTargetPath(taggingFile.SubtitlePath, targetFileName);
+        var subtitlePaths = GetSubtitlePaths(taggingFile);
+        for (var i = 0; i < subtitlePaths.Count; i++)
+        {
+            if (subtitlePaths[i] != GetTargetPath(
+                    subtitlePaths[i],
+                    GetSubtitleTargetFileName(targetFileName, i, subtitlePaths.Count),
+                    targetDirectory
+                ))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
-    private string GetTargetPath(string path, string targetFileName)
-        => Path.Combine(Path.GetDirectoryName(path)!, targetFileName + Path.GetExtension(path));
+    private string GetTargetPath(string path, string targetFileName, string targetDirectory)
+        => Path.Combine(targetDirectory, targetFileName + Path.GetExtension(path));
+
+    private static string GetSubtitleTargetFileName(string targetFileName, int index, int subtitleCount)
+        => subtitleCount == 1
+            ? targetFileName
+            : $"{targetFileName}.{index + 1}";
+
+    private static List<string> GetSubtitlePaths(TaggingFile taggingFile)
+    {
+        var paths = new List<string>();
+        if (!string.IsNullOrEmpty(taggingFile.SubtitlePath))
+        {
+            paths.Add(taggingFile.SubtitlePath);
+        }
+
+        foreach (var subtitlePath in taggingFile.SubtitlePaths)
+        {
+            if (!string.IsNullOrEmpty(subtitlePath) && !paths.Contains(subtitlePath))
+            {
+                paths.Add(subtitlePath);
+            }
+        }
+
+        return paths;
+    }
+
+    private string GetTargetDirectory(TaggingFile taggingFile, FileMetadata metadata, string targetFileName)
+    {
+        var currentDirectory = Path.GetDirectoryName(taggingFile.Path)!;
+        if (!config.OrganizeFolders)
+        {
+            return currentDirectory;
+        }
+
+        var rootPath = taggingFile.RootPath ?? currentDirectory;
+        return metadata switch
+        {
+            MovieFileMetadata => Path.Combine(rootPath, targetFileName),
+            TVFileMetadata tv => Path.Combine(rootPath, GetFileName(tv.SeriesName, tv.SeriesName), GetSeasonFolderName(tv.Season)),
+            _ => currentDirectory
+        };
+    }
+
+    private static string GetSeasonFolderName(int season)
+        => season == 0
+            ? "Specials"
+            : $"Season {season:00}";
 
     private string GetFileName(string fileName, string oldFileName)
     {
