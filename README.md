@@ -18,6 +18,36 @@ This is because building cross-platform user interfaces with .NET Core is still 
 - Supports mp4 and mkv containers
 - Subtitle file renaming
 
+## Requirements and running locally
+To run AutoTag from source, install the .NET 10 SDK and run commands from the repository root.
+
+AutoTag fetches metadata from TheMovieDB, so a TMDB API key is required before processing files. Set it with the `TMDB_API_KEY` environment variable:
+
+PowerShell:
+```powershell
+$env:TMDB_API_KEY="your_tmdb_api_key"
+```
+
+Linux/macOS:
+```sh
+export TMDB_API_KEY="your_tmdb_api_key"
+```
+
+Check that the CLI starts:
+```sh
+dotnet run --project AutoTag.CLI -- --help
+```
+
+Process TV episodes:
+```sh
+dotnet run --project AutoTag.CLI -- -t "path/to/tv/files"
+```
+
+Process movies:
+```sh
+dotnet run --project AutoTag.CLI -- -m "path/to/movie/files"
+```
+
 ## Usage
 ```
 USAGE:
