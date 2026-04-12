@@ -40,6 +40,10 @@ public partial class RootCommandSettings
     [Description("Manually choose alternate episode orderings for a TV show")]
     public bool? EpisodeGroup { get; init; }
 
+    [CommandOption("--include-adult")]
+    [Description("Include adult titles in TMDB searches")]
+    public bool? IncludeAdult { get; init; }
+
     private void SetTaggingOptions(AutoTagConfig config)
     {
         if (TVMode)
@@ -85,6 +89,11 @@ public partial class RootCommandSettings
         if (EpisodeGroup.HasValue)
         {
             config.EpisodeGroup = EpisodeGroup.Value;
+        }
+
+        if (IncludeAdult.HasValue)
+        {
+            config.IncludeAdult = IncludeAdult.Value;
         }
     }
 }

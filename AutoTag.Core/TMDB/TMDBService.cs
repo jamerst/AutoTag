@@ -39,7 +39,7 @@ public class TMDBService(TMDbClient client, AutoTagConfig config) : ITMDBService
     private Dictionary<int, string> MovieGenres = [];
     
     public Task<SearchContainer<SearchTv>> SearchTvShowAsync(string query)
-        => client.SearchTvShowAsync(query, config.Language);
+        => client.SearchTvShowAsync(query, config.Language, includeAdult: config.IncludeAdult);
 
     public Task<TvShow> GetTvShowWithEpisodeGroupsAsync(int id)
         => client.GetTvShowAsync(id, TvShowMethods.EpisodeGroups, config.Language);
@@ -68,7 +68,7 @@ public class TMDBService(TMDbClient client, AutoTagConfig config) : ITMDBService
         => client.GetTvShowImagesAsync(id, $"{config.Language},null");
 
     public Task<SearchContainer<SearchMovie>> SearchMovieAsync(string query, int year = 0, string? language = null)
-        => client.SearchMovieAsync(query, language ?? config.Language, year: year);
+        => client.SearchMovieAsync(query, language ?? config.Language, includeAdult: config.IncludeAdult, year: year);
 
     public Task<TMDbMovie> GetMovieAsync(int movieId)
         => client.GetMovieAsync(movieId, language: config.Language);

@@ -43,6 +43,11 @@ Process TV episodes:
 dotnet run --project AutoTag.CLI -- -t "path/to/tv/files"
 ```
 
+Include adult titles in TMDB searches:
+```sh
+dotnet run --project AutoTag.CLI -- -t --include-adult "path/to/tv/files"
+```
+
 Process movies:
 ```sh
 dotnet run --project AutoTag.CLI -- -m "path/to/movie/files"
@@ -79,6 +84,7 @@ OPTIONS:
       --apple-tagging                    Add extra tags to mp4 files for use with Apple devices and software
   -l, --language <LANGUAGE>              Metadata language (default: en)
   -g, --episode-group                    Manually choose alternate episode orderings for a TV show
+      --include-adult                    Include adult titles in TMDB searches
 
 ```
 
@@ -135,7 +141,7 @@ Enabling this option will prompt you to select the episode ordering for each sho
 ## Config
 AutoTag creates a config file to store default preferences at `~/.config/autotag/conf.json` or `%APPDATA%\Roaming\autotag\conf.json`. A different config file can be specified using the `-c` option. If the file does not exist, a file will be created with the default settings:
 ```
-"configVer": 11,                          // Internal use
+"configVer": 12,                          // Internal use
 "mode": 0,                                // Default tagging mode, 0 = TV, 1 = Movie
 "manualMode": false,                      // Manual tagging mode
 "verbose": false,                         // Verbose output
@@ -151,6 +157,7 @@ AutoTag creates a config file to store default preferences at `~/.config/autotag
 "renameSubtitles": false,                 // Rename subtitle files
 "language": "en",                         // Metadata language,
 "searchLanguages": [],                    // Additional fallback languages to use when searching movies on TMDB
+"includeAdult": false,                    // Include adult titles in TMDB searches
 "episodeGroup": false,                    // Enable alternate episode ordering selection
 "fileNameReplaces": []                    // File name character replacements. Array of objects of the form { "replace": "", "replacement": "" }
 ```
