@@ -32,6 +32,12 @@
           "Microsoft.Extensions.Options": "10.0.1"
         }
       },
+      "Microsoft.NET.ILLink.Tasks": {
+        "type": "Direct",
+        "requested": "[10.0.3, )",
+        "resolved": "10.0.3",
+        "contentHash": "i8eWi2ThxC0/kLkgckJe3zScNARB3x2P2AUTg7Mc6IpnZJAGSg6se7pmW6sKEhgxd9J20rUYwYNCQbN4fLwDvg=="
+      },
       "Spectre.Console": {
         "type": "Direct",
         "requested": "[0.54.0, )",

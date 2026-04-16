@@ -18,6 +18,8 @@
     <!-- needed to serialize config. see https://devblogs.microsoft.com/dotnet/system-text-json-in-dotnet-8/#disabling-reflection-defaults -->
     <JsonSerializerIsReflectionEnabledByDefault>true</JsonSerializerIsReflectionEnabledByDefault>
     <TrimMode>partial</TrimMode>
+    <DebugSymbols>False</DebugSymbols>
+    <DebugType>None</DebugType>
   </PropertyGroup>
 
   <ItemGroup>
