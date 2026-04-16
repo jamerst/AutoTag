@@ -28,6 +28,8 @@ jobs:
         run: dotnet publish AutoTag.CLI -r ${{ matrix.dotnet-runtime }} -c Release --no-restore
           
       - name: Upload
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           outputName="autotag-${{ github.ref_name }}_${{ matrix.dotnet-runtime }}.zip"
           finalOutputName="${outputName/osx/macos}"
