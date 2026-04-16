@@ -19,10 +19,15 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
+      - name: Restore dependencies
+        # need to set /p:PublishTrimmed here as well because --no-restore on the publish step causes trimming to silently fail
+        # https://github.com/dotnet/sdk/issues/37049
+        run: dotnet restore --locked-mode /p:PublishTrimmed=true
+
       - name: Publish
         env:
           TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
-        run: dotnet publish AutoTag.CLI -r ${{ matrix.dotnet-runtime }} -c Release --locked-mode
+        run: dotnet publish AutoTag.CLI -r ${{ matrix.dotnet-runtime }} -c Release --no-restore
           
       - name: Upload
         env:
