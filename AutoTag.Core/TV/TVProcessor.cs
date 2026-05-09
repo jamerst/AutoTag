@@ -8,6 +8,8 @@ using TMDbLib.Objects.TvShows;
 namespace AutoTag.Core.TV;
 public class TVProcessor(ITMDBService tmdb, IFileWriter writer, ITVCache cache, IUserInterface ui, AutoTagConfig config) : IProcessor
 {
+    private static readonly Regex SeriesYearSuffixRegex = new(@"\s+\((19|20)\d{2}\)$", RegexOptions.CultureInvariant);
+
     public async Task<bool> ProcessAsync(TaggingFile file)
     {
         var metadata = ParseFileName(file);
@@ -86,7 +88,13 @@ public class TVProcessor(ITMDBService tmdb, IFileWriter writer, ITVCache cache, 
         {
             try
             {
-                var match = Regex.Match(Path.GetFullPath(file.Path), config.ParsePattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+                var fullPath = Path.GetFullPath(file.Path);
+                var match = Regex.Match(fullPath, config.ParsePattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+                if (!match.Success && fullPath.Contains(Path.DirectorySeparatorChar))
+                {
+                    var normalisedPath = fullPath.Replace(Path.DirectorySeparatorChar, '/');
+                    match = Regex.Match(normalisedPath, config.ParsePattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+                }
 
                 return new TVFileMetadata
                 {
@@ -112,6 +120,14 @@ public class TVProcessor(ITMDBService tmdb, IFileWriter writer, ITVCache cache, 
         
         // if not already searched for series
         var searchResults = await tmdb.SearchTvShowAsync(seriesName);
+        if (searchResults.Results.Count == 0)
+        {
+            var normalisedSeriesName = NormaliseSeriesSearchName(seriesName);
+            if (normalisedSeriesName != seriesName)
+            {
+                searchResults = await tmdb.SearchTvShowAsync(normalisedSeriesName);
+            }
+        }
 
         var seriesResults = searchResults.Results
             .OrderByDescending(searchResult => SeriesNameSimilarity(seriesName, searchResult.Name))
@@ -240,14 +256,34 @@ public class TVProcessor(ITMDBService tmdb, IFileWriter writer, ITVCache cache, 
     public async Task<(FindResult Result, string? LastResultErrorMessage)> FindEpisodeAsync(TVFileMetadata metadata, ShowResults show, bool fileIsTaggable)
     {
         var showData = show.TvSearchResult;
+        metadata.Id = showData.Id;
+        metadata.SeriesName = showData.Name;
         
         // lookup season/episode is the episode number in the default ordering
         // if episode groups are used we need to map from the ordering scheme used in the file name to the default
         // ordering to find the episode details
         var lookupSeason = metadata.Season;
         var lookupEpisode = metadata.Episode;
+        var resolvedAbsoluteEpisode = false;
 
-        if (show.HasEpisodeGroupMapping)
+        if (metadata.AbsoluteEpisode.HasValue)
+        {
+            var resolvedEpisode = await TryResolveAbsoluteEpisodeAsync(showData.Id, metadata.AbsoluteEpisode.Value);
+            if (!resolvedEpisode.HasValue)
+            {
+                return (FindResult.Skip,
+                    $"Error: Cannot map absolute episode {metadata.AbsoluteEpisode.Value} for {metadata.SeriesName} on TheMovieDB");
+            }
+
+            metadata.Season = resolvedEpisode.Value.Season;
+            metadata.Episode = resolvedEpisode.Value.Episode;
+
+            lookupSeason = resolvedEpisode.Value.Season;
+            lookupEpisode = resolvedEpisode.Value.Episode;
+            resolvedAbsoluteEpisode = true;
+        }
+
+        if (show.HasEpisodeGroupMapping && !resolvedAbsoluteEpisode)
         {
             if (show.TryGetMapping(metadata.Season, metadata.Episode, out var groupNumbering))
             {
@@ -261,18 +297,7 @@ public class TVProcessor(ITMDBService tmdb, IFileWriter writer, ITVCache cache, 
             }
         }
 
-        metadata.Id = showData.Id;
-        metadata.SeriesName = showData.Name;
-
-        if (!cache.TryGetSeason(showData.Id, lookupSeason, out var seasonResult))
-        {
-            seasonResult = await tmdb.GetTvSeasonAsync(showData.Id, lookupSeason);
-
-            if (seasonResult != null)
-            {
-                cache.AddSeason(showData.Id, lookupSeason, seasonResult);
-            }
-        }
+        var seasonResult = await GetSeasonAsync(showData.Id, lookupSeason);
 
         if (seasonResult == null ||
             !seasonResult.Episodes.TryFind(e => e.EpisodeNumber == lookupEpisode, out var episodeResult))
@@ -302,6 +327,44 @@ public class TVProcessor(ITMDBService tmdb, IFileWriter writer, ITVCache cache, 
         }
 
         return (FindResult.Success, null);
+    }
+
+    private async Task<TvSeason?> GetSeasonAsync(int showId, int seasonNumber)
+    {
+        if (!cache.TryGetSeason(showId, seasonNumber, out var seasonResult))
+        {
+            seasonResult = await tmdb.GetTvSeasonAsync(showId, seasonNumber);
+
+            if (seasonResult != null)
+            {
+                cache.AddSeason(showId, seasonNumber, seasonResult);
+            }
+        }
+
+        return seasonResult;
+    }
+
+    private async Task<(int Season, int Episode)?> TryResolveAbsoluteEpisodeAsync(int showId, int absoluteEpisode)
+    {
+        var remainingEpisode = absoluteEpisode;
+
+        for (int seasonNumber = 1; seasonNumber <= 100; seasonNumber++)
+        {
+            var seasonResult = await GetSeasonAsync(showId, seasonNumber);
+            if (seasonResult == null || seasonResult.Episodes.Count == 0)
+            {
+                break;
+            }
+
+            if (remainingEpisode <= seasonResult.Episodes.Count)
+            {
+                return (seasonNumber, remainingEpisode);
+            }
+
+            remainingEpisode -= seasonResult.Episodes.Count;
+        }
+
+        return null;
     }
 
     public async Task FindPosterAsync(TVFileMetadata metadata)
@@ -338,4 +401,7 @@ public class TVProcessor(ITMDBService tmdb, IFileWriter writer, ITVCache cache, 
 
         return 0;
     }
+
+    internal static string NormaliseSeriesSearchName(string seriesName)
+        => SeriesYearSuffixRegex.Replace(seriesName.Trim(), "");
 }

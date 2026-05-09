@@ -1,6 +1,7 @@
 using System.Reflection;
 using AutoTag.Core.Config;
 using AutoTag.Core.Files;
+using AutoTag.Core.Movie;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace AutoTag.CLI;
@@ -18,7 +19,8 @@ public class CLIInterface(IServiceProvider serviceProvider) : IUserInterface
     public async Task<int> RunAsync(IEnumerable<FileSystemInfo> entries)
     {
         Config = serviceProvider.GetRequiredService<AutoTagConfig>();
-        var processor = serviceProvider.GetRequiredKeyedService<IProcessor>(Config.Mode);
+        var movieProcessor = serviceProvider.GetRequiredKeyedService<IProcessor>(Mode.Movie);
+        var tvProcessor = serviceProvider.GetRequiredKeyedService<IProcessor>(Mode.TV);
         var fileFinder = serviceProvider.GetRequiredService<IFileFinder>();
         
         AnsiConsole.WriteLine($"AutoTag v{GetVersion()}");
@@ -37,7 +39,7 @@ public class CLIInterface(IServiceProvider serviceProvider) : IUserInterface
             CurrentFile = file;
             AnsiConsole.MarkupLineInterpolated($"[fuchsia]\n{file.Path}:[/]");
 
-            Success &= await processor.ProcessAsync(file);
+            Success &= await ProcessWithFallbackAsync(file, movieProcessor, tvProcessor);
         }
 
         return ReportResults(Files.Count);
@@ -177,4 +179,71 @@ public class CLIInterface(IServiceProvider serviceProvider) : IUserInterface
     public void SetFilePath(string path)
     {
     }
+
+    private async Task<bool> ProcessWithFallbackAsync(TaggingFile file, IProcessor movieProcessor, IProcessor tvProcessor)
+    {
+        var (primaryMode, secondaryMode) = GetProcessorOrder(file.Path);
+
+        bool successBeforeAttempt = Success;
+        var primaryResult = await GetProcessor(primaryMode, movieProcessor, tvProcessor).ProcessAsync(file);
+        if (primaryResult)
+        {
+            return true;
+        }
+
+        if (!ShouldTryAlternateProcessor(file.Path, file.Status, secondaryMode))
+        {
+            return false;
+        }
+
+        DisplayMessage($"Retrying as {(secondaryMode == Mode.Movie ? "movie" : "TV")}", MessageType.Warning);
+
+        Success = successBeforeAttempt;
+        file.Success = true;
+        file.Status = "";
+
+        return await GetProcessor(secondaryMode, movieProcessor, tvProcessor).ProcessAsync(file);
+    }
+
+    private (Mode Primary, Mode Secondary) GetProcessorOrder(string path)
+    {
+        var fileName = Path.GetFileName(path);
+        if (MovieNameNormalizer.LooksLikeTvEpisode(fileName))
+        {
+            return (Mode.TV, Mode.Movie);
+        }
+
+        if (MovieNameNormalizer.LooksLikeMovieCandidate(fileName))
+        {
+            return (Mode.Movie, Mode.TV);
+        }
+
+        return Config.Mode == Mode.Movie
+            ? (Mode.Movie, Mode.TV)
+            : (Mode.TV, Mode.Movie);
+    }
+
+    private static IProcessor GetProcessor(Mode mode, IProcessor movieProcessor, IProcessor tvProcessor)
+        => mode == Mode.Movie
+            ? movieProcessor
+            : tvProcessor;
+
+    private static bool ShouldTryAlternateProcessor(string path, string status, Mode secondaryMode)
+    {
+        if (!IsAlternateProcessorRetryableStatus(status))
+        {
+            return false;
+        }
+
+        var fileName = Path.GetFileName(path);
+        return secondaryMode == Mode.TV
+            ? MovieNameNormalizer.LooksLikeTvEpisode(fileName)
+            : MovieNameNormalizer.LooksLikeMovieCandidate(fileName);
+    }
+
+    private static bool IsAlternateProcessorRetryableStatus(string status)
+        => status.StartsWith("Error: Failed to parse required information from filename", StringComparison.OrdinalIgnoreCase)
+           || status.StartsWith("Error: failed to find title ", StringComparison.OrdinalIgnoreCase)
+           || status.StartsWith("Error: Cannot find series ", StringComparison.OrdinalIgnoreCase)
+           || status.StartsWith("Error: Unable to parse ", StringComparison.OrdinalIgnoreCase);
 }

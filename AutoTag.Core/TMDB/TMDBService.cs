@@ -4,6 +4,7 @@ using TMDbLib.Objects.General;
 using TMDbLib.Objects.Search;
 using TMDbLib.Objects.TvShows;
 using Credits = TMDbLib.Objects.Movies.Credits;
+using TMDbMovie = TMDbLib.Objects.Movies.Movie;
 
 namespace AutoTag.Core.TMDB;
 
@@ -23,7 +24,9 @@ public interface ITMDBService
 
     Task<ImagesWithId> GetTvShowImagesAsync(int id);
 
-    Task<SearchContainer<SearchMovie>> SearchMovieAsync(string query, int year = 0);
+    Task<SearchContainer<SearchMovie>> SearchMovieAsync(string query, int year = 0, string? language = null);
+
+    Task<TMDbMovie> GetMovieAsync(int movieId);
 
     Task<List<string>> GetMovieGenreNamesAsync(IEnumerable<int> genreIds);
 
@@ -36,7 +39,7 @@ public class TMDBService(TMDbClient client, AutoTagConfig config) : ITMDBService
     private Dictionary<int, string> MovieGenres = [];
     
     public Task<SearchContainer<SearchTv>> SearchTvShowAsync(string query)
-        => client.SearchTvShowAsync(query, config.Language);
+        => client.SearchTvShowAsync(query, config.Language, includeAdult: config.IncludeAdult);
 
     public Task<TvShow> GetTvShowWithEpisodeGroupsAsync(int id)
         => client.GetTvShowAsync(id, TvShowMethods.EpisodeGroups, config.Language);
@@ -64,8 +67,11 @@ public class TMDBService(TMDbClient client, AutoTagConfig config) : ITMDBService
     public Task<ImagesWithId> GetTvShowImagesAsync(int id)
         => client.GetTvShowImagesAsync(id, $"{config.Language},null");
 
-    public Task<SearchContainer<SearchMovie>> SearchMovieAsync(string query, int year = 0)
-        => client.SearchMovieAsync(query, config.Language, year: year);
+    public Task<SearchContainer<SearchMovie>> SearchMovieAsync(string query, int year = 0, string? language = null)
+        => client.SearchMovieAsync(query, language ?? config.Language, includeAdult: config.IncludeAdult, year: year);
+
+    public Task<TMDbMovie> GetMovieAsync(int movieId)
+        => client.GetMovieAsync(movieId, language: config.Language);
 
     
     public async Task<List<string>> GetMovieGenreNamesAsync(IEnumerable<int> genreIds)

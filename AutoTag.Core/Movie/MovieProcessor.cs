@@ -1,17 +1,21 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using System.Text.RegularExpressions;
 using AutoTag.Core.Config;
 using AutoTag.Core.Files;
 using AutoTag.Core.TMDB;
-using TMDbLib.Objects.General;
 using TMDbLib.Objects.Search;
+using TMDbMovie = TMDbLib.Objects.Movies.Movie;
 
 namespace AutoTag.Core.Movie;
 public class MovieProcessor(ITMDBService tmdb, IFileWriter writer, IUserInterface ui, AutoTagConfig config) : IProcessor
 {
     public async Task<bool> ProcessAsync(TaggingFile file)
     {
-        if (!TryParseFileName(Path.GetFileName(file.Path), out string? title, out int? year))
+        if (MovieNameNormalizer.LooksLikeTvEpisode(Path.GetFileName(file.Path)))
+        {
+            ui.SetStatus("File skipped - filename looks like a TV episode", MessageType.Warning);
+            return true;
+        }
+
+        if (!MovieNameNormalizer.TryParseFileName(Path.GetFileName(file.Path), out string? title, out int? year))
         {
             ui.SetStatus("Error: Failed to parse required information from filename", MessageType.Error);
             return false;
@@ -37,72 +41,54 @@ public class MovieProcessor(ITMDBService tmdb, IFileWriter writer, IUserInterfac
         return taggingSuccess && result.Success && result.Complete;
     }
 
-    private static readonly Regex FileNameRegex = new(
-        @"^((?<Title>.+?)[\. _-]?)" + // get title by reading from start to a field (whichever field comes first)
-        "?(" +
-        @"([\(]?(?<Year>(19|20)[0-9]{2})[\)]?)|" + // year - extract for use in searching
-        "([0-9]{3,4}(p|i))|" + // resolution (e.g. 1080p, 720i)
-        @"((?:PPV\.)?[HPS]DTV|[. ](?:HD)?CAM[| ]|B[DR]Rip|[.| ](?:HD-?)?TS[.| ]|(?:PPV )?WEB-?DL(?: DVDRip)?|HDRip|DVDRip|CamRip|W[EB]Rip|BluRay|DvDScr|hdtv|REMUX|3D|Half-(OU|SBS)+|4K|NF|AMZN)|" + // rip type
-        @"(xvid|[hx]\.?26[45]|AVC)|" + // video codec
-        @"(MP3|DD5\.?1|Dual[\- ]Audio|LiNE|DTS[-HD]+|AAC[.-]LC|AAC(?:\.?2\.0)?|AC3(?:\.5\.1)?|7\.1|DDP5.1)|" + // audio codec
-        "(REPACK|INTERNAL|PROPER)|" + // scene tags
-        @"\.(mp4|m4v|mkv)$" + // file extensions
-        ")"
-    );
-    private bool TryParseFileName(string fileName, [NotNullWhen(true)] out string? title, out int? year)
-    {
-        Match match = FileNameRegex.Match(fileName);
-        if (match.Success)
-        {
-            title = match.Groups["Title"].Value.Replace('.', ' ');
-            
-            var yearStr = match.Groups["Year"].Value;
-            year = string.IsNullOrEmpty(yearStr)
-                ? null
-                : int.Parse(yearStr);
-        }
-        else
-        {
-            title = null;
-            year = null;
-        }
-
-        return !string.IsNullOrEmpty(title);
-    }
-
     private async Task<(FindResult, SearchMovie?)> FindMovieAsync(string title, int? year)
     {
-        SearchContainer<SearchMovie> searchResults;
-        if (year.HasValue)
+        var manualResults = new List<SearchMovie>();
+        var seenResultIds = new HashSet<int>();
+
+        foreach (var attempt in GetSearchAttempts(title, year))
         {
-            searchResults = await tmdb.SearchMovieAsync(title, year.Value); // if year was parsed, use it to narrow down search further
+            ui.DisplayMessage(
+                $@"Searching TMDB for movie ""{attempt.Query}""{(attempt.Year.HasValue ? $" ({attempt.Year.Value})" : "")}{(string.Equals(attempt.Language, config.Language, StringComparison.OrdinalIgnoreCase) ? "" : $" [{attempt.Language}]")}",
+                MessageType.Log
+            );
+
+            var searchResults = attempt.Year.HasValue
+                ? await tmdb.SearchMovieAsync(attempt.Query, attempt.Year.Value, attempt.Language)
+                : await tmdb.SearchMovieAsync(attempt.Query, language: attempt.Language);
+
+            if (searchResults.Results.Count == 0)
+            {
+                continue;
+            }
+
+            if (!config.ManualMode)
+            {
+                return (FindResult.Success, searchResults.Results[0]);
+            }
+
+            foreach (var result in searchResults.Results.Where(result => seenResultIds.Add(result.Id)))
+            {
+                manualResults.Add(result);
+            }
         }
-        else
-        {
-            searchResults = await tmdb.SearchMovieAsync(title);
-        }
-        
-        if (searchResults.Results.Count == 0)
+
+        if (manualResults.Count == 0)
         {
             ui.SetStatus($"Error: failed to find title {title} on TheMovieDB", MessageType.Error);
             return (FindResult.Fail, null);
         }
 
-        if (!config.ManualMode)
-        {
-            return (FindResult.Success, searchResults.Results[0]);
-        }
-
         var selection = ui.SelectOption(
             "Please choose an option",
-            searchResults.Results
+            manualResults
                 .Select(m => $"{m.Title} ({m.ReleaseDate?.Year.ToString() ?? "Unknown"})")
                 .ToList()
         );
         
         if (selection.HasValue)
         {
-            var selected = searchResults.Results[selection.Value];
+            var selected = manualResults[selection.Value];
             ui.SetStatus($"Selected {selected.Title} ({selected.ReleaseDate?.Year.ToString() ?? "Unknown"})", MessageType.Information);
             
             return (FindResult.Success, selected);
@@ -114,18 +100,19 @@ public class MovieProcessor(ITMDBService tmdb, IFileWriter writer, IUserInterfac
 
     private async Task<MovieFileMetadata> GetMovieMetadataAsync(SearchMovie selectedResult, bool fileIsTaggable)
     {
+        TMDbMovie movie = await tmdb.GetMovieAsync(selectedResult.Id);
         var result = new MovieFileMetadata
         {
             Id = selectedResult.Id,
-            Title = selectedResult.Title,
-            Overview = selectedResult.Overview,
-            CoverURL = string.IsNullOrEmpty(selectedResult.PosterPath)
+            Title = movie.Title,
+            Overview = movie.Overview,
+            CoverURL = string.IsNullOrEmpty(movie.PosterPath)
                 ? null
-                : $"https://image.tmdb.org/t/p/original{selectedResult.PosterPath}",
-            Date = selectedResult.ReleaseDate
+                : $"https://image.tmdb.org/t/p/original{movie.PosterPath}",
+            Date = movie.ReleaseDate
         };
         
-        result.Genres = await tmdb.GetMovieGenreNamesAsync(selectedResult.GenreIds);
+        result.Genres = movie.Genres.Select(g => g.Name).ToList();
 
         if (config.ExtendedTagging && fileIsTaggable)
         {
@@ -144,4 +131,36 @@ public class MovieProcessor(ITMDBService tmdb, IFileWriter writer, IUserInterfac
 
         return result;
     }
+
+    private IEnumerable<MovieSearchAttempt> GetSearchAttempts(string title, int? year)
+    {
+        foreach (var candidate in MovieNameNormalizer.GetSearchCandidates(title))
+        {
+            foreach (var language in GetSearchLanguages())
+            {
+                if (year.HasValue)
+                {
+                    yield return new MovieSearchAttempt(candidate, year, language);
+                }
+
+                yield return new MovieSearchAttempt(candidate, null, language);
+            }
+        }
+    }
+
+    private IEnumerable<string> GetSearchLanguages()
+    {
+        var languages = new List<string>();
+
+        if (!string.IsNullOrWhiteSpace(config.Language))
+        {
+            languages.Add(config.Language);
+        }
+
+        languages.AddRange(config.SearchLanguages.Where(language => !string.IsNullOrWhiteSpace(language)));
+
+        return languages.Distinct(StringComparer.OrdinalIgnoreCase);
+    }
+
+    private readonly record struct MovieSearchAttempt(string Query, int? Year, string Language);
 }

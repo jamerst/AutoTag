@@ -46,6 +46,40 @@ public class FindShowAsync : TVProcessorTestBase
             Times.Once
         );
     }
+
+    [Fact]
+    public async Task Should_RetryWithoutTrailingYear_When_InitialSearchHasNoResults()
+    {
+        var mockTmdb = new Mock<ITMDBService>();
+        mockTmdb.Setup(tmdb => tmdb.SearchTvShowAsync("The Looney Tunes Show (2011)"))
+            .ReturnsAsync(new SearchContainer<SearchTv> { Results = [] });
+        mockTmdb.Setup(tmdb => tmdb.SearchTvShowAsync("The Looney Tunes Show"))
+            .ReturnsAsync(new SearchContainer<SearchTv>
+            {
+                Results =
+                [
+                    new SearchTv
+                    {
+                        Id = 1,
+                        Name = "The Looney Tunes Show"
+                    }
+                ]
+            });
+
+        var mockCache = new Mock<ITVCache>();
+        var tv = GetInstance(tmdb: mockTmdb.Object, cache: mockCache.Object);
+
+        var result = await tv.FindShowAsync("The Looney Tunes Show (2011)");
+
+        result.Should().Be(FindResult.Success);
+        mockTmdb.Verify(tmdb => tmdb.SearchTvShowAsync("The Looney Tunes Show (2011)"), Times.Once);
+        mockTmdb.Verify(tmdb => tmdb.SearchTvShowAsync("The Looney Tunes Show"), Times.Once);
+        mockCache.Verify(c => c.AddShow(
+            "The Looney Tunes Show (2011)",
+            It.Is<List<ShowResults>>(results => results.Count == 1 && results[0].TvSearchResult.Name == "The Looney Tunes Show")),
+            Times.Once
+        );
+    }
     
     [Fact]
     public async Task Should_OnlyCacheSelectedResult_When_ManualModeEnabled()

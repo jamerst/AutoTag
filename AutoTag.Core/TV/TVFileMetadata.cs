@@ -9,6 +9,8 @@ public class TVFileMetadata : FileMetadata
     public int Season { get; set; }
     
     public int Episode { get; set; }
+
+    public int? AbsoluteEpisode { get; set; }
     
     public int SeasonEpisodes { get; set; }
 
@@ -94,6 +96,18 @@ public class TVFileMetadata : FileMetadata
 
     public override string ToString()
     {
+        if (AbsoluteEpisode.HasValue && Season == 0)
+        {
+            if (!string.IsNullOrEmpty(Title))
+            {
+                return $"{SeriesName} E{AbsoluteEpisode.Value:000} ({Title})";
+            }
+            else
+            {
+                return $"{SeriesName} E{AbsoluteEpisode.Value:000}";
+            }
+        }
+
         if (!string.IsNullOrEmpty(Title))
         {
             return $"{SeriesName} S{Season:00}E{Episode:00} ({Title})";

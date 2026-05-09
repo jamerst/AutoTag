@@ -16,7 +16,57 @@ This is because building cross-platform user interfaces with .NET Core is still 
 - Manual tagging mode
 - Full Linux support (and presumably macOS?)
 - Supports mp4 and mkv containers
-- Subtitle file renaming
+- Subtitle file renaming for .srt, .vtt, .sub, .ssa and .ass files
+
+## Requirements and running locally
+To run AutoTag from source, install the .NET 10 SDK and run commands from the repository root.
+
+AutoTag fetches metadata from TheMovieDB, so a TMDB API key is required before processing files. Set it with the `TMDB_API_KEY` environment variable:
+
+PowerShell:
+```powershell
+$env:TMDB_API_KEY="your_tmdb_api_key"
+```
+
+Linux/macOS:
+```sh
+export TMDB_API_KEY="your_tmdb_api_key"
+```
+
+Check that the CLI starts:
+```sh
+dotnet run --project AutoTag.CLI -- --help
+```
+
+Process TV episodes:
+```sh
+dotnet run --project AutoTag.CLI -- -t "path/to/tv/files"
+```
+
+Include adult titles in TMDB searches:
+```sh
+dotnet run --project AutoTag.CLI -- -t --include-adult "path/to/tv/files"
+```
+
+Move files into TV season folders or movie folders:
+```sh
+dotnet run --project AutoTag.CLI -- -t --organize-folders "path/to/tv/files"
+```
+
+Remove source folders after moving files if they are empty:
+```sh
+dotnet run --project AutoTag.CLI -- -t --organize-folders --remove-empty-folders "path/to/tv/files"
+```
+
+Rename and move subtitle files with matching videos:
+```sh
+dotnet run --project AutoTag.CLI -- -t --rename-subs --organize-folders "path/to/tv/files"
+```
+
+Process movies:
+```sh
+dotnet run --project AutoTag.CLI -- -m "path/to/movie/files"
+```
 
 ## Usage
 ```
@@ -49,6 +99,9 @@ OPTIONS:
       --apple-tagging                    Add extra tags to mp4 files for use with Apple devices and software
   -l, --language <LANGUAGE>              Metadata language (default: en)
   -g, --episode-group                    Manually choose alternate episode orderings for a TV show
+      --include-adult                    Include adult titles in TMDB searches
+      --organize-folders                 Move files into media folders after tagging
+      --remove-empty-folders             Remove source folders after moving files if they are empty
 
 ```
 
@@ -86,6 +139,8 @@ The `--extended-tagging` option adds additional information to Matroska video fi
 ### Language
 The language of the metadata can be set using the `-l` or `--language` option. This accepts a [ISO 639-1 language code](https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes) with optional [ISO 3166 alpha-2 country code](https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2) for regional variants. E.g., to get metadata in German use `-l de`, or for Brazilian Portuguese use `-l pt-BR`. Note that the data for other languages is probably less complete than it is for English. If data in a given language is not available it will fall back to some alternative, likely English.
 
+Movie searching can optionally use additional fallback languages via the `searchLanguages` config setting. For example, with `"language": "pt-BR"` and `"searchLanguages": ["en-US"]`, AutoTag will still write metadata in Brazilian Portuguese but will retry movie searches in English if the Portuguese search fails.
+
 ### Alternate Episode Orderings (Episode Groups)
 The `--episode-group` option allows you to choose one of the additional episodes group collections created on TMDB as source for the episode ordering. All contained episode groups must follow the naming scheme `<NAME> XX`. Episode groups whose names begin with `special` in their names are also valid and will be treated as `Season 0`.
 
@@ -103,13 +158,15 @@ Enabling this option will prompt you to select the episode ordering for each sho
 ## Config
 AutoTag creates a config file to store default preferences at `~/.config/autotag/conf.json` or `%APPDATA%\Roaming\autotag\conf.json`. A different config file can be specified using the `-c` option. If the file does not exist, a file will be created with the default settings:
 ```
-"configVer": 9,                           // Internal use
+"configVer": 14,                          // Internal use
 "mode": 0,                                // Default tagging mode, 0 = TV, 1 = Movie
 "manualMode": false,                      // Manual tagging mode
 "verbose": false,                         // Verbose output
 "addCoverArt": true,                      // Add cover art to files
 "tagFiles": true,                         // Write tags to files
 "renameFiles": true,                      // Rename files
+"organizeFolders": false,                 // Move files into TV season folders or movie folders
+"removeEmptyFolders": false,              // Remove source folders after moving files if they are empty
 "tvRenamePattern": "%1 - %2x%3:00 - %4",  // Pattern to rename TV files, %1 = Series Name, %2 = Season, %3 = Episode, %4 = Episode Title
 "movieRenamePattern": "%1 (%2)",          // Pattern to rename movie files, %1 = Title, %2 = Year
 "parsePattern": "",                       // Custom regex to parse TV episode information
@@ -118,9 +175,13 @@ AutoTag creates a config file to store default preferences at `~/.config/autotag
 "appleTagging": false,                    // Add extra tags to mp4 files for use with Apple devices and software
 "renameSubtitles": false,                 // Rename subtitle files
 "language": "en",                         // Metadata language,
+"searchLanguages": [],                    // Additional fallback languages to use when searching movies on TMDB
+"includeAdult": false,                    // Include adult titles in TMDB searches
 "episodeGroup": false,                    // Enable alternate episode ordering selection
 "fileNameReplaces": []                    // File name character replacements. Array of objects of the form { "replace": "", "replacement": "" }
 ```
+
+When `renameSubtitles` is enabled, AutoTag renames supported subtitle files along with matching videos. If multiple loose subtitle files match the same TV episode, AutoTag keeps them all and adds numbered suffixes such as `.1.ass` and `.2.ass`.
 
 ## Moving away from TheTVDB
 **v3.1.0 and above use TheMovieDB as the TV metadata source instead of TheTVDB.** This is due to the declining quality of metadata, and TheTVDB's free API being deprecated in favour of a paid model.

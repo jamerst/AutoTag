@@ -2,7 +2,7 @@ namespace AutoTag.Core.Config;
 
 public class AutoTagConfig
 {
-    public const int CurrentVer = 10;
+    public const int CurrentVer = 14;
     
     public int ConfigVer { get; set; } = CurrentVer;
     
@@ -17,6 +17,10 @@ public class AutoTagConfig
     public bool TagFiles { get; set; } = true;
     
     public bool RenameFiles { get; set; } = true;
+    
+    public bool OrganizeFolders { get; set; } = false;
+    
+    public bool RemoveEmptyFolders { get; set; } = false;
     
     public string TVRenamePattern { get; set; } = "%1 - %2x%3:00 - %4";
     
@@ -33,6 +37,10 @@ public class AutoTagConfig
     public bool RenameSubtitles { get; set; } = false;
     
     public string Language { get; set; } = "en";
+
+    public List<string> SearchLanguages { get; set; } = [];
+    
+    public bool IncludeAdult { get; set; } = false;
     
     public bool EpisodeGroup { get; set; }
     

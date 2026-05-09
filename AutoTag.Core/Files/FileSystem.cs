@@ -11,6 +11,12 @@ public interface IFileSystem
     void Move(string sourceFileName, string destFileName);
 
     void CreateDirectory(DirectoryInfo directoryInfo);
+    
+    bool DirectoryExists(string path);
+
+    bool DirectoryIsEmpty(string path);
+
+    void DeleteDirectory(string path);
 
     Stream OpenReadStream(string path);
 
@@ -27,6 +33,12 @@ public class FileSystem : IFileSystem
     public void Move(string sourceFileName, string destFileName) => File.Move(sourceFileName, destFileName);
 
     public void CreateDirectory(DirectoryInfo directoryInfo) => directoryInfo.Create();
+    
+    public bool DirectoryExists(string path) => Directory.Exists(path);
+
+    public bool DirectoryIsEmpty(string path) => !Directory.EnumerateFileSystemEntries(path).Any();
+
+    public void DeleteDirectory(string path) => Directory.Delete(path);
 
     public Stream OpenReadStream(string path) => new FileStream(path, FileMode.Open, FileAccess.Read);
 
