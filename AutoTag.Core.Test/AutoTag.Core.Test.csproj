@@ -1,5 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
     <PropertyGroup>
         <TargetFramework>net10.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
@@ -24,6 +23,11 @@
         </PackageReference>
     </ItemGroup>
 
+    <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+        <DebugSymbols>False</DebugSymbols>
+        <DebugType>None</DebugType>
+    </PropertyGroup>
+
     <ItemGroup>
         <Using Include="Xunit"/>
     </ItemGroup>
@@ -31,5 +35,4 @@
     <ItemGroup>
       <ProjectReference Include="..\AutoTag.Core\AutoTag.Core.csproj" />
     </ItemGroup>
-
 </Project>

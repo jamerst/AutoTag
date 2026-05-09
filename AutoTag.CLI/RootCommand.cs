@@ -16,10 +16,9 @@ public class RootCommand : AsyncCommand<RootCommandSettings>
             AnsiConsole.WriteLine(CLIInterface.GetVersion());
             return 0;
         }
-
-        var tmdbKey = ApiKeys.TMDBKey;
+        
         var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings { DisableDefaults = true });
-        builder.Services.AddCoreServices(tmdbKey ?? string.Empty);
+        builder.Services.AddCoreServices(ThisAssembly.Constants.TMDBApiKey);
         builder.Services.AddScoped<IUserInterface, CLIInterface>();
 
         using var host = builder.Build();
@@ -38,12 +37,6 @@ public class RootCommand : AsyncCommand<RootCommandSettings>
         if (cmdSettings.SetDefault)
         {
             await configService.SaveToDiskAsync();
-        }
-
-        if (cmdSettings.Paths.Any() && string.IsNullOrWhiteSpace(tmdbKey))
-        {
-            AnsiConsole.MarkupLine("[red]Error:[/] TMDB API key missing. Set the `TMDB_API_KEY` environment variable or add `AutoTag.CLI/Keys.cs` before processing files.");
-            return 1;
         }
 
         var ui = (CLIInterface)host.Services.GetRequiredService<IUserInterface>();
