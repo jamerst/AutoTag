@@ -39,7 +39,7 @@ public class CLIInterface(IServiceProvider serviceProvider) : IUserInterface
             CurrentFile = file;
             AnsiConsole.MarkupLineInterpolated($"[fuchsia]\n{file.Path}:[/]");
 
-            Success &= await ProcessWithFallbackAsync(file, movieProcessor, tvProcessor);
+            Success &= (await ProcessWithFallbackAsync(file, movieProcessor, tvProcessor)).IsSuccess();
         }
 
         return ReportResults(Files.Count);
@@ -180,20 +180,20 @@ public class CLIInterface(IServiceProvider serviceProvider) : IUserInterface
     {
     }
 
-    private async Task<bool> ProcessWithFallbackAsync(TaggingFile file, IProcessor movieProcessor, IProcessor tvProcessor)
+    private async Task<ProcessResult> ProcessWithFallbackAsync(TaggingFile file, IProcessor movieProcessor, IProcessor tvProcessor)
     {
         var (primaryMode, secondaryMode) = GetProcessorOrder(file.Path);
 
         bool successBeforeAttempt = Success;
         var primaryResult = await GetProcessor(primaryMode, movieProcessor, tvProcessor).ProcessAsync(file);
-        if (primaryResult)
+        if (primaryResult.IsSuccess())
         {
-            return true;
+            return primaryResult;
         }
 
-        if (!ShouldTryAlternateProcessor(file.Path, file.Status, secondaryMode))
+        if (!ShouldTryAlternateProcessor(file.Path, primaryResult, secondaryMode))
         {
-            return false;
+            return ProcessResult.Fail;
         }
 
         DisplayMessage($"Retrying as {(secondaryMode == Mode.Movie ? "movie" : "TV")}", MessageType.Warning);
@@ -228,22 +228,16 @@ public class CLIInterface(IServiceProvider serviceProvider) : IUserInterface
             ? movieProcessor
             : tvProcessor;
 
-    private static bool ShouldTryAlternateProcessor(string path, string status, Mode secondaryMode)
+    private static bool ShouldTryAlternateProcessor(string path, ProcessResult result, Mode secondaryMode)
     {
-        if (!IsAlternateProcessorRetryableStatus(status))
+        if (result is ProcessResult.ParseFailure or ProcessResult.NotFound)
         {
-            return false;
+            var fileName = Path.GetFileName(path);
+            return secondaryMode == Mode.TV
+                ? MovieNameNormalizer.LooksLikeTvEpisode(fileName)
+                : MovieNameNormalizer.LooksLikeMovieCandidate(fileName);
         }
 
-        var fileName = Path.GetFileName(path);
-        return secondaryMode == Mode.TV
-            ? MovieNameNormalizer.LooksLikeTvEpisode(fileName)
-            : MovieNameNormalizer.LooksLikeMovieCandidate(fileName);
+        return false;
     }
-
-    private static bool IsAlternateProcessorRetryableStatus(string status)
-        => status.StartsWith("Error: Failed to parse required information from filename", StringComparison.OrdinalIgnoreCase)
-           || status.StartsWith("Error: failed to find title ", StringComparison.OrdinalIgnoreCase)
-           || status.StartsWith("Error: Cannot find series ", StringComparison.OrdinalIgnoreCase)
-           || status.StartsWith("Error: Unable to parse ", StringComparison.OrdinalIgnoreCase);
 }

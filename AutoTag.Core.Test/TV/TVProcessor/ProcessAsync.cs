@@ -11,7 +11,7 @@ namespace AutoTag.Core.Test.TV.TVProcessor;
 public class ProcessAsync : TVProcessorTestBase
 {
     [Fact]
-    public async Task Should_ReturnFalse_When_FileNameCannotBeParsed()
+    public async Task Should_ReturnParseFailure_When_FileNameCannotBeParsed()
     {
         var instance = GetInstance();
 
@@ -20,11 +20,11 @@ public class ProcessAsync : TVProcessorTestBase
             Path = "invalid file name"
         });
 
-        result.Should().BeFalse();
+        result.Should().Be(ProcessResult.ParseFailure);
     }
 
     [Fact]
-    public async Task Should_ReturnFalse_When_UnableToFindShow()
+    public async Task Should_ReturnNotFound_When_UnableToFindShow()
     {
         var mockTmdb = new Mock<ITMDBService>();
         mockTmdb.Setup(tmdb => tmdb.SearchTvShowAsync(It.IsAny<string>()))
@@ -37,12 +37,12 @@ public class ProcessAsync : TVProcessorTestBase
             Path = "/Show/Show S01E02.mp4"
         });
 
-        result.Should().BeFalse();
+        result.Should().Be(ProcessResult.NotFound);
         mockTmdb.Verify(tmdb => tmdb.SearchTvShowAsync(It.IsAny<string>()), Times.Once);
     }
     
     [Fact]
-    public async Task Should_ReturnTrueAndShowWarning_When_FileSkipped()
+    public async Task Should_ReturnSkippedAndShowWarning_When_FileSkipped()
     {
         var config = new AutoTagConfig { ManualMode = true };
         
@@ -61,12 +61,12 @@ public class ProcessAsync : TVProcessorTestBase
             Path = "/Show/Show S01E02.mp4"
         });
 
-        result.Should().BeTrue();
+        result.Should().Be(ProcessResult.Skipped);
         mockUi.Verify(ui => ui.SetStatus("File skipped", MessageType.Warning));
     }
     
     [Fact]
-    public async Task Should_ReturnFalse_When_FindEpisodeFails()
+    public async Task Should_ReturnNotFound_When_FindEpisodeFails()
     {
         var mockCache = new Mock<ITVCache>();
         
@@ -113,11 +113,11 @@ public class ProcessAsync : TVProcessorTestBase
             Path = "/Show/Show S01E02.mp4"
         });
 
-        result.Should().BeFalse();
+        result.Should().Be(ProcessResult.NotFound);
     }
 
     [Fact]
-    public async Task Should_ReturnFalseAndShowError_When_ReachedEndOfSearchResultsWithoutFindingEpisode()
+    public async Task Should_ReturnNotFoundAndShowError_When_ReachedEndOfSearchResultsWithoutFindingEpisode()
     {
         var mockCache = new Mock<ITVCache>();
         
@@ -140,7 +140,7 @@ public class ProcessAsync : TVProcessorTestBase
             Path = "/Show/Show S01E02.mp4"
         });
 
-        result.Should().BeFalse();
+        result.Should().Be(ProcessResult.NotFound);
         mockUi.Verify(ui => ui.SetStatus("Error: Cannot find Show S01E02 on TheMovieDB", MessageType.Error));
     }
 
@@ -178,12 +178,12 @@ public class ProcessAsync : TVProcessorTestBase
             Taggable = true
         });
 
-        result.Should().BeTrue();
+        result.Should().Be(ProcessResult.Success);
         mockCache.Verify(c => c.TryGetSeasonPoster(It.IsAny<int>(), It.IsAny<int>(), out poster));
     }
 
     [Fact]
-    public async Task Should_WriteFileAndReturnTrue_When_Succeeds()
+    public async Task Should_WriteFileAndReturnSuccess_When_Succeeds()
     {
         var config = new AutoTagConfig { AddCoverArt = false };
         
@@ -213,7 +213,7 @@ public class ProcessAsync : TVProcessorTestBase
             Path = "/Show/Show S01E02.mp4"
         });
 
-        result.Should().BeTrue();
+        result.Should().Be(ProcessResult.Success);
         mockWriter.Verify(w => w.WriteAsync(It.IsAny<TaggingFile>(), It.IsAny<FileMetadata>()));
     }
 }

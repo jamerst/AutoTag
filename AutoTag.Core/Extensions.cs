@@ -68,4 +68,6 @@ public static class Extensions
 
         return item != null;
     }
+
+    public static bool IsSuccess(this ProcessResult result) => result is ProcessResult.Success or ProcessResult.Skipped;
 }

@@ -7,18 +7,18 @@ using TMDbMovie = TMDbLib.Objects.Movies.Movie;
 namespace AutoTag.Core.Movie;
 public class MovieProcessor(ITMDBService tmdb, IFileWriter writer, IUserInterface ui, AutoTagConfig config) : IProcessor
 {
-    public async Task<bool> ProcessAsync(TaggingFile file)
+    public async Task<ProcessResult> ProcessAsync(TaggingFile file)
     {
         if (MovieNameNormalizer.LooksLikeTvEpisode(Path.GetFileName(file.Path)))
         {
             ui.SetStatus("File skipped - filename looks like a TV episode", MessageType.Warning);
-            return true;
+            return ProcessResult.ParseFailure;
         }
 
         if (!MovieNameNormalizer.TryParseFileName(Path.GetFileName(file.Path), out string? title, out int? year))
         {
             ui.SetStatus("Error: Failed to parse required information from filename", MessageType.Error);
-            return false;
+            return ProcessResult.ParseFailure;
         }
         
         ui.SetStatus($"Parsed file as {title}", MessageType.Log);
@@ -27,9 +27,9 @@ public class MovieProcessor(ITMDBService tmdb, IFileWriter writer, IUserInterfac
         switch (findMovieResult)
         {
             case FindResult.Fail:
-                return false;
+                return ProcessResult.NotFound;
             case FindResult.Skip:
-                return true;
+                return ProcessResult.Skipped;
         }
 
         ui.SetStatus($"Found {selectedResult!.Title} ({selectedResult.ReleaseDate?.Year.ToString() ?? "unknown year"}) on TheMovieDB", MessageType.Information);
@@ -38,7 +38,9 @@ public class MovieProcessor(ITMDBService tmdb, IFileWriter writer, IUserInterfac
         
         bool taggingSuccess = await writer.WriteAsync(file, result);
 
-        return taggingSuccess && result.Success && result.Complete;
+        return taggingSuccess && result.Success && result.Complete
+            ? ProcessResult.Success
+            : ProcessResult.Fail;
     }
 
     private async Task<(FindResult, SearchMovie?)> FindMovieAsync(string title, int? year)

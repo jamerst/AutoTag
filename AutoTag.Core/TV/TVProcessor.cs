@@ -10,12 +10,12 @@ public class TVProcessor(ITMDBService tmdb, IFileWriter writer, ITVCache cache, 
 {
     private static readonly Regex SeriesYearSuffixRegex = new(@"\s+\((19|20)\d{2}\)$", RegexOptions.CultureInvariant);
 
-    public async Task<bool> ProcessAsync(TaggingFile file)
+    public async Task<ProcessResult> ProcessAsync(TaggingFile file)
     {
         var metadata = ParseFileName(file);
         if (metadata == null)
         {
-            return false;
+            return ProcessResult.ParseFailure;
         }
 
         ui.SetStatus($"Parsed file as {metadata}", MessageType.Log);
@@ -24,10 +24,10 @@ public class TVProcessor(ITMDBService tmdb, IFileWriter writer, ITVCache cache, 
         switch (findShowResult)
         {
             case FindResult.Fail:
-                return false;
+                return ProcessResult.NotFound;
             case FindResult.Skip:
                 ui.SetStatus("File skipped", MessageType.Warning);
-                return true;
+                return ProcessResult.Skipped;
         }
 
         string? lastResultMessage = null;
@@ -40,7 +40,7 @@ public class TVProcessor(ITMDBService tmdb, IFileWriter writer, ITVCache cache, 
             
             if (findEpisodeResult == FindResult.Fail)
             {
-                return false;
+                return ProcessResult.NotFound;
             }
             else if (findEpisodeResult == FindResult.Success)
             {
@@ -54,7 +54,7 @@ public class TVProcessor(ITMDBService tmdb, IFileWriter writer, ITVCache cache, 
         {
             ui.SetStatus(lastResultMessage, MessageType.Error);
 
-            return false;
+            return ProcessResult.NotFound;
         }
 
         ui.SetStatus($"Found {metadata} ({metadata.Title}) on TheMovieDB", MessageType.Information);
@@ -66,7 +66,9 @@ public class TVProcessor(ITMDBService tmdb, IFileWriter writer, ITVCache cache, 
 
         var taggingSuccess = await writer.WriteAsync(file, metadata);
 
-        return taggingSuccess && metadata.Success && metadata.Complete;
+        return taggingSuccess && metadata.Success && metadata.Complete
+            ? ProcessResult.Success
+            : ProcessResult.Fail;
     }
 
     public TVFileMetadata? ParseFileName(TaggingFile file)
