@@ -1,8 +1,6 @@
 using AutoTag.Core.Config;
 using AutoTag.Core.Files;
 using AutoTag.Core.TMDB;
-using TMDbLib.Objects.Search;
-using TMDbMovie = TMDbLib.Objects.Movies.Movie;
 
 namespace AutoTag.Core.Movie;
 public class MovieProcessor(ITMDBService tmdb, IFileWriter writer, IUserInterface ui, AutoTagConfig config) : IProcessor
@@ -43,33 +41,30 @@ public class MovieProcessor(ITMDBService tmdb, IFileWriter writer, IUserInterfac
             : ProcessResult.Fail;
     }
 
-    private async Task<(FindResult, SearchMovie?)> FindMovieAsync(string title, int? year)
+    private async Task<(FindResult, TMDBMovie?)> FindMovieAsync(string title, int? year)
     {
-        var manualResults = new List<SearchMovie>();
+        var manualResults = new List<TMDBMovie>();
         var seenResultIds = new HashSet<int>();
 
         foreach (var attempt in GetSearchAttempts(title, year))
         {
             ui.DisplayMessage(
-                $@"Searching TMDB for movie ""{attempt.Query}""{(attempt.Year.HasValue ? $" ({attempt.Year.Value})" : "")}{(string.Equals(attempt.Language, config.Language, StringComparison.OrdinalIgnoreCase) ? "" : $" [{attempt.Language}]")}",
+                $"Searching TheMovieDB for movie {attempt.ToString(config)}",
                 MessageType.Log
             );
 
-            var searchResults = attempt.Year.HasValue
-                ? await tmdb.SearchMovieAsync(attempt.Query, attempt.Year.Value, attempt.Language)
-                : await tmdb.SearchMovieAsync(attempt.Query, language: attempt.Language);
-
-            if (searchResults.Results.Count == 0)
+            var searchResults = await tmdb.SearchMovieAsync(attempt.Query, attempt.Language, attempt.Year);
+            if (searchResults.Count == 0)
             {
                 continue;
             }
 
             if (!config.ManualMode)
             {
-                return (FindResult.Success, searchResults.Results[0]);
+                return (FindResult.Success, searchResults[0]);
             }
 
-            foreach (var result in searchResults.Results.Where(result => seenResultIds.Add(result.Id)))
+            foreach (var result in searchResults.Where(result => seenResultIds.Add(result.Id)))
             {
                 manualResults.Add(result);
             }
@@ -100,9 +95,13 @@ public class MovieProcessor(ITMDBService tmdb, IFileWriter writer, IUserInterfac
         return (FindResult.Skip, null);
     }
 
-    private async Task<MovieFileMetadata> GetMovieMetadataAsync(SearchMovie selectedResult, bool fileIsTaggable)
+    private async Task<MovieFileMetadata> GetMovieMetadataAsync(TMDBMovie selectedResult, bool fileIsTaggable)
     {
-        TMDbMovie movie = await tmdb.GetMovieAsync(selectedResult.Id);
+        // refetch in metadata language if search language was different
+        var movie = selectedResult.Language == config.Language
+            ? selectedResult
+            : await tmdb.GetMovieAsync(selectedResult.Id);
+        
         var result = new MovieFileMetadata
         {
             Id = selectedResult.Id,
@@ -114,7 +113,7 @@ public class MovieProcessor(ITMDBService tmdb, IFileWriter writer, IUserInterfac
             Date = movie.ReleaseDate
         };
         
-        result.Genres = movie.Genres.Select(g => g.Name).ToList();
+        result.Genres = movie.Genres;
 
         if (config.ExtendedTagging && fileIsTaggable)
         {
@@ -152,17 +151,16 @@ public class MovieProcessor(ITMDBService tmdb, IFileWriter writer, IUserInterfac
 
     private IEnumerable<string> GetSearchLanguages()
     {
-        var languages = new List<string>();
-
-        if (!string.IsNullOrWhiteSpace(config.Language))
-        {
-            languages.Add(config.Language);
-        }
-
-        languages.AddRange(config.SearchLanguages.Where(language => !string.IsNullOrWhiteSpace(language)));
+        IEnumerable<string> languages = [config.Language, ..config.SearchLanguages];
 
         return languages.Distinct(StringComparer.OrdinalIgnoreCase);
     }
 
-    private readonly record struct MovieSearchAttempt(string Query, int? Year, string Language);
+    private readonly record struct MovieSearchAttempt(string Query, int? Year, string Language)
+    {
+        public string ToString(AutoTagConfig config) =>
+            $"""
+             "{Query}"{(Year.HasValue ? $" ({Year.Value})" : "")}{(Language.ToLower() != config.Language ? $" [{Language}]" : "")}
+             """;
+    }
 }

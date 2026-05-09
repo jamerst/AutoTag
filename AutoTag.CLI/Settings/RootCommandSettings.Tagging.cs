@@ -35,6 +35,10 @@ public partial class RootCommandSettings
     [CommandOption("-l|--language <language>")]
     [Description("Metadata language (default: en)")]
     public string? Language { get; init; }
+    
+    [CommandOption("-sl|--search-language <language>")]
+    [Description("Additional languages to use when searching TMDB")]
+    public string[] SearchLanguages { get; init; }
 
     [CommandOption("-g|--episode-group")]
     [Description("Manually choose alternate episode orderings for a TV show")]
@@ -92,6 +96,11 @@ public partial class RootCommandSettings
         if (!string.IsNullOrWhiteSpace(Language))
         {
             config.Language = Language;
+        }
+
+        if (SearchLanguages.Length > 0)
+        {
+            config.SearchLanguages = SearchLanguages.ToList();
         }
 
         if (EpisodeGroup.HasValue)

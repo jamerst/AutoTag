@@ -4,7 +4,6 @@ using TMDbLib.Objects.General;
 using TMDbLib.Objects.Search;
 using TMDbLib.Objects.TvShows;
 using Credits = TMDbLib.Objects.Movies.Credits;
-using TMDbMovie = TMDbLib.Objects.Movies.Movie;
 
 namespace AutoTag.Core.TMDB;
 
@@ -24,11 +23,9 @@ public interface ITMDBService
 
     Task<ImagesWithId> GetTvShowImagesAsync(int id);
 
-    Task<SearchContainer<SearchMovie>> SearchMovieAsync(string query, int year = 0, string? language = null);
+    Task<List<TMDBMovie>> SearchMovieAsync(string query, string language, int? year);
 
-    Task<TMDbMovie> GetMovieAsync(int movieId);
-
-    Task<List<string>> GetMovieGenreNamesAsync(IEnumerable<int> genreIds);
+    Task<TMDBMovie> GetMovieAsync(int movieId);
 
     Task<Credits> GetMovieCreditsAsync(int movieId);
 }
@@ -67,22 +64,31 @@ public class TMDBService(TMDbClient client, AutoTagConfig config) : ITMDBService
     public Task<ImagesWithId> GetTvShowImagesAsync(int id)
         => client.GetTvShowImagesAsync(id, $"{config.Language},null");
 
-    public Task<SearchContainer<SearchMovie>> SearchMovieAsync(string query, int year = 0, string? language = null)
-        => client.SearchMovieAsync(query, language ?? config.Language, includeAdult: config.IncludeAdult, year: year);
+    public async Task<List<TMDBMovie>> SearchMovieAsync(string query, string language, int? year)
+    {
+        var results = await client.SearchMovieAsync(query, language, includeAdult: config.IncludeAdult, year: year ?? 0);
 
-    public Task<TMDbMovie> GetMovieAsync(int movieId)
-        => client.GetMovieAsync(movieId, language: config.Language);
+        if (results.Results.Count == 0)
+        {
+            return [];
+        }
+
+        await GetMovieGenreNamesAsync();
+
+        return results.Results.Select(r => TMDBMovie.FromSearchMovie(r, language, MovieGenres)).ToList();
+    }
+
+    public async Task<TMDBMovie> GetMovieAsync(int movieId)
+        => TMDBMovie.FromMovie(await client.GetMovieAsync(movieId, language: config.Language), config.Language);
 
     
-    public async Task<List<string>> GetMovieGenreNamesAsync(IEnumerable<int> genreIds)
+    private async Task GetMovieGenreNamesAsync()
     {
         if (MovieGenres.Count == 0)
         {
             MovieGenres = (await client.GetMovieGenresAsync(config.Language))
                 .ToDictionary(g => g.Id, g => g.Name);
         }
-
-        return genreIds.Select(g => MovieGenres[g]).ToList();
     }
 
     public Task<Credits> GetMovieCreditsAsync(int movieId)
