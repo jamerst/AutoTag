@@ -1,6 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Text.RegularExpressions;
 using AutoTag.Core.Config;
 using AutoTag.Core.Files;
+using AutoTag.Core.Files.Parsing;
 using AutoTag.Core.Movie;
 using AutoTag.Core.TMDB;
 using AutoTag.Core.TV;
@@ -21,8 +23,13 @@ public static class Extensions
 
         services.AddSingleton<IFileSystem, FileSystem>();
         services.AddSingleton<IFileFinder, FileFinder>();
+
+        services.AddSingleton<IFileNameParser, FileNameParser>();
+        services.AddSingleton<TVFileNameParser>();
+        services.AddSingleton<MovieFileNameParser>();
         
         services.AddSingleton<IFileWriter, FileWriter>();
+        services.AddSingleton<IFileNamer, FileNamer>();
         
         services.AddScoped<ICoverArtFetcher, CoverArtFetcher>();
 
@@ -70,4 +77,9 @@ public static class Extensions
     }
 
     public static bool IsSuccess(this ProcessResult result) => result is ProcessResult.Success or ProcessResult.Skipped;
+
+    public static int? GetNullableIntValue(this GroupCollection groups, string groupName)
+        => groups.TryGetValue(groupName, out var match) && int.TryParse(match.Value, out var value)
+            ? value
+            : null;
 }

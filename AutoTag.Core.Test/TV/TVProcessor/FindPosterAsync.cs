@@ -14,8 +14,8 @@ public class FindPosterAsync : TVProcessorTestBase
         mockCache.Setup(c => c.TryGetSeasonPoster(It.IsAny<int>(), It.IsAny<int>(), out url))
             .Returns(true);
 
-        var metadata = new TVFileMetadata();
-        
+        var metadata = new TVFileMetadata { Title = "", SeriesName = "" };
+
         var instance = GetInstance(cache: mockCache.Object);
 
         await instance.FindPosterAsync(metadata);
@@ -38,15 +38,15 @@ public class FindPosterAsync : TVProcessorTestBase
                 ]
             });
 
-        var metadata = new TVFileMetadata();
+        var metadata = new TVFileMetadata { Title = "", SeriesName = "" };
 
-        var instance = GetInstance(tmdb: mockTmdb.Object);
+        var instance = GetInstance(mockTmdb.Object);
 
         await instance.FindPosterAsync(metadata);
 
         metadata.CoverURL.Should().Be("https://image.tmdb.org/t/p/original/file2");
     }
-    
+
     [Fact]
     public async Task Should_ReportErrorAndMarkAsIncomplete_When_NoPostersFound()
     {
@@ -59,9 +59,9 @@ public class FindPosterAsync : TVProcessorTestBase
 
         var mockUi = new Mock<IUserInterface>();
 
-        var metadata = new TVFileMetadata();
+        var metadata = new TVFileMetadata { Title = "", SeriesName = "" };
 
-        var instance = GetInstance(tmdb: mockTmdb.Object, ui: mockUi.Object);
+        var instance = GetInstance(mockTmdb.Object, ui: mockUi.Object);
 
         await instance.FindPosterAsync(metadata);
 

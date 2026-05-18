@@ -1,27 +1,23 @@
-﻿using System.Text.RegularExpressions;
-using AutoTag.Core.Config;
+﻿using AutoTag.Core.Config;
+using AutoTag.Core.Files;
+using TagLib;
+using File = TagLib.File;
 
 namespace AutoTag.Core;
+
 public abstract class FileMetadata
 {
-    public int Id { get; set; }
-    public string? Title { get; set; }
-    public string? Overview { get; set; }
+    public int Id { get; init; }
+    public required string Title { get; init; }
+    public string? Overview { get; init; }
     public string? CoverURL { get; set; }
-    public bool Success { get; set; }
-    public bool Complete { get; set; }
+    public bool Complete { get; set; } = true;
     public string? Director { get; set; }
     public IEnumerable<string>? Actors { get; set; }
     public IEnumerable<string>? Characters { get; set; }
-    public IEnumerable<string>? Genres { get; set; }
+    public IEnumerable<string>? Genres { get; init; }
 
-    public FileMetadata()
-    {
-        Success = true;
-        Complete = true;
-    }
-
-    public virtual void WriteToFile(TagLib.File file, AutoTagConfig config, IUserInterface ui)
+    public virtual void WriteToFile(File file, AutoTagConfig config, IUserInterface ui)
     {
         file.Tag.Title = Title;
         file.Tag.Description = Overview;
@@ -31,7 +27,7 @@ public abstract class FileMetadata
             file.Tag.Genres = Genres.ToArray();
         }
 
-        if (config.ExtendedTagging && (file.TagTypes & TagLib.TagTypes.Matroska) == TagLib.TagTypes.Matroska)
+        if (config.ExtendedTagging && (file.TagTypes & TagTypes.Matroska) == TagTypes.Matroska)
         {
             file.Tag.Conductor = Director;
             file.Tag.Performers = Actors?.ToArray();
@@ -39,21 +35,9 @@ public abstract class FileMetadata
         }
     }
 
-    public abstract string GetFileName(AutoTagConfig config);
+    public abstract string GetRenamePattern(AutoTagConfig config);
 
-    protected static readonly Regex RenameRegex = new(@"%(?<num>\d+)(?:\:(?<format>[0#]+))?");
-
-    protected static string FormatRenameNumber(Match match, int value)
-    {
-        if (match.Groups.TryGetValue("format", out var format))
-        {
-            return value.ToString(format.Value);
-        }
-        else
-        {
-            return value.ToString();
-        }
-    }
+    public abstract IEnumerable<IFileNameField> GetRenameFields();
 
     public abstract override string ToString();
 }

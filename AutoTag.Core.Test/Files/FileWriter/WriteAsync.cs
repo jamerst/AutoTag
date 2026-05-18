@@ -1,14 +1,28 @@
 using AutoTag.Core.Config;
 using AutoTag.Core.Files;
 using AutoTag.Core.Movie;
+using AutoTag.Core.Test.Helpers;
 using AutoTag.Core.TV;
 
 namespace AutoTag.Core.Test.Files.FileWriter;
 
 public class WriteAsync
 {
+    private static Core.Files.FileWriter GetInstance(ICoverArtFetcher? fetcher = null, AutoTagConfig? config = null,
+        IFileSystem? fs = null, IUserInterface? ui = null, IFileNamer? namer = null)
+        => new(
+            fetcher.OrDefaultMock(),
+            config.OrDefaultMock(),
+            fs.OrDefaultMock(),
+            ui.OrDefaultMock(),
+            namer ?? new Core.Files.FileNamer(config.OrDefaultMock())
+        );
+
+    private static string GetPath(params string[] segments) =>
+        Path.Combine([OperatingSystem.IsWindows() ? @"C:\" : "/", ..segments]);
+
     [Fact]
-    public async Task Should_Skip_Rename_When_Video_And_Subtitle_Are_Already_Correctly_Named()
+    public async Task Should_SkipRename_WhenVideoAndSubtitleAreAlreadyCorrectlyNamed()
     {
         var config = new AutoTagConfig
         {
@@ -17,14 +31,16 @@ public class WriteAsync
         };
 
         var mockFs = new Mock<IFileSystem>();
-        var mockUi = new Mock<IUserInterface>();
-        var mockCoverArtFetcher = new Mock<ICoverArtFetcher>();
+        mockFs.Setup(fs => fs.GetDirectoryPath(It.IsAny<string>()))
+            .Returns(GetPath());
 
-        var writer = new Core.Files.FileWriter(mockCoverArtFetcher.Object, config, mockFs.Object, mockUi.Object);
+        var mockUi = new Mock<IUserInterface>();
+
+        var writer = GetInstance(config: config, fs: mockFs.Object, ui: mockUi.Object);
         var taggingFile = new TaggingFile
         {
-            Path = @"C:\Media\Movie (2020).mkv",
-            SubtitlePath = @"C:\Media\Movie (2020).srt"
+            Path = GetPath("Movie (2020).mkv"),
+            SubtitlePaths = [GetPath("Movie (2020).srt")]
         };
 
         var metadata = new MovieFileMetadata
@@ -37,11 +53,12 @@ public class WriteAsync
 
         result.Should().BeTrue();
         mockFs.Verify(fs => fs.Move(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
-        mockUi.Verify(ui => ui.SetStatus("Rename skipped - already named correctly", MessageType.Information), Times.Once);
+        mockUi.Verify(ui => ui.SetStatus("Rename skipped - already named correctly", MessageType.Information),
+            Times.Once);
     }
 
     [Fact]
-    public async Task Should_Not_Skip_When_Subtitle_Name_Is_Still_Wrong()
+    public async Task Should_NotSkip_WhenSubtitleNameIsWrong()
     {
         var config = new AutoTagConfig
         {
@@ -50,17 +67,22 @@ public class WriteAsync
         };
 
         var mockFs = new Mock<IFileSystem>();
-        mockFs.Setup(fs => fs.Exists(@"C:\Media\Movie (2020).srt"))
+
+        var inPath = GetPath("subtitle.srt");
+        var outPath = GetPath("Movie (2020).srt");
+
+        mockFs.Setup(fs => fs.Exists(outPath))
             .Returns(false);
+        mockFs.Setup(fs => fs.GetDirectoryPath(It.IsAny<string>()))
+            .Returns(GetPath());
 
         var mockUi = new Mock<IUserInterface>();
-        var mockCoverArtFetcher = new Mock<ICoverArtFetcher>();
 
-        var writer = new Core.Files.FileWriter(mockCoverArtFetcher.Object, config, mockFs.Object, mockUi.Object);
+        var writer = GetInstance(config: config, fs: mockFs.Object, ui: mockUi.Object);
         var taggingFile = new TaggingFile
         {
-            Path = @"C:\Media\Movie (2020).mkv",
-            SubtitlePath = @"C:\Media\subtitle.srt"
+            Path = GetPath("Movie (2020).mkv"),
+            SubtitlePaths = [GetPath(inPath)]
         };
 
         var metadata = new MovieFileMetadata
@@ -72,142 +94,65 @@ public class WriteAsync
         var result = await writer.WriteAsync(taggingFile, metadata);
 
         result.Should().BeTrue();
-        mockFs.Verify(fs => fs.Move(@"C:\Media\subtitle.srt", @"C:\Media\Movie (2020).srt"), Times.Once);
-        mockUi.Verify(ui => ui.SetStatus("File skipped - already named correctly", MessageType.Information), Times.Never);
+        mockFs.Verify(fs => fs.Move(inPath, outPath), Times.Once);
+        mockUi.Verify(ui => ui.SetStatus("File skipped - already named correctly", MessageType.Information),
+            Times.Never);
     }
 
     [Fact]
-    public async Task Should_Tag_File_When_Rename_Is_Skipped_Because_Name_Is_Already_Correct()
+    public async Task Should_TagFile_WhenRenameIsSkipped()
     {
         var config = new AutoTagConfig
         {
-            RenameFiles = true,
+            RenameFiles = false,
             TagFiles = true
         };
         var mockUi = new Mock<IUserInterface>();
-        var writer = new Core.Files.FileWriter(
-            new Mock<ICoverArtFetcher>().Object,
-            config,
-            new Mock<IFileSystem>().Object,
-            mockUi.Object
-        );
+        var writer = GetInstance(config: config, ui: mockUi.Object);
         var metadata = new MovieFileMetadata
         {
             Title = "Movie",
             Date = new DateTime(2020, 1, 1)
         };
 
-        var result = await writer.WriteAsync(new TaggingFile { Path = @"C:\Media\Movie (2020).mkv" }, metadata);
+        var result = await writer.WriteAsync(new TaggingFile { Path = GetPath("Movie (2020).mkv") }, metadata);
 
         result.Should().BeFalse();
-        mockUi.Verify(ui => ui.SetStatus("Error: Failed to write tags to file", MessageType.Error, It.IsAny<Exception>()), Times.Once);
+        mockUi.Verify(
+            ui => ui.SetStatus("Error: Failed to write tags to file", MessageType.Error, It.IsAny<Exception>()),
+            Times.Once);
     }
 
     [Fact]
-    public async Task Should_Move_Movie_Into_Named_Folder_When_OrganizeFolders_Enabled()
+    public async Task Should_RemoveSourceFolder_WhenSourceFolderIsEmptyAndAbsolutePatternUsed()
     {
         var config = new AutoTagConfig
         {
-            OrganizeFolders = true,
-            RenameFiles = true,
-            TagFiles = false
-        };
-
-        var mockFs = new Mock<IFileSystem>();
-        mockFs.Setup(fs => fs.Exists(@"C:\Media\Movie (2020)\Movie (2020).mkv"))
-            .Returns(false);
-
-        var mockUi = new Mock<IUserInterface>();
-        var mockCoverArtFetcher = new Mock<ICoverArtFetcher>();
-
-        var writer = new Core.Files.FileWriter(mockCoverArtFetcher.Object, config, mockFs.Object, mockUi.Object);
-        var taggingFile = new TaggingFile
-        {
-            Path = @"C:\Media\Downloads\raw.mkv",
-            RootPath = @"C:\Media"
-        };
-
-        var metadata = new MovieFileMetadata
-        {
-            Title = "Movie",
-            Date = new DateTime(2020, 1, 1)
-        };
-
-        var result = await writer.WriteAsync(taggingFile, metadata);
-
-        result.Should().BeTrue();
-        mockFs.Verify(fs => fs.CreateDirectory(It.Is<DirectoryInfo>(d => d.FullName == @"C:\Media\Movie (2020)")), Times.Once);
-        mockFs.Verify(fs => fs.Move(@"C:\Media\Downloads\raw.mkv", @"C:\Media\Movie (2020)\Movie (2020).mkv"), Times.Once);
-    }
-
-    [Fact]
-    public async Task Should_Move_TV_Special_Into_Specials_Folder_When_OrganizeFolders_Enabled()
-    {
-        var config = new AutoTagConfig
-        {
-            OrganizeFolders = true,
-            RenameFiles = true,
-            TagFiles = false
-        };
-
-        var mockFs = new Mock<IFileSystem>();
-        mockFs.Setup(fs => fs.Exists(@"C:\Media\Series\Specials\Series - 0x01 - Pilot.mkv"))
-            .Returns(false);
-
-        var mockUi = new Mock<IUserInterface>();
-        var mockCoverArtFetcher = new Mock<ICoverArtFetcher>();
-
-        var writer = new Core.Files.FileWriter(mockCoverArtFetcher.Object, config, mockFs.Object, mockUi.Object);
-        var taggingFile = new TaggingFile
-        {
-            Path = @"C:\Media\Downloads\raw.mkv",
-            RootPath = @"C:\Media"
-        };
-
-        var metadata = new TVFileMetadata
-        {
-            SeriesName = "Series",
-            Season = 0,
-            Episode = 1,
-            Title = "Pilot"
-        };
-
-        var result = await writer.WriteAsync(taggingFile, metadata);
-
-        result.Should().BeTrue();
-        mockFs.Verify(fs => fs.CreateDirectory(It.Is<DirectoryInfo>(d => d.FullName == @"C:\Media\Series\Specials")), Times.Once);
-        mockFs.Verify(fs => fs.Move(@"C:\Media\Downloads\raw.mkv", @"C:\Media\Series\Specials\Series - 0x01 - Pilot.mkv"), Times.Once);
-    }
-
-    [Fact]
-    public async Task Should_Remove_Source_Folder_When_Organized_And_Source_Folder_Is_Empty()
-    {
-        var config = new AutoTagConfig
-        {
-            OrganizeFolders = true,
+            MovieRenamePattern = GetPath("Movies", "{Title} ({Year})"),
             RemoveEmptyFolders = true,
             RenameFiles = true,
             TagFiles = false
         };
 
         var mockFs = new Mock<IFileSystem>();
-        mockFs.Setup(fs => fs.Exists(@"C:\Media\Movie (2020)\Movie (2020).mkv"))
+        mockFs.Setup(fs => fs.Exists(GetPath("Movies", "Movie (2020).mkv")))
             .Returns(false);
-        mockFs.Setup(fs => fs.DirectoryExists(@"C:\Media\Downloads"))
+        mockFs.Setup(fs => fs.DirectoryExists(GetPath("Downloads")))
             .Returns(true);
-        mockFs.Setup(fs => fs.DirectoryIsEmpty(@"C:\Media\Downloads"))
+        mockFs.Setup(fs => fs.DirectoryIsEmpty(GetPath("Downloads")))
             .Returns(true);
+        mockFs.Setup(fs => fs.GetDirectoryPath(It.Is((string s) => s.Contains("Downloads"))))
+            .Returns(GetPath("Downloads"));
+        mockFs.Setup(fs => fs.GetDirectoryPath(It.Is((string s) => s.Contains("Movies"))))
+            .Returns(GetPath("Movies"));
+        mockFs.Setup(fs => fs.PathContainsDirectory(It.IsAny<string>())).Returns(true);
 
-        var writer = new Core.Files.FileWriter(
-            new Mock<ICoverArtFetcher>().Object,
-            config,
-            mockFs.Object,
-            new Mock<IUserInterface>().Object
-        );
+        var downloads = GetPath("Downloads");
+
+        var writer = GetInstance(config: config, fs: mockFs.Object);
         var taggingFile = new TaggingFile
         {
-            Path = @"C:\Media\Downloads\raw.mkv",
-            RootPath = @"C:\Media"
+            Path = GetPath("Downloads", "raw.mkv")
         };
         var metadata = new MovieFileMetadata
         {
@@ -218,38 +163,35 @@ public class WriteAsync
         var result = await writer.WriteAsync(taggingFile, metadata);
 
         result.Should().BeTrue();
-        mockFs.Verify(fs => fs.DeleteDirectory(@"C:\Media\Downloads"), Times.Once);
+        mockFs.Verify(fs => fs.DeleteDirectory(downloads), Times.Once);
     }
 
     [Fact]
-    public async Task Should_Not_Remove_Source_Folder_When_It_Is_Not_Empty()
+    public async Task Should_NotRemoveSourceFolder_WhenNotEmpty()
     {
         var config = new AutoTagConfig
         {
-            OrganizeFolders = true,
+            MovieRenamePattern = GetPath("Movies", "{Title} ({Year})"),
             RemoveEmptyFolders = true,
             RenameFiles = true,
             TagFiles = false
         };
 
         var mockFs = new Mock<IFileSystem>();
-        mockFs.Setup(fs => fs.Exists(@"C:\Media\Movie (2020)\Movie (2020).mkv"))
+        mockFs.Setup(fs => fs.Exists(GetPath("Movies", "Movie (2020).mkv")))
             .Returns(false);
-        mockFs.Setup(fs => fs.DirectoryExists(@"C:\Media\Downloads"))
+        mockFs.Setup(fs => fs.DirectoryExists("Downloads"))
             .Returns(true);
-        mockFs.Setup(fs => fs.DirectoryIsEmpty(@"C:\Media\Downloads"))
+        mockFs.Setup(fs => fs.DirectoryIsEmpty("Downloads"))
             .Returns(false);
+        mockFs.Setup(fs => fs.GetDirectoryPath(It.IsAny<string>()))
+            .Returns(GetPath());
+        mockFs.Setup(fs => fs.PathContainsDirectory(It.IsAny<string>())).Returns(true);
 
-        var writer = new Core.Files.FileWriter(
-            new Mock<ICoverArtFetcher>().Object,
-            config,
-            mockFs.Object,
-            new Mock<IUserInterface>().Object
-        );
+        var writer = GetInstance(config: config, fs: mockFs.Object);
         var taggingFile = new TaggingFile
         {
-            Path = @"C:\Media\Downloads\raw.mkv",
-            RootPath = @"C:\Media"
+            Path = GetPath("Downloads", "raw.mkv")
         };
         var metadata = new MovieFileMetadata
         {
@@ -264,31 +206,26 @@ public class WriteAsync
     }
 
     [Fact]
-    public async Task Should_Rename_Multiple_Subtitles_With_Numbered_Suffixes()
+    public async Task Should_RenameMultipleSubtitlesWithNumberedSuffixes()
     {
         var config = new AutoTagConfig
         {
-            OrganizeFolders = true,
             RenameFiles = true,
             TagFiles = false
         };
 
         var mockFs = new Mock<IFileSystem>();
-        var writer = new Core.Files.FileWriter(
-            new Mock<ICoverArtFetcher>().Object,
-            config,
-            mockFs.Object,
-            new Mock<IUserInterface>().Object
-        );
+        mockFs.Setup(fs => fs.GetDirectoryPath(It.IsAny<string>()))
+            .Returns(GetPath());
+
+        var writer = GetInstance(config: config, fs: mockFs.Object);
+
+        var sub1Path = GetPath("sub-one.ass");
+        var sub2Path = GetPath("sub-two.ass");
         var taggingFile = new TaggingFile
         {
-            Path = @"C:\Media\Downloads\raw.mkv",
-            RootPath = @"C:\Media",
-            SubtitlePaths =
-            [
-                @"C:\Media\Downloads\sub-one.ass",
-                @"C:\Media\Downloads\sub-two.ass"
-            ]
+            Path = GetPath("raw.mkv"),
+            SubtitlePaths = [sub1Path, sub2Path]
         };
         var metadata = new TVFileMetadata
         {
@@ -300,14 +237,17 @@ public class WriteAsync
 
         var result = await writer.WriteAsync(taggingFile, metadata);
 
+        var sub1OutPath = GetPath("Series - 1x01 - Pilot.1.ass");
+        var sub2OutPath = GetPath("Series - 1x01 - Pilot.2.ass");
+
         result.Should().BeTrue();
         mockFs.Verify(fs => fs.Move(
-            @"C:\Media\Downloads\sub-one.ass",
-            @"C:\Media\Series\Season 01\Series - 1x01 - Pilot.1.ass"
+            sub1Path,
+            sub1OutPath
         ), Times.Once);
         mockFs.Verify(fs => fs.Move(
-            @"C:\Media\Downloads\sub-two.ass",
-            @"C:\Media\Series\Season 01\Series - 1x01 - Pilot.2.ass"
+            sub2Path,
+            sub2OutPath
         ), Times.Once);
     }
 }

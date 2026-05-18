@@ -4,6 +4,10 @@ namespace AutoTag.CLI.Settings;
 
 public partial class RootCommandSettings
 {
+    [CommandOption("-a|--auto")]
+    [Description("Auto tagging mode (auto select mode based on file name)")]
+    public bool AutoMode { get; init; }
+
     [CommandOption("-t|--tv")]
     [Description("TV tagging mode")]
     public bool TVMode { get; init; }
@@ -35,8 +39,8 @@ public partial class RootCommandSettings
     [CommandOption("-l|--language <language>")]
     [Description("Metadata language (default: en)")]
     public string? Language { get; init; }
-    
-    [CommandOption("-sl|--search-language <language>")]
+
+    [CommandOption("--search-language <language>")]
     [Description("Additional languages to use when searching TMDB")]
     public string[] SearchLanguages { get; init; }
 
@@ -48,16 +52,17 @@ public partial class RootCommandSettings
     [Description("Include adult titles in TMDB searches")]
     public bool? IncludeAdult { get; init; }
 
-    [CommandOption("--organize-folders")]
-    [Description("Move files into media folders after tagging")]
-    public bool? OrganizeFolders { get; init; }
-
     [CommandOption("--remove-empty-folders")]
     [Description("Remove source folders after moving files if they are empty")]
     public bool? RemoveEmptyFolders { get; init; }
 
     private void SetTaggingOptions(AutoTagConfig config)
     {
+        if (AutoMode)
+        {
+            config.Mode = Mode.Auto;
+        }
+
         if (TVMode)
         {
             config.Mode = Mode.TV;
@@ -111,11 +116,6 @@ public partial class RootCommandSettings
         if (IncludeAdult.HasValue)
         {
             config.IncludeAdult = IncludeAdult.Value;
-        }
-
-        if (OrganizeFolders.HasValue)
-        {
-            config.OrganizeFolders = OrganizeFolders.Value;
         }
 
         if (RemoveEmptyFolders.HasValue)

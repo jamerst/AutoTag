@@ -3,25 +3,19 @@ using AutoTag.Core.Files;
 using AutoTag.Core.TMDB;
 
 namespace AutoTag.Core.Movie;
+
 public class MovieProcessor(ITMDBService tmdb, IFileWriter writer, IUserInterface ui, AutoTagConfig config) : IProcessor
 {
     public async Task<ProcessResult> ProcessAsync(TaggingFile file)
     {
-        if (MovieNameNormalizer.LooksLikeTvEpisode(Path.GetFileName(file.Path)))
+        if (file.MovieDetails is null)
         {
-            ui.SetStatus("File skipped - filename looks like a TV episode", MessageType.Warning);
             return ProcessResult.ParseFailure;
         }
 
-        if (!MovieNameNormalizer.TryParseFileName(Path.GetFileName(file.Path), out string? title, out int? year))
-        {
-            ui.SetStatus("Error: Failed to parse required information from filename", MessageType.Error);
-            return ProcessResult.ParseFailure;
-        }
-        
-        ui.SetStatus($"Parsed file as {title}", MessageType.Log);
+        ui.SetStatus($"Parsed file as {file.MovieDetails}", MessageType.Log);
 
-        var (findMovieResult, selectedResult) = await FindMovieAsync(title, year);
+        var (findMovieResult, selectedResult) = await FindMovieAsync(file.MovieDetails.Title, file.MovieDetails.Year);
         switch (findMovieResult)
         {
             case FindResult.Fail:
@@ -30,13 +24,15 @@ public class MovieProcessor(ITMDBService tmdb, IFileWriter writer, IUserInterfac
                 return ProcessResult.Skipped;
         }
 
-        ui.SetStatus($"Found {selectedResult!.Title} ({selectedResult.ReleaseDate?.Year.ToString() ?? "unknown year"}) on TheMovieDB", MessageType.Information);
+        ui.SetStatus(
+            $"Found {selectedResult!.Title} ({selectedResult.ReleaseDate?.Year.ToString() ?? "unknown year"}) on TheMovieDB",
+            MessageType.Information);
 
         var result = await GetMovieMetadataAsync(selectedResult, file.Taggable);
-        
-        bool taggingSuccess = await writer.WriteAsync(file, result);
 
-        return taggingSuccess && result.Success && result.Complete
+        var taggingSuccess = await writer.WriteAsync(file, result);
+
+        return taggingSuccess && result.Complete
             ? ProcessResult.Success
             : ProcessResult.Fail;
     }
@@ -82,12 +78,13 @@ public class MovieProcessor(ITMDBService tmdb, IFileWriter writer, IUserInterfac
                 .Select(m => $"{m.Title} ({m.ReleaseDate?.Year.ToString() ?? "Unknown"})")
                 .ToList()
         );
-        
+
         if (selection.HasValue)
         {
             var selected = manualResults[selection.Value];
-            ui.SetStatus($"Selected {selected.Title} ({selected.ReleaseDate?.Year.ToString() ?? "Unknown"})", MessageType.Information);
-            
+            ui.SetStatus($"Selected {selected.Title} ({selected.ReleaseDate?.Year.ToString() ?? "Unknown"})",
+                MessageType.Information);
+
             return (FindResult.Success, selected);
         }
 
@@ -101,7 +98,7 @@ public class MovieProcessor(ITMDBService tmdb, IFileWriter writer, IUserInterfac
         var movie = selectedResult.Language == config.Language
             ? selectedResult
             : await tmdb.GetMovieAsync(selectedResult.Id);
-        
+
         var result = new MovieFileMetadata
         {
             Id = selectedResult.Id,
@@ -110,10 +107,9 @@ public class MovieProcessor(ITMDBService tmdb, IFileWriter writer, IUserInterfac
             CoverURL = string.IsNullOrEmpty(movie.PosterPath)
                 ? null
                 : $"https://image.tmdb.org/t/p/original{movie.PosterPath}",
-            Date = movie.ReleaseDate
+            Date = movie.ReleaseDate,
+            Genres = movie.Genres
         };
-        
-        result.Genres = movie.Genres;
 
         if (config.ExtendedTagging && fileIsTaggable)
         {
@@ -135,7 +131,7 @@ public class MovieProcessor(ITMDBService tmdb, IFileWriter writer, IUserInterfac
 
     private IEnumerable<MovieSearchAttempt> GetSearchAttempts(string title, int? year)
     {
-        foreach (var candidate in MovieNameNormalizer.GetSearchCandidates(title))
+        foreach (var candidate in GetSearchCandidates(title))
         {
             foreach (var language in GetSearchLanguages())
             {
@@ -147,6 +143,25 @@ public class MovieProcessor(ITMDBService tmdb, IFileWriter writer, IUserInterfac
                 yield return new MovieSearchAttempt(candidate, null, language);
             }
         }
+    }
+
+    private static HashSet<string> GetSearchCandidates(string title)
+    {
+        var candidates = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            title
+        };
+
+        var words = title.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (words.Length > 4)
+        {
+            for (var removedWords = 1; removedWords <= Math.Min(3, words.Length - 3); removedWords++)
+            {
+                candidates.Add(string.Join(' ', words.Take(words.Length - removedWords)));
+            }
+        }
+
+        return candidates;
     }
 
     private IEnumerable<string> GetSearchLanguages()

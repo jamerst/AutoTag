@@ -1,5 +1,6 @@
 using AutoTag.Core.Config;
 using AutoTag.Core.Files;
+using AutoTag.Core.Files.Parsing;
 using AutoTag.Core.TMDB;
 using AutoTag.Core.TV;
 using TMDbLib.Objects.General;
@@ -30,22 +31,23 @@ public class ProcessAsync : TVProcessorTestBase
         mockTmdb.Setup(tmdb => tmdb.SearchTvShowAsync(It.IsAny<string>()))
             .ReturnsAsync(new SearchContainer<SearchTv> { Results = [] });
 
-        var instance = GetInstance(tmdb: mockTmdb.Object);
+        var instance = GetInstance(mockTmdb.Object);
 
         var result = await instance.ProcessAsync(new TaggingFile
         {
-            Path = "/Show/Show S01E02.mp4"
+            Path = "/Show/Show S01E02.mp4",
+            TVDetails = new ParsedTVFileName("Show", null, 1, 2, null, null)
         });
 
         result.Should().Be(ProcessResult.NotFound);
         mockTmdb.Verify(tmdb => tmdb.SearchTvShowAsync(It.IsAny<string>()), Times.Once);
     }
-    
+
     [Fact]
     public async Task Should_ReturnSkippedAndShowWarning_When_FileSkipped()
     {
         var config = new AutoTagConfig { ManualMode = true };
-        
+
         var mockTmdb = new Mock<ITMDBService>();
         mockTmdb.Setup(tmdb => tmdb.SearchTvShowAsync(It.IsAny<string>()))
             .ReturnsAsync(new SearchContainer<SearchTv> { Results = [new SearchTv { Name = "Show" }] });
@@ -54,24 +56,22 @@ public class ProcessAsync : TVProcessorTestBase
         mockUi.Setup(ui => ui.SelectOption(It.IsAny<string>(), It.IsAny<List<string>>()))
             .Returns((int?)null);
 
-        var instance = GetInstance(tmdb: mockTmdb.Object, ui: mockUi.Object, config: config);
+        var instance = GetInstance(mockTmdb.Object, ui: mockUi.Object, config: config);
 
         var result = await instance.ProcessAsync(new TaggingFile
         {
-            Path = "/Show/Show S01E02.mp4"
+            Path = "/Show/Show S01E02.mp4",
+            TVDetails = new ParsedTVFileName("Show", null, 1, 2, null, null)
         });
 
         result.Should().Be(ProcessResult.Skipped);
         mockUi.Verify(ui => ui.SetStatus("File skipped", MessageType.Warning));
     }
-    
+
     [Fact]
     public async Task Should_ReturnNotFound_When_FindEpisodeFails()
     {
         var mockCache = new Mock<ITVCache>();
-        
-        mockCache.Setup(c => c.ShowIsCached(It.IsAny<string>()))
-            .Returns(true);
 
         var show = new ShowResults(new SearchTv { Name = "Show" });
         show.AddEpisodeGroup(
@@ -96,10 +96,10 @@ public class ProcessAsync : TVProcessorTestBase
             },
             out _
         );
-        
-        mockCache.Setup(c => c.GetShow(It.IsAny<string>()))
-            .Returns([show]);
-        
+        List<ShowResults>? showResults = [show];
+        mockCache.Setup(c => c.TryGetShow(It.IsAny<string>(), It.IsAny<int?>(), out showResults))
+            .Returns(true);
+
         TvSeason? season = null;
         mockCache.Setup(c => c.TryGetSeason(It.IsAny<int>(), It.IsAny<int>(), out season))
             .Returns(false);
@@ -110,7 +110,8 @@ public class ProcessAsync : TVProcessorTestBase
 
         var result = await instance.ProcessAsync(new TaggingFile
         {
-            Path = "/Show/Show S01E02.mp4"
+            Path = "/Show/Show S01E02.mp4",
+            TVDetails = new ParsedTVFileName("Show", null, 1, 2, null, null)
         });
 
         result.Should().Be(ProcessResult.NotFound);
@@ -120,13 +121,11 @@ public class ProcessAsync : TVProcessorTestBase
     public async Task Should_ReturnNotFoundAndShowError_When_ReachedEndOfSearchResultsWithoutFindingEpisode()
     {
         var mockCache = new Mock<ITVCache>();
-        
-        mockCache.Setup(c => c.ShowIsCached(It.IsAny<string>()))
+
+        List<ShowResults>? showResults = [new ShowResults(new SearchTv { Name = "Show" })];
+        mockCache.Setup(c => c.TryGetShow(It.IsAny<string>(), It.IsAny<int?>(), out showResults))
             .Returns(true);
-        
-        mockCache.Setup(c => c.GetShow(It.IsAny<string>()))
-            .Returns([ new ShowResults(new SearchTv { Name = "Show" }) ]);
-        
+
         TvSeason? season = null;
         mockCache.Setup(c => c.TryGetSeason(It.IsAny<int>(), It.IsAny<int>(), out season))
             .Returns(false);
@@ -137,7 +136,8 @@ public class ProcessAsync : TVProcessorTestBase
 
         var result = await instance.ProcessAsync(new TaggingFile
         {
-            Path = "/Show/Show S01E02.mp4"
+            Path = "/Show/Show S01E02.mp4",
+            TVDetails = new ParsedTVFileName("Show", null, 1, 2, null, null)
         });
 
         result.Should().Be(ProcessResult.NotFound);
@@ -148,13 +148,11 @@ public class ProcessAsync : TVProcessorTestBase
     public async Task Should_FindCoverArtFromSeason_When_NoCoverFromEpisode()
     {
         var mockCache = new Mock<ITVCache>();
-        
-        mockCache.Setup(c => c.ShowIsCached(It.IsAny<string>()))
+
+        List<ShowResults>? showResults = [new ShowResults(new SearchTv { Name = "Show" })];
+        mockCache.Setup(c => c.TryGetShow(It.IsAny<string>(), It.IsAny<int?>(), out showResults))
             .Returns(true);
-        
-        mockCache.Setup(c => c.GetShow(It.IsAny<string>()))
-            .Returns([ new ShowResults(new SearchTv { Name = "Show" }) ]);
-        
+
         var season = new TvSeason
         {
             Episodes = [new TvSeasonEpisode { EpisodeNumber = 2 }]
@@ -175,6 +173,7 @@ public class ProcessAsync : TVProcessorTestBase
         var result = await instance.ProcessAsync(new TaggingFile
         {
             Path = "/Show/Show S01E02.mp4",
+            TVDetails = new ParsedTVFileName("Show", null, 1, 2, null, null),
             Taggable = true
         });
 
@@ -186,15 +185,13 @@ public class ProcessAsync : TVProcessorTestBase
     public async Task Should_WriteFileAndReturnSuccess_When_Succeeds()
     {
         var config = new AutoTagConfig { AddCoverArt = false };
-        
+
         var mockCache = new Mock<ITVCache>();
-        
-        mockCache.Setup(c => c.ShowIsCached(It.IsAny<string>()))
+
+        List<ShowResults>? showResults = [new ShowResults(new SearchTv { Name = "Show" })];
+        mockCache.Setup(c => c.TryGetShow(It.IsAny<string>(), It.IsAny<int?>(), out showResults))
             .Returns(true);
-        
-        mockCache.Setup(c => c.GetShow(It.IsAny<string>()))
-            .Returns([ new ShowResults(new SearchTv { Name = "Show" }) ]);
-        
+
         var season = new TvSeason
         {
             Episodes = [new TvSeasonEpisode { EpisodeNumber = 2 }]
@@ -210,7 +207,8 @@ public class ProcessAsync : TVProcessorTestBase
 
         var result = await instance.ProcessAsync(new TaggingFile
         {
-            Path = "/Show/Show S01E02.mp4"
+            Path = "/Show/Show S01E02.mp4",
+            TVDetails = new ParsedTVFileName("Show", null, 1, 2, null, null)
         });
 
         result.Should().Be(ProcessResult.Success);

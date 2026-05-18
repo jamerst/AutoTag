@@ -13,18 +13,20 @@ public class FindShowAsync : TVProcessorTestBase
     public async Task Should_NotQueryAPI_When_ShowAlreadyInCache()
     {
         var mockCache = new Mock<ITVCache>();
-        mockCache.Setup(c => c.ShowIsCached(It.IsAny<string>())).Returns(true);
+        List<ShowResults>? showResult = [];
+        mockCache.Setup(c => c.TryGetShow(It.IsAny<string>(), It.IsAny<int?>(), out showResult))
+            .Returns(true);
 
         var mockTmdb = new Mock<ITMDBService>();
 
-        var tv = GetInstance(tmdb: mockTmdb.Object, cache: mockCache.Object);
+        var tv = GetInstance(mockTmdb.Object, cache: mockCache.Object);
 
-        var result = await tv.FindShowAsync("a");
+        var (result, _) = await tv.FindShowAsync("a", null);
 
         result.Should().Be(FindResult.Success);
         mockTmdb.Verify(t => t.SearchTvShowAsync(It.IsAny<string>()), Times.Never);
     }
-    
+
     [Fact]
     public async Task Should_ReportError_When_NoTMDBSearchResults()
     {
@@ -37,9 +39,9 @@ public class FindShowAsync : TVProcessorTestBase
 
         var mockUi = new Mock<IUserInterface>();
 
-        var tv = GetInstance(tmdb: mockTmdb.Object, ui: mockUi.Object);
+        var tv = GetInstance(mockTmdb.Object, ui: mockUi.Object);
 
-        var result = await tv.FindShowAsync("series name");
+        var (result, _) = await tv.FindShowAsync("series name", null);
 
         result.Should().Be(FindResult.Fail);
         mockUi.Verify(ui => ui.SetStatus("Error: Cannot find series series name on TheMovieDB", MessageType.Error),
@@ -48,12 +50,10 @@ public class FindShowAsync : TVProcessorTestBase
     }
 
     [Fact]
-    public async Task Should_RetryWithoutTrailingYear_When_InitialSearchHasNoResults()
+    public async Task Should_OrderResultsWithMatchingYearFirst_When_YearProvided()
     {
         var mockTmdb = new Mock<ITMDBService>();
-        mockTmdb.Setup(tmdb => tmdb.SearchTvShowAsync("The Looney Tunes Show (2011)"))
-            .ReturnsAsync(new SearchContainer<SearchTv> { Results = [] });
-        mockTmdb.Setup(tmdb => tmdb.SearchTvShowAsync("The Looney Tunes Show"))
+        mockTmdb.Setup(tmdb => tmdb.SearchTvShowAsync(It.IsAny<string>()))
             .ReturnsAsync(new SearchContainer<SearchTv>
             {
                 Results =
@@ -61,26 +61,40 @@ public class FindShowAsync : TVProcessorTestBase
                     new SearchTv
                     {
                         Id = 1,
-                        Name = "The Looney Tunes Show"
+                        Name = "Series name",
+                        FirstAirDate = new DateTime(1990, 01, 01)
+                    },
+                    new SearchTv
+                    {
+                        Id = 2,
+                        Name = "2",
+                        FirstAirDate = null
+                    },
+                    new SearchTv
+                    {
+                        Id = 3,
+                        Name = "Series name",
+                        FirstAirDate = new DateTime(2007, 01, 01)
+                    },
+                    new SearchTv
+                    {
+                        Id = 4,
+                        Name = "4",
+                        FirstAirDate = new DateTime(2007, 01, 01)
                     }
                 ]
             });
 
-        var mockCache = new Mock<ITVCache>();
-        var tv = GetInstance(tmdb: mockTmdb.Object, cache: mockCache.Object);
+        var mockUi = new Mock<IUserInterface>();
 
-        var result = await tv.FindShowAsync("The Looney Tunes Show (2011)");
+        var tv = GetInstance(mockTmdb.Object, ui: mockUi.Object);
 
-        result.Should().Be(FindResult.Success);
-        mockTmdb.Verify(tmdb => tmdb.SearchTvShowAsync("The Looney Tunes Show (2011)"), Times.Once);
-        mockTmdb.Verify(tmdb => tmdb.SearchTvShowAsync("The Looney Tunes Show"), Times.Once);
-        mockCache.Verify(c => c.AddShow(
-            "The Looney Tunes Show (2011)",
-            It.Is<List<ShowResults>>(results => results.Count == 1 && results[0].TvSearchResult.Name == "The Looney Tunes Show")),
-            Times.Once
-        );
+        var (_, showResults) = await tv.FindShowAsync("series name", 2007);
+
+        showResults.Should().NotBeNull();
+        showResults[0].TvSearchResult.Id.Should().Be(3);
     }
-    
+
     [Fact]
     public async Task Should_OnlyCacheSelectedResult_When_ManualModeEnabled()
     {
@@ -122,19 +136,20 @@ public class FindShowAsync : TVProcessorTestBase
         mockUi.Setup(ui => ui.SelectOption(It.IsAny<string>(), It.IsAny<List<string>>()))
             .Returns(results.IndexOf(selectedResult));
 
-        var tv = GetInstance(tmdb: mockTmdb.Object, cache: mockCache.Object, ui: mockUi.Object, config: config);
+        var tv = GetInstance(mockTmdb.Object, cache: mockCache.Object, ui: mockUi.Object, config: config);
 
-        var result = await tv.FindShowAsync("a");
+        var (result, _) = await tv.FindShowAsync("a", null);
 
         result.Should().Be(FindResult.Success);
         mockUi.Verify(ui => ui.SelectOption("Please choose an option:", It.IsAny<List<string>>()), Times.Once);
         mockCache.Verify(c => c.AddShow(
                 It.IsAny<string>(),
+                It.IsAny<int?>(),
                 It.Is<List<ShowResults>>(s => s.Count == 1 && s[0].TvSearchResult.Id == selectedResult.Id)),
             Times.Once
         );
     }
-    
+
     [Fact]
     public async Task Should_SkipFile_When_SelectOptionReturnsNull()
     {
@@ -142,22 +157,22 @@ public class FindShowAsync : TVProcessorTestBase
         {
             ManualMode = true
         };
-        
+
         var mockTmdb = new Mock<ITMDBService>();
         mockTmdb.Setup(tmdb => tmdb.SearchTvShowAsync(It.IsAny<string>()))
             .ReturnsAsync(new SearchContainer<SearchTv>
             {
                 Results = [new SearchTv { Name = "" }]
             });
-        
+
         var mockUi = new Mock<IUserInterface>();
         mockUi.Setup(ui => ui.SelectOption(It.IsAny<string>(), It.IsAny<List<string>>()))
             .Returns((int?)null);
 
-        var tv = GetInstance(tmdb: mockTmdb.Object, ui: mockUi.Object, config: config);
+        var tv = GetInstance(mockTmdb.Object, ui: mockUi.Object, config: config);
 
-        var result = await tv.FindShowAsync("");
-        
+        var (result, _) = await tv.FindShowAsync("", null);
+
         result.Should().Be(FindResult.Skip);
     }
 
@@ -168,14 +183,14 @@ public class FindShowAsync : TVProcessorTestBase
         {
             EpisodeGroup = true
         };
-        
+
         var mockTmdb = new Mock<ITMDBService>();
         mockTmdb.Setup(tmdb => tmdb.SearchTvShowAsync(It.IsAny<string>()))
             .ReturnsAsync(new SearchContainer<SearchTv>
             {
                 Results = [new SearchTv { Name = "" }]
             });
-        
+
         mockTmdb.Setup(tmdb => tmdb.GetTvShowWithEpisodeGroupsAsync(It.IsAny<int>()))
             .ReturnsAsync(new TvShow
             {
@@ -185,9 +200,9 @@ public class FindShowAsync : TVProcessorTestBase
                 }
             });
 
-        var tv = GetInstance(tmdb: mockTmdb.Object, config: config);
+        var tv = GetInstance(mockTmdb.Object, config: config);
 
-        var result = await tv.FindShowAsync("");
+        var (result, _) = await tv.FindShowAsync("", null);
         result.Should().Be(FindResult.Skip);
     }
 
@@ -198,7 +213,7 @@ public class FindShowAsync : TVProcessorTestBase
         {
             EpisodeGroup = true
         };
-        
+
         var mockTmdb = new Mock<ITMDBService>();
 
         var expectedShow = new SearchTv { Name = "Show 1" };
@@ -207,7 +222,7 @@ public class FindShowAsync : TVProcessorTestBase
             {
                 Results = [expectedShow, new SearchTv { Name = "Show 2" }]
             });
-        
+
         mockTmdb.Setup(tmdb => tmdb.GetTvShowWithEpisodeGroupsAsync(It.IsAny<int>()))
             .ReturnsAsync(new TvShow
             {
@@ -220,11 +235,14 @@ public class FindShowAsync : TVProcessorTestBase
         mockTmdb.Setup(tmdb => tmdb.GetTvEpisodeGroupsAsync(It.IsAny<string>()))
             .ReturnsAsync(new TvGroupCollection
             {
-                Groups = [new TvGroup
-                {
-                    Name = "Season 1",
-                    Episodes = []
-                }]
+                Groups =
+                [
+                    new TvGroup
+                    {
+                        Name = "Season 1",
+                        Episodes = []
+                    }
+                ]
             });
 
         var mockUi = new Mock<IUserInterface>();
@@ -233,12 +251,13 @@ public class FindShowAsync : TVProcessorTestBase
 
         var mockCache = new Mock<ITVCache>();
 
-        var tv = GetInstance(tmdb: mockTmdb.Object, ui: mockUi.Object, cache: mockCache.Object, config: config);
+        var tv = GetInstance(mockTmdb.Object, ui: mockUi.Object, cache: mockCache.Object, config: config);
 
-        await tv.FindShowAsync("");
-        
+        await tv.FindShowAsync("", null);
+
         mockCache.Verify(c => c.AddShow(
             It.IsAny<string>(),
+            It.IsAny<int?>(),
             It.Is<List<ShowResults>>(results => results.Count == 1
                 && results.Single().TvSearchResult == expectedShow)
         ));

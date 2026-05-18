@@ -1,53 +1,41 @@
 using AutoTag.Core.Config;
+using AutoTag.Core.Files;
+using TagLib;
+using TagLib.Mpeg4;
+using File = TagLib.File;
 
 namespace AutoTag.Core.Movie;
 
 public class MovieFileMetadata : FileMetadata
 {
-    public DateTime? Date { get; set; }
+    private const byte StikMovie = 9;
+    public DateTime? Date { get; init; }
 
-    public override void WriteToFile(TagLib.File file, AutoTagConfig config, IUserInterface ui)
+    public override void WriteToFile(File file, AutoTagConfig config, IUserInterface ui)
     {
         base.WriteToFile(file, config, ui);
 
         if (Date.HasValue)
         {
-            file.Tag.Year = (uint) Date.Value.Year;
+            file.Tag.Year = (uint)Date.Value.Year;
         }
 
-        if (config.AppleTagging && (file.TagTypes & TagLib.TagTypes.Apple) == TagLib.TagTypes.Apple)
+        if (config.AppleTagging && (file.TagTypes & TagTypes.Apple) == TagTypes.Apple)
         {
-            var appleTags = (TagLib.Mpeg4.AppleTag) file.GetTag(TagLib.TagTypes.Apple);
+            var appleTags = (AppleTag)file.GetTag(TagTypes.Apple);
 
             // Media Type - allows Apple software to recognise as a movie
-            appleTags.SetData("stik", new TagLib.ByteVector(StikMovie), (uint) TagLib.Mpeg4.AppleDataBox.FlagType.ContainsData);
+            appleTags.SetData("stik", new ByteVector(StikMovie), (uint)AppleDataBox.FlagType.ContainsData);
         }
     }
 
-    private const byte StikMovie = 9;
+    public override string GetRenamePattern(AutoTagConfig config) => config.MovieRenamePattern;
 
-    public override string GetFileName(AutoTagConfig config)
+    public override IEnumerable<IFileNameField> GetRenameFields()
     {
-        return RenameRegex.Replace(config.MovieRenamePattern, (m) =>
-        {
-            return m.Groups["num"].Value switch
-            {
-                "1" => Title!,
-                "2" => Date.HasValue ? FormatRenameNumber(m, Date.Value.Year) : "",
-                _ => m.Value
-            };
-        });
+        yield return new StringFileNameField("Title", "1", Title);
+        yield return new IntegerFileNameField("Year", "2", Date?.Year);
     }
 
-    public override string ToString()
-    {
-        if (Date.HasValue)
-        {
-            return $"{Title} ({Date.Value.Year})";
-        }
-        else
-        {
-            return Title!;
-        }
-    }
+    public override string ToString() => $"{Title}{(Date.HasValue ? $" ({Date.Value.Year})" : "")}";
 }

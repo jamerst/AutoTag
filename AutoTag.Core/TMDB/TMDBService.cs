@@ -11,6 +11,8 @@ public interface ITMDBService
 {
     Task<SearchContainer<SearchTv>> SearchTvShowAsync(string query);
 
+    Task<TvShow> GetTvShowAsync(int id);
+
     Task<TvShow> GetTvShowWithEpisodeGroupsAsync(int id);
 
     Task<TvGroupCollection?> GetTvEpisodeGroupsAsync(string id);
@@ -18,7 +20,7 @@ public interface ITMDBService
     Task<TvSeason?> GetTvSeasonAsync(int tvShowId, int seasonNumber);
 
     Task<List<string>> GetTvGenreNamesAsync(IEnumerable<int> genreIds);
-    
+
     Task<CreditsWithGuestStars> GetTvEpisodeCreditsAsync(int tvShowId, int seasonNumber, int episodeNumber);
 
     Task<ImagesWithId> GetTvShowImagesAsync(int id);
@@ -32,11 +34,14 @@ public interface ITMDBService
 
 public class TMDBService(TMDbClient client, AutoTagConfig config) : ITMDBService
 {
-    private Dictionary<int, string> TVGenres = [];
     private Dictionary<int, string> MovieGenres = [];
-    
+    private Dictionary<int, string> TVGenres = [];
+
     public Task<SearchContainer<SearchTv>> SearchTvShowAsync(string query)
         => client.SearchTvShowAsync(query, config.Language, includeAdult: config.IncludeAdult);
+
+    public Task<TvShow> GetTvShowAsync(int id)
+        => client.GetTvShowAsync(id, language: config.Language);
 
     public Task<TvShow> GetTvShowWithEpisodeGroupsAsync(int id)
         => client.GetTvShowAsync(id, TvShowMethods.EpisodeGroups, config.Language);
@@ -66,7 +71,8 @@ public class TMDBService(TMDbClient client, AutoTagConfig config) : ITMDBService
 
     public async Task<List<TMDBMovie>> SearchMovieAsync(string query, string language, int? year)
     {
-        var results = await client.SearchMovieAsync(query, language, includeAdult: config.IncludeAdult, year: year ?? 0);
+        var results =
+            await client.SearchMovieAsync(query, language, includeAdult: config.IncludeAdult, year: year ?? 0);
 
         if (results.Results.Count == 0)
         {
@@ -79,9 +85,12 @@ public class TMDBService(TMDbClient client, AutoTagConfig config) : ITMDBService
     }
 
     public async Task<TMDBMovie> GetMovieAsync(int movieId)
-        => TMDBMovie.FromMovie(await client.GetMovieAsync(movieId, language: config.Language), config.Language);
+        => TMDBMovie.FromMovie(await client.GetMovieAsync(movieId, config.Language), config.Language);
 
-    
+    public Task<Credits> GetMovieCreditsAsync(int movieId)
+        => client.GetMovieCreditsAsync(movieId);
+
+
     private async Task GetMovieGenreNamesAsync()
     {
         if (MovieGenres.Count == 0)
@@ -90,7 +99,4 @@ public class TMDBService(TMDbClient client, AutoTagConfig config) : ITMDBService
                 .ToDictionary(g => g.Id, g => g.Name);
         }
     }
-
-    public Task<Credits> GetMovieCreditsAsync(int movieId)
-        => client.GetMovieCreditsAsync(movieId);
 }
