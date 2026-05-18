@@ -42,7 +42,7 @@ public partial class RootCommandSettings
 
     [CommandOption("--search-language <language>")]
     [Description("Additional languages to use when searching TMDB")]
-    public string[] SearchLanguages { get; init; }
+    public string[]? SearchLanguages { get; init; }
 
     [CommandOption("-g|--episode-group")]
     [Description("Manually choose alternate episode orderings for a TV show")]
@@ -103,7 +103,7 @@ public partial class RootCommandSettings
             config.Language = Language;
         }
 
-        if (SearchLanguages.Length > 0)
+        if (SearchLanguages?.Length > 0)
         {
             config.SearchLanguages = SearchLanguages.ToList();
         }
