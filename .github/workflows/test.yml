@@ -45,4 +45,6 @@ jobs:
         run: dotnet build --no-restore
 
       - name: Test
+        env:
+          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
         run: dotnet test AutoTag.CLI.Test --no-build --verbosity normal
