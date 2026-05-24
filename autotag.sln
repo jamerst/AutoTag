@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AutoTag.cli", "AutoTag.CLI\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AutoTag.Core.Test", "AutoTag.Core.Test\AutoTag.Core.Test.csproj", "{F68C84FA-E812-4D0E-9DDA-BCA5FC18D892}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AutoTag.CLI.Test", "AutoTag.CLI.Test\AutoTag.CLI.Test.csproj", "{FFE0E097-BEEE-4276-A898-65C4C2694271}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -58,5 +60,17 @@ Global
 		{F68C84FA-E812-4D0E-9DDA-BCA5FC18D892}.Release|x64.Build.0 = Release|Any CPU
 		{F68C84FA-E812-4D0E-9DDA-BCA5FC18D892}.Release|x86.ActiveCfg = Release|Any CPU
 		{F68C84FA-E812-4D0E-9DDA-BCA5FC18D892}.Release|x86.Build.0 = Release|Any CPU
+		{FFE0E097-BEEE-4276-A898-65C4C2694271}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FFE0E097-BEEE-4276-A898-65C4C2694271}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FFE0E097-BEEE-4276-A898-65C4C2694271}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{FFE0E097-BEEE-4276-A898-65C4C2694271}.Debug|x64.Build.0 = Debug|Any CPU
+		{FFE0E097-BEEE-4276-A898-65C4C2694271}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{FFE0E097-BEEE-4276-A898-65C4C2694271}.Debug|x86.Build.0 = Debug|Any CPU
+		{FFE0E097-BEEE-4276-A898-65C4C2694271}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FFE0E097-BEEE-4276-A898-65C4C2694271}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FFE0E097-BEEE-4276-A898-65C4C2694271}.Release|x64.ActiveCfg = Release|Any CPU
+		{FFE0E097-BEEE-4276-A898-65C4C2694271}.Release|x64.Build.0 = Release|Any CPU
+		{FFE0E097-BEEE-4276-A898-65C4C2694271}.Release|x86.ActiveCfg = Release|Any CPU
+		{FFE0E097-BEEE-4276-A898-65C4C2694271}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
