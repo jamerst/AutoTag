@@ -287,6 +287,8 @@ Linux/macOS:
 export TMDB_API_KEY="your_tmdb_api_key"
 ```
 
+You should also set the environment variable within your IDE to allow debugging.
+
 Note that the API key only needs to be set at build-time, it is inlined into the output so doesn't need to be set at
 runtime.
 
@@ -294,9 +296,28 @@ To run the CLI run `dotnet run --project AutoTag.CLI -- [arguments]`.
 
 ### Testing
 
-Unit tests should be implemented for any new features. Tests can be executed by running `dotnet test`.
+#### Unit Tests
 
-Note: unit tests should avoid side effects (e.g. writing files to disk) and should work cross-platform.
+Unit tests should be implemented for any new features. AutoTag uses xUnit and AwesomeAssertions for tests. Unit tests
+can be executed by running `dotnet test AutoTag.Core.Test`.
+
+**Note: unit tests should avoid side effects (e.g. writing files to disk) and should work cross-platform.**
+
+#### Integration Tests
+
+Integration tests for the command-line interface should also be implemented for any large/main path features, but they
+don't need to have full coverage.
+
+Integration tests can be executed by running `dotnet test AutoTag.CLI.Test`. Tests are run against a production build so
+you will need to set your TMDB API key as above.
+
+Integration test guidelines:
+
+- Integration tests should provide assurance that the main key features of AutoTag are functioning correctly.
+- Unit tests are preferred for complex or lesser-used features as they are easier to implement and faster to execute.
+- Integration tests can have side effects (e.g. write files to disk), but these should be cleaned up automatically and
+  avoid conflicts with other tests to allow parallel execution.
+- **Integration tests must work cross-platform** - the GitHub workflows run them under Linux, macOS and Windows.
 
 ## Attributions
 

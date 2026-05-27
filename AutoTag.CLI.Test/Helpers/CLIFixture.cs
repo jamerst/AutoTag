@@ -3,17 +3,17 @@ using AutoTag.CLI.Test.Helpers;
 using CliWrap;
 
 [assembly: AssemblyFixture(typeof(CLIFixture))]
-[assembly: CaptureConsole]
+[assembly: CaptureConsole(CaptureOut = true, CaptureError = true)]
 
 namespace AutoTag.CLI.Test.Helpers;
 
-public class CLIFixture : IAsyncLifetime
+public class CLIFixture(ITestContextAccessor context) : IAsyncLifetime
 {
     private string _cliPublishOutput = null!;
 
     public async ValueTask InitializeAsync()
     {
-        var wd = Directory.GetCurrentDirectory();
+        var stdout = new StringBuilder();
 
         string? outputPath = null;
         var build = await Cli.Wrap("dotnet")
@@ -21,7 +21,8 @@ public class CLIFixture : IAsyncLifetime
             .WithArguments(["publish", "AutoTag.CLI", "-c", "Release"])
             .WithStandardOutputPipe(PipeTarget.ToDelegate(l =>
             {
-                Console.WriteLine(l);
+                stdout.AppendLine(l);
+
                 if (l.Contains("AutoTag.CLI ->"))
                 {
                     outputPath = Path.Combine(
@@ -30,12 +31,14 @@ public class CLIFixture : IAsyncLifetime
                     );
                 }
             }))
-            .WithStandardErrorPipe(PipeTarget.ToDelegate(Console.WriteLine))
+            .WithStandardErrorPipe(PipeTarget.ToDelegate(context.Current.SendDiagnosticMessage))
             .WithValidation(CommandResultValidation.None)
             .ExecuteAsync();
 
         if (!build.IsSuccess || string.IsNullOrEmpty(outputPath))
         {
+            context.Current.SendDiagnosticMessage("CLI production build failed:\n{0}", stdout.ToString());
+
             throw new Exception("CLI build failed");
         }
 
@@ -49,18 +52,23 @@ public class CLIFixture : IAsyncLifetime
         return ValueTask.CompletedTask;
     }
 
-    public async Task<(string, int)> ExecuteAsync(Func<Command, Command> configure)
+    public async Task<(string, int)> ExecuteAsync(params string[] arguments)
     {
         if (string.IsNullOrEmpty(_cliPublishOutput))
         {
             throw new InvalidOperationException("CLI publish output not set");
         }
 
-        var stdout = new StringBuilder();
+        if (context.Current.TestClassInstance is not CLITestBase cliTest)
+        {
+            throw new InvalidOperationException($"Test class must derive from {nameof(CLITestBase)}");
+        }
 
-        var cmd = configure(Cli.Wrap(_cliPublishOutput)
+        var stdout = new StringBuilder();
+        var cmd = Cli.Wrap(_cliPublishOutput)
+            .WithArguments([..arguments, "-c", cliTest.ConfigPath])
             .WithStandardOutputPipe(PipeTarget.ToStringBuilder(stdout))
-            .WithValidation(CommandResultValidation.None));
+            .WithValidation(CommandResultValidation.None);
 
         var result = await cmd.ExecuteAsync();
 

@@ -8,16 +8,19 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <PackageReference Include="AwesomeAssertions" Version="9.4.0"/>
         <PackageReference Include="CliWrap" Version="3.10.1"/>
         <PackageReference Include="coverlet.collector" Version="6.0.4"/>
-        <PackageReference Include="FluentAssertions" Version="8.10.0"/>
         <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1"/>
         <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4"/>
         <PackageReference Include="xunit.v3" Version="3.2.2"/>
     </ItemGroup>
 
     <ItemGroup>
-        <Using Include="Xunit"/>
+        <Content Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest"/>
     </ItemGroup>
 
+    <ItemGroup>
+        <ProjectReference Include="..\AutoTag.Core\AutoTag.Core.csproj"/>
+    </ItemGroup>
 </Project>

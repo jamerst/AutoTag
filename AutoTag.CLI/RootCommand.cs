@@ -9,14 +9,20 @@ namespace AutoTag.CLI;
 
 public class RootCommand : AsyncCommand<RootCommandSettings>
 {
-    public override async Task<int> ExecuteAsync(CommandContext context, RootCommandSettings cmdSettings, CancellationToken cancellationToken)
+    private static readonly JsonSerializerOptions PrintJsonOptions = new()
+    {
+        WriteIndented = true
+    };
+
+    public override async Task<int> ExecuteAsync(CommandContext context, RootCommandSettings cmdSettings,
+        CancellationToken cancellationToken)
     {
         if (cmdSettings.PrintVersion)
         {
             AnsiConsole.WriteLine(CLIInterface.GetVersion());
             return 0;
         }
-        
+
         var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings { DisableDefaults = true });
         builder.Services.AddCoreServices(ThisAssembly.Constants.TMDBApiKey);
         builder.Services.AddScoped<IUserInterface, CLIInterface>();
@@ -25,8 +31,13 @@ public class RootCommand : AsyncCommand<RootCommandSettings>
 
         var configService = host.Services.GetRequiredService<IAutoTagConfigService>();
         var config = await configService.LoadOrGenerateConfigAsync(cmdSettings.ConfigPath);
-        
+
         cmdSettings.UpdateConfig(config);
+
+        if (cmdSettings.SetDefault)
+        {
+            await configService.SaveToDiskAsync();
+        }
 
         if (cmdSettings.PrintConfig)
         {
@@ -34,17 +45,7 @@ public class RootCommand : AsyncCommand<RootCommandSettings>
             return 0;
         }
 
-        if (cmdSettings.SetDefault)
-        {
-            await configService.SaveToDiskAsync();
-        }
-
         var ui = (CLIInterface)host.Services.GetRequiredService<IUserInterface>();
         return await ui.RunAsync(cmdSettings.Paths);
     }
-
-    private static readonly JsonSerializerOptions PrintJsonOptions = new()
-    {
-        WriteIndented = true
-    };
 }
