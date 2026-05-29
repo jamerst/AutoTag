@@ -12,6 +12,7 @@
         <PackageReference Include="CliWrap" Version="3.10.1"/>
         <PackageReference Include="coverlet.collector" Version="6.0.4"/>
         <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1"/>
+        <PackageReference Include="Spectre.Console.Cli.Testing" Version="0.55.0"/>
         <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4"/>
         <PackageReference Include="xunit.v3" Version="3.2.2"/>
     </ItemGroup>
@@ -21,6 +22,7 @@
     </ItemGroup>
 
     <ItemGroup>
+        <ProjectReference Include="..\AutoTag.CLI\AutoTag.CLI.csproj"/>
         <ProjectReference Include="..\AutoTag.Core\AutoTag.Core.csproj"/>
     </ItemGroup>
 </Project>

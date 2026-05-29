@@ -1,6 +1,9 @@
+using System.Diagnostics;
 using System.Text;
 using AutoTag.CLI.Test.Helpers;
 using CliWrap;
+using CliWrap.Buffered;
+using Spectre.Console.Cli.Testing;
 
 [assembly: AssemblyFixture(typeof(CLIFixture))]
 [assembly: CaptureConsole(CaptureOut = true, CaptureError = true)]
@@ -13,6 +16,11 @@ public class CLIFixture(ITestContextAccessor context) : IAsyncLifetime
 
     public async ValueTask InitializeAsync()
     {
+        if (Debugger.IsAttached)
+        {
+            return;
+        }
+
         var stdout = new StringBuilder();
 
         string? outputPath = null;
@@ -54,24 +62,36 @@ public class CLIFixture(ITestContextAccessor context) : IAsyncLifetime
 
     public async Task<(string, int)> ExecuteAsync(params string[] arguments)
     {
-        if (string.IsNullOrEmpty(_cliPublishOutput))
-        {
-            throw new InvalidOperationException("CLI publish output not set");
-        }
-
         if (context.Current.TestClassInstance is not CLITestBase cliTest)
         {
             throw new InvalidOperationException($"Test class must derive from {nameof(CLITestBase)}");
         }
 
-        var stdout = new StringBuilder();
+        string[] args = [..arguments, "-c", cliTest.ConfigPath];
+
+        if (Debugger.IsAttached)
+        {
+            context.Current.SendDiagnosticMessage("Debugger detected, running CLI in-process");
+
+            var app = new CommandAppTester();
+            app.SetDefaultCommand<RootCommand>();
+
+            var appResult = await app.RunAsync(args);
+
+            return (appResult.Output, appResult.ExitCode);
+        }
+
+        if (string.IsNullOrEmpty(_cliPublishOutput))
+        {
+            throw new InvalidOperationException("CLI publish output not set");
+        }
+
         var cmd = Cli.Wrap(_cliPublishOutput)
-            .WithArguments([..arguments, "-c", cliTest.ConfigPath])
-            .WithStandardOutputPipe(PipeTarget.ToStringBuilder(stdout))
+            .WithArguments(args)
             .WithValidation(CommandResultValidation.None);
 
-        var result = await cmd.ExecuteAsync();
+        var result = await cmd.ExecuteBufferedAsync();
 
-        return (stdout.ToString(), result.ExitCode);
+        return (result.StandardOutput, result.ExitCode);
     }
 }

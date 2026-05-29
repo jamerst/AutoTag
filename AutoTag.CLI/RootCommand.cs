@@ -7,24 +7,25 @@ using Spectre.Console.Json;
 
 namespace AutoTag.CLI;
 
-public class RootCommand : AsyncCommand<RootCommandSettings>
+public class RootCommand(IAnsiConsole console) : AsyncCommand<RootCommandSettings>
 {
     private static readonly JsonSerializerOptions PrintJsonOptions = new()
     {
         WriteIndented = true
     };
 
-    public override async Task<int> ExecuteAsync(CommandContext context, RootCommandSettings cmdSettings,
+    protected override async Task<int> ExecuteAsync(CommandContext context, RootCommandSettings cmdSettings,
         CancellationToken cancellationToken)
     {
         if (cmdSettings.PrintVersion)
         {
-            AnsiConsole.WriteLine(CLIInterface.GetVersion());
+            console.WriteLine(CLIInterface.GetVersion());
             return 0;
         }
 
         var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings { DisableDefaults = true });
         builder.Services.AddCoreServices(ThisAssembly.Constants.TMDBApiKey);
+        builder.Services.AddSingleton(console);
         builder.Services.AddScoped<IUserInterface, CLIInterface>();
 
         using var host = builder.Build();
@@ -41,7 +42,7 @@ public class RootCommand : AsyncCommand<RootCommandSettings>
 
         if (cmdSettings.PrintConfig)
         {
-            AnsiConsole.Write(new JsonText(JsonSerializer.Serialize(config, PrintJsonOptions)));
+            console.Write(new JsonText(JsonSerializer.Serialize(config, PrintJsonOptions)));
             return 0;
         }
 

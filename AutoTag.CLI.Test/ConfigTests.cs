@@ -72,4 +72,26 @@ public class ConfigTests(CLIFixture cli, ITestContextAccessor context) : CLITest
             config.RemoveEmptyFolders.Should().BeTrue();
         }
     }
+
+    [Fact]
+    public async Task Should_LoadConfigFromFile()
+    {
+        await cli.ExecuteAsync(
+            "--set-default",
+            "--print-config",
+            "--no-rename",
+            "--tv-pattern", "{Series}/{Season:S00}{Episode:E00}",
+            "--replace", "a=b",
+            "--replace", "cde=fgh"
+        );
+
+        var (output, _) = await cli.ExecuteAsync("--print-config");
+
+        var config = JsonSerializer.Deserialize<AutoTagConfig>(output)!;
+
+        config.RenameFiles.Should().BeFalse();
+        config.TVRenamePattern.Should().Be("{Series}/{Season:S00}{Episode:E00}");
+        config.FileNameReplaces.Should()
+            .BeEquivalentTo([new FileNameReplace("a", "b"), new FileNameReplace("cde", "fgh")]);
+    }
 }

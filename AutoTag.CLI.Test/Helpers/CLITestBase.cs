@@ -2,12 +2,20 @@ namespace AutoTag.CLI.Test.Helpers;
 
 public abstract class CLITestBase : IDisposable
 {
+    private readonly string _testDirectory;
+
     protected CLITestBase()
     {
-        ConfigPath = Path.Combine(".", $"test-config.{Random.Shared.Next()}.json");
+        _testDirectory = Path.Combine(".", $"test-files-{Random.Shared.Next()}");
+        Directory.CreateDirectory(_testDirectory);
+
+        ConfigPath = Path.Combine(_testDirectory, "conf.json");
+        FileSystem = new FileSystemBuilder(Path.Combine(_testDirectory, "filesystem"));
     }
 
     public string ConfigPath { get; }
 
-    public void Dispose() => File.Delete(ConfigPath);
+    protected FileSystemBuilder FileSystem { get; }
+
+    public void Dispose() => Directory.Delete(_testDirectory, true);
 }
