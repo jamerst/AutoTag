@@ -12,7 +12,7 @@ public class FileSystemBuilder(string basePath)
         }
         else
         {
-            File.Create(filePath);
+            using var _ = File.Create(filePath);
         }
 
         return this;
