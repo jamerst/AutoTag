@@ -29,7 +29,7 @@ public class ProcessTests(CLIFixture cli) : CLITestBase
                 .CreateFile("Star Wars (1977).mkv")
             );
 
-        var (_, exitCode) = await cli.ExecuteAsync(
+        var (stdout, exitCode) = await cli.ExecuteAsync(
             FileSystem.GetPath("Downloads"),
             FileSystem.GetPath("Movies", "Interstellar.2014.avi"),
             FileSystem.GetPath("Movies", "Star Wars (1977).mkv"),
@@ -37,6 +37,11 @@ public class ProcessTests(CLIFixture cli) : CLITestBase
             "--movie-pattern", "{Title} ({Year})",
             "--rename-subs"
         );
+
+        if (exitCode != 0)
+        {
+            TestContext.Current.SendDiagnosticMessage(stdout);
+        }
 
         exitCode.Should().Be(0);
 

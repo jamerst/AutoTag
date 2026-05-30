@@ -88,7 +88,8 @@ public class CLIFixture(ITestContextAccessor context) : IAsyncLifetime
 
         var cmd = Cli.Wrap(_cliPublishOutput)
             .WithArguments(args)
-            .WithValidation(CommandResultValidation.None);
+            .WithValidation(CommandResultValidation.None)
+            .WithEnvironmentVariables(env => env.Set("TERM", "dumb"));
 
         var result = await cmd.ExecuteBufferedAsync();
 
