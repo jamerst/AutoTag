@@ -38,11 +38,6 @@ public class ProcessTests(CLIFixture cli) : CLITestBase
             "--rename-subs"
         );
 
-        if (exitCode != 0)
-        {
-            TestContext.Current.SendDiagnosticMessage(stdout);
-        }
-
         exitCode.Should().Be(0);
 
         AssertFile(

@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text;
+using System.Text.RegularExpressions;
 using AutoTag.CLI.Test.Helpers;
 using CliWrap;
 using CliWrap.Buffered;
@@ -10,9 +11,12 @@ using Spectre.Console.Cli.Testing;
 
 namespace AutoTag.CLI.Test.Helpers;
 
-public class CLIFixture(ITestContextAccessor context) : IAsyncLifetime
+public partial class CLIFixture(ITestContextAccessor context) : IAsyncLifetime
 {
     private string _cliPublishOutput = null!;
+
+    [GeneratedRegex(@"\x1b\[[0-9;]*m")]
+    private static partial Regex AnsiCodeRegex { get; }
 
     public async ValueTask InitializeAsync()
     {
@@ -78,7 +82,7 @@ public class CLIFixture(ITestContextAccessor context) : IAsyncLifetime
 
             var appResult = await app.RunAsync(args);
 
-            return (appResult.Output, appResult.ExitCode);
+            return (RemoveAnsiColourCodes(appResult.Output), appResult.ExitCode);
         }
 
         if (string.IsNullOrEmpty(_cliPublishOutput))
@@ -88,11 +92,18 @@ public class CLIFixture(ITestContextAccessor context) : IAsyncLifetime
 
         var cmd = Cli.Wrap(_cliPublishOutput)
             .WithArguments(args)
-            .WithValidation(CommandResultValidation.None)
-            .WithEnvironmentVariables(env => env.Set("TERM", "dumb"));
+            .WithValidation(CommandResultValidation.None);
 
         var result = await cmd.ExecuteBufferedAsync();
 
-        return (result.StandardOutput, result.ExitCode);
+        if (!result.IsSuccess)
+        {
+            context.Current.SendDiagnosticMessage($"CLI returned non-zero exit code ({result.ExitCode})");
+            context.Current.SendDiagnosticMessage(result.StandardOutput);
+        }
+
+        return (RemoveAnsiColourCodes(result.StandardOutput), result.ExitCode);
     }
+
+    private static string RemoveAnsiColourCodes(string input) => AnsiCodeRegex.Replace(input, "");
 }
