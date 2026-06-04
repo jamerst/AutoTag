@@ -40,7 +40,7 @@
         <Constant Include="TMDBApiKey" Value="$(TMDB_API_KEY)"/>
     </ItemGroup>
 
-    <Target Name="KeyCheck" BeforeTargets="PrepareForBuild">
+    <Target Name="KeyCheck" BeforeTargets="PrepareForBuild" Condition="'$(Configuration)' == 'Release'">
         <Error Condition="$(TMDB_API_KEY) == ''" Text="TMDB API key missing. Set TMDB_API_KEY environment variable before building."/>
     </Target>
 </Project>
