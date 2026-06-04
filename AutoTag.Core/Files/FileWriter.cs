@@ -191,7 +191,8 @@ public class FileWriter(
 
     private static bool IsAlreadyNamedCorrectly(TaggingFile taggingFile, string newPath,
         IEnumerable<(string Path, string NewPath)> subtitlePaths)
-        => taggingFile.Path == newPath && subtitlePaths.All(p => p.Path == p.NewPath);
+        => taggingFile.Path == Path.GetFullPath(newPath) &&
+            subtitlePaths.All(p => p.Path == Path.GetFullPath(p.NewPath));
 
     private static string GetSubtitleTargetFileName(string targetFileName, int index, int subtitleCount)
         => subtitleCount == 1
