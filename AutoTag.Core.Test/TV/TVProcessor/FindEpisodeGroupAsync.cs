@@ -92,7 +92,7 @@ public class FindEpisodeGroupAsync : TVProcessorTestBase
 
         result.Should().BeNull();
         newShow!.TvSearchResult.Should().Be(show2);
-        newShow!.HasEpisodeGroupMapping.Should().BeTrue();
+        newShow.HasEpisodeGroupMapping.Should().BeTrue();
     }
 
     [Fact]

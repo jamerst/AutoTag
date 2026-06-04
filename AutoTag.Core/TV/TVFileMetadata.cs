@@ -63,7 +63,7 @@ public class TVFileMetadata : FileMetadata
             // Series
             appleTags.SetText("tvsh", SeriesName);
 
-            if (Season >= byte.MinValue && Season <= byte.MaxValue)
+            if (Season is >= byte.MinValue and <= byte.MaxValue)
             {
                 // Season number
                 appleTags.SetData("tvsn", new ByteVector((byte)Season), (uint)AppleDataBox.FlagType.ContainsData);
@@ -74,7 +74,7 @@ public class TVFileMetadata : FileMetadata
                     MessageType.Warning);
             }
 
-            if (Episode >= byte.MinValue && Episode <= byte.MaxValue)
+            if (Episode is >= byte.MinValue and <= byte.MaxValue)
             {
                 // Episode number
                 appleTags.SetData("tves", new ByteVector((byte)Episode), (uint)AppleDataBox.FlagType.ContainsData);

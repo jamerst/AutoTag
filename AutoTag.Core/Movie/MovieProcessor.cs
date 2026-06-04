@@ -115,9 +115,9 @@ public class MovieProcessor(ITMDBService tmdb, IFileWriter writer, IUserInterfac
         {
             var credits = await tmdb.GetMovieCreditsAsync(selectedResult.Id);
 
-            result.Director = credits.Crew.FirstOrDefault(c => c.Job == "Director")?.Name;
-            result.Actors = credits.Cast.Select(c => c.Name).ToList();
-            result.Characters = credits.Cast.Select(c => c.Character).ToList();
+            result.Director = credits.Crew!.FirstOrDefault(c => c.Job == "Director")?.Name;
+            result.Actors = credits.Cast!.Select(c => c.Name!).ToList();
+            result.Characters = credits.Cast!.Select(c => c.Character!).ToList();
         }
 
         if (string.IsNullOrEmpty(result.CoverURL))

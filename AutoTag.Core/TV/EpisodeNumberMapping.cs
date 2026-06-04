@@ -10,7 +10,7 @@ public class EpisodeNumberMapping(List<TvSeason> seasons)
         var episodeCounter = 0;
         foreach (var season in seasons)
         {
-            if (episodeNumber <= episodeCounter + season.Episodes.Count)
+            if (episodeNumber <= episodeCounter + season.Episodes!.Count)
             {
                 return (season, season.Episodes[episodeNumber - episodeCounter - 1]);
             }

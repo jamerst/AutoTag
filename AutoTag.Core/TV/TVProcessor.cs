@@ -89,8 +89,8 @@ public class TVProcessor(ITMDBService tmdb, IFileWriter writer, ITVCache cache, 
         // if not already searched for series
         var searchResults = await tmdb.SearchTvShowAsync(seriesName);
 
-        var seriesResults = searchResults.Results
-            .OrderByDescending(searchResult => SeriesNameSimilarity(seriesName, searchResult.Name))
+        var seriesResults = searchResults.Results!
+            .OrderByDescending(searchResult => SeriesNameSimilarity(seriesName, searchResult.Name!))
             .ThenByDescending(r => r.FirstAirDate.HasValue && r.FirstAirDate.Value.Year == year)
             .ToList();
 
@@ -156,7 +156,7 @@ public class TVProcessor(ITMDBService tmdb, IFileWriter writer, ITVCache cache, 
             var tvShow = await tmdb.GetTvShowWithEpisodeGroupsAsync(seriesResult.TvSearchResult.Id);
             var groups = tvShow.EpisodeGroups;
 
-            if (groups.Results.Count != 0)
+            if (groups!.Results!.Count != 0)
             {
                 var options = groups.Results
                     .Select(g => $"[{g.Type}] {g.Name} ({g.GroupCount} seasons, {g.EpisodeCount} episodes)")
@@ -180,7 +180,7 @@ public class TVProcessor(ITMDBService tmdb, IFileWriter writer, ITVCache cache, 
                         continue;
                     }
 
-                    var groupInfo = await tmdb.GetTvEpisodeGroupsAsync(groups.Results[chosenGroup.Value].Id);
+                    var groupInfo = await tmdb.GetTvEpisodeGroupsAsync(groups.Results[chosenGroup.Value].Id!);
                     if (groupInfo is null)
                     {
                         ui.SetStatus($@"Error: Could not retrieve TV episode group for show ""{tvShow.Name}""",
@@ -255,31 +255,31 @@ public class TVProcessor(ITMDBService tmdb, IFileWriter writer, ITVCache cache, 
         var metadata = new TVFileMetadata
         {
             Id = showData.Id,
-            SeriesName = showData.Name,
+            SeriesName = showData.Name!,
             Year = parsedDetails.Year,
             Season = parsedDetails.Season ?? result.Value.Season.SeasonNumber,
             Episode = parsedDetails.Season.HasValue
                 ? parsedDetails.Episode
-                : result.Value.Episode.EpisodeNumber,
+                : (int)result.Value.Episode.EpisodeNumber,
             EndEpisode = parsedDetails.EndEpisode,
-            SeasonEpisodes = result.Value.Season.Episodes.Count,
+            SeasonEpisodes = result.Value.Season.Episodes!.Count,
             CoverURL = !string.IsNullOrEmpty(result.Value.Season.PosterPath)
                 ? $"https://image.tmdb.org/t/p/original/{result.Value.Season.PosterPath}"
                 : null,
-            Title = result.Value.Episode.Name,
+            Title = result.Value.Episode.Name!,
             Overview = result.Value.Episode.Overview,
-            Genres = await tmdb.GetTvGenreNamesAsync(show.TvSearchResult.GenreIds),
+            Genres = await tmdb.GetTvGenreNamesAsync(show.TvSearchResult.GenreIds!),
             Part = parsedDetails.Part
         };
 
         if (config.ExtendedTagging && fileIsTaggable)
         {
-            metadata.Director = result.Value.Episode.Crew.Find(c => c.Job == "Director")?.Name;
+            metadata.Director = result.Value.Episode.Crew!.Find(c => c.Job == "Director")?.Name;
 
             var credits = await tmdb.GetTvEpisodeCreditsAsync(showData.Id, result.Value.Season.SeasonNumber,
-                result.Value.Episode.EpisodeNumber);
-            metadata.Actors = credits.Cast.Select(c => c.Name).ToArray();
-            metadata.Characters = credits.Cast.Select(c => c.Character).ToArray();
+                (int)result.Value.Episode.EpisodeNumber);
+            metadata.Actors = credits.Cast!.Select(c => c.Name!).ToArray();
+            metadata.Characters = credits.Cast!.Select(c => c.Character!).ToArray();
         }
 
         return (FindResult.Success, metadata, null);
@@ -308,7 +308,7 @@ public class TVProcessor(ITMDBService tmdb, IFileWriter writer, ITVCache cache, 
         {
             var season = await GetSeasonAsync(showId, seasonNumber.Value);
 
-            if (season != null && season.Episodes.TryFind(e => e.EpisodeNumber == episodeNumber, out var episode))
+            if (season != null && season.Episodes!.TryFind(e => e.EpisodeNumber == episodeNumber, out var episode))
             {
                 return (season, episode);
             }
@@ -355,7 +355,7 @@ public class TVProcessor(ITMDBService tmdb, IFileWriter writer, ITVCache cache, 
         {
             var seriesImages = await tmdb.GetTvShowImagesAsync(metadata.Id);
 
-            if (seriesImages.Posters.Count > 0)
+            if (seriesImages.Posters?.Count > 0)
             {
                 var bestVotedImage = seriesImages.Posters.OrderByDescending(p => p.VoteAverage).First();
 

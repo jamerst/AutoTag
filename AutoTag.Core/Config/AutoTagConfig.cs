@@ -10,9 +10,9 @@ public class AutoTagConfig
 
     public Mode Mode { get; set; } = Mode.Auto;
 
-    public bool ManualMode { get; set; } = false;
+    public bool ManualMode { get; set; }
 
-    public bool Verbose { get; set; } = false;
+    public bool Verbose { get; set; }
 
     public bool AddCoverArt { get; set; } = true;
 
@@ -20,7 +20,7 @@ public class AutoTagConfig
 
     public bool RenameFiles { get; set; } = true;
 
-    public bool RemoveEmptyFolders { get; set; } = false;
+    public bool RemoveEmptyFolders { get; set; }
 
     public string TVRenamePattern { get; set; } =
         "{Series} - {Season}x{Episode:00}{EndEpisode:-00|} - {Title}{Part:pt-0|}";
@@ -29,19 +29,19 @@ public class AutoTagConfig
 
     public string? ParsePattern { get; set; }
 
-    public bool WindowsSafe { get; set; } = false;
+    public bool WindowsSafe { get; set; }
 
-    public bool ExtendedTagging { get; set; } = false;
+    public bool ExtendedTagging { get; set; }
 
-    public bool AppleTagging { get; set; } = false;
+    public bool AppleTagging { get; set; }
 
-    public bool RenameSubtitles { get; set; } = false;
+    public bool RenameSubtitles { get; set; }
 
     public string Language { get; set; } = "en";
 
     public List<string> SearchLanguages { get; set; } = [];
 
-    public bool IncludeAdult { get; set; } = false;
+    public bool IncludeAdult { get; set; }
 
     public bool EpisodeGroup { get; set; }
 

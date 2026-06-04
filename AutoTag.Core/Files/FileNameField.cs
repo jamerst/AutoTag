@@ -16,12 +16,13 @@ public class StringFileNameField(string specifier, string? legacySpecifier, stri
     public string Specifier { get; } = specifier;
     public string? LegacySpecifier { get; } = legacySpecifier;
 
-    public string GetFormattedValue(string? _) => Value ?? "";
+    public string GetFormattedValue(string? format) => Value ?? "";
 }
 
-public class IntegerFileNameField(string specifier, string? legacySpecifier, int? value) : IFileNameField
+public partial class IntegerFileNameField(string specifier, string? legacySpecifier, int? value) : IFileNameField
 {
-    private static readonly Regex FormatSpecifierRegex = new("[0#]+");
+    [GeneratedRegex("[0#]+")]
+    private static partial Regex FormatSpecifierRegex { get; }
 
     private int? Value { get; } = value;
     public string Specifier { get; } = specifier;

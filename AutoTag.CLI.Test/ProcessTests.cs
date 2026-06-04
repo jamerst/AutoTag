@@ -288,7 +288,7 @@ public class ProcessTests(CLIFixture cli) : CLITestBase
         );
     }
 
-    private void AssertFile(string originalPath, string newPath, Action<FileTags>? assertTags = null)
+    private static void AssertFile(string originalPath, string newPath, Action<FileTags>? assertTags = null)
     {
         if (originalPath != newPath)
         {

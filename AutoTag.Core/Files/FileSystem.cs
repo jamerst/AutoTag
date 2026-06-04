@@ -40,7 +40,7 @@ public class FileSystem : IFileSystem
 
     public void Move(string sourceFileName, string destFileName) => File.Move(sourceFileName, destFileName);
 
-    public void CreateDirectory(DirectoryInfo directoryInfo) => directoryInfo.Create();
+    public void CreateDirectory(DirectoryInfo directory) => directory.Create();
 
     public void CreateDirectory(string path) => CreateDirectory(new DirectoryInfo(path));
 

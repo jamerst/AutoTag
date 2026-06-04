@@ -6,7 +6,7 @@ namespace AutoTag.Core.Test.Files.TVFileNameParser;
 
 public class TryParse
 {
-    private Core.Files.Parsing.TVFileNameParser GetInstance(AutoTagConfig? config = null)
+    private static Core.Files.Parsing.TVFileNameParser GetInstance(AutoTagConfig? config = null)
         => new(config.OrDefaultMock());
 
     [Theory]

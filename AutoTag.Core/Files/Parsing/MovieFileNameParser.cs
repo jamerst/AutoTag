@@ -28,7 +28,7 @@ public class MovieFileNameParser
         new(@"\((?:[^,)]*,\s*)?(?<Year>(19|20)\d{2})\)", SharedRegexOptions);
 
     private static readonly Regex BareYearRegex = new(@"\b(?<Year>(19|20)\d{2})\b", SharedRegexOptions);
-    private static readonly Regex SeparatorRegex = new(@"[._-]+", SharedRegexOptions);
+    private static readonly Regex SeparatorRegex = new("[._-]+", SharedRegexOptions);
     private static readonly Regex BracketCharacterRegex = new(@"[(){}\[\]]", SharedRegexOptions);
     private static readonly Regex MultiSpaceRegex = new(@"\s+", SharedRegexOptions);
     private static readonly Regex TrimmedPunctuationRegex = new(@"^[\s\p{P}]+|[\s\p{P}]+$", SharedRegexOptions);

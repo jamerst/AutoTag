@@ -167,9 +167,9 @@ public class FileFinder(AutoTagConfig config, IFileSystem fs, IUserInterface ui,
         || (config.RenameSubtitles && IsSubtitleFile(info.Extension));
 
 
-    private bool IsVideoFile(string extension) => ProcessableVideoExtensions.Contains(extension);
+    private static bool IsVideoFile(string extension) => ProcessableVideoExtensions.Contains(extension);
 
-    private bool IsTaggableVideoFile(string extension) => TaggableVideoExtensions.Contains(extension);
+    private static bool IsTaggableVideoFile(string extension) => TaggableVideoExtensions.Contains(extension);
 
-    private bool IsSubtitleFile(string extension) => SubtitleExtensions.Contains(extension);
+    private static bool IsSubtitleFile(string extension) => SubtitleExtensions.Contains(extension);
 }

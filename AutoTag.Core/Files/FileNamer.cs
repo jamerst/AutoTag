@@ -8,15 +8,15 @@ public interface IFileNamer
     (string Result, bool ReplacedInvalid) GetNewFileName(FileMetadata metadata);
 }
 
-public class FileNamer(AutoTagConfig config) : IFileNamer
+public partial class FileNamer(AutoTagConfig config) : IFileNamer
 {
-    private static readonly Regex RenameRegex =
-        new(
-            @"{(?<specifier>[A-z]+)(?:\:(?<specifierFormat>[^}]+))?}|%(?<legacySpecifier>\d+)(?:\:(?<legacySpecifierFormat>[0#]+))?");
-
     private static readonly char[] InvalidNtfsChars = ['<', '>', ':', '"', '/', '\\', '|', '?', '*'];
 
     private readonly char[] _invalidFilenameChars = GetInvalidFileNameChars(config);
+
+    [GeneratedRegex(
+        @"{(?<specifier>[A-z]+)(?:\:(?<specifierFormat>[^}]+))?}|%(?<legacySpecifier>\d+)(?:\:(?<legacySpecifierFormat>[0#]+))?")]
+    private static partial Regex RenameRegex { get; }
 
     public (string Result, bool ReplacedInvalid) GetNewFileName(FileMetadata metadata)
     {
