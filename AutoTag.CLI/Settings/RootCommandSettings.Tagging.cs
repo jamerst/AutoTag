@@ -4,6 +4,10 @@ namespace AutoTag.CLI.Settings;
 
 public partial class RootCommandSettings
 {
+    [CommandOption("-a|--auto")]
+    [Description("Auto tagging mode (auto select mode based on file name)")]
+    public bool AutoMode { get; init; }
+
     [CommandOption("-t|--tv")]
     [Description("TV tagging mode")]
     public bool TVMode { get; init; }
@@ -36,12 +40,29 @@ public partial class RootCommandSettings
     [Description("Metadata language (default: en)")]
     public string? Language { get; init; }
 
+    [CommandOption("--search-language <language>")]
+    [Description("Additional languages to use when searching TMDB")]
+    public string[]? SearchLanguages { get; init; }
+
     [CommandOption("-g|--episode-group")]
     [Description("Manually choose alternate episode orderings for a TV show")]
     public bool? EpisodeGroup { get; init; }
 
+    [CommandOption("--include-adult")]
+    [Description("Include adult titles in TMDB searches")]
+    public bool? IncludeAdult { get; init; }
+
+    [CommandOption("--remove-empty-folders")]
+    [Description("Remove source folders after moving files if they are empty")]
+    public bool? RemoveEmptyFolders { get; init; }
+
     private void SetTaggingOptions(AutoTagConfig config)
     {
+        if (AutoMode)
+        {
+            config.Mode = Mode.Auto;
+        }
+
         if (TVMode)
         {
             config.Mode = Mode.TV;
@@ -82,9 +103,24 @@ public partial class RootCommandSettings
             config.Language = Language;
         }
 
+        if (SearchLanguages?.Length > 0)
+        {
+            config.SearchLanguages = SearchLanguages.ToList();
+        }
+
         if (EpisodeGroup.HasValue)
         {
             config.EpisodeGroup = EpisodeGroup.Value;
+        }
+
+        if (IncludeAdult.HasValue)
+        {
+            config.IncludeAdult = IncludeAdult.Value;
+        }
+
+        if (RemoveEmptyFolders.HasValue)
+        {
+            config.RemoveEmptyFolders = RemoveEmptyFolders.Value;
         }
     }
 }

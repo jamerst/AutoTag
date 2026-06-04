@@ -26,7 +26,7 @@ public class FindEpisodeGroupAsync : TVProcessorTestBase
                     ]
                 }
             });
-    
+
     [Fact]
     public async Task Should_AddSkipToNextSearchResultOption_When_MultipleSearchResults()
     {
@@ -36,16 +36,22 @@ public class FindEpisodeGroupAsync : TVProcessorTestBase
         List<List<string>> passedOptions = [];
         var mockUi = new Mock<IUserInterface>();
         mockUi.Setup(ui => ui.SelectOption(It.IsAny<string>(), It.IsAny<List<string>>()))
-            .Returns((string msg, List<string> options) => msg.Contains("Show 1") ? options.Count - 1 : 0) // skip to next search result for first result, first option otherwise
+            .Returns((string msg, List<string> options) =>
+                msg.Contains("Show 1")
+                    ? options.Count - 1
+                    : 0) // skip to next search result for first result, first option otherwise
             .Callback((string _, List<string> options) => passedOptions.Add(options));
 
-        var instance = GetInstance(tmdb: mockTmdb.Object, ui: mockUi.Object);
+        var instance = GetInstance(mockTmdb.Object, ui: mockUi.Object);
 
         await instance.FindEpisodeGroupAsync([new SearchTv { Name = "Show 1" }, new SearchTv { Name = "Show 2" }]);
 
         passedOptions.Count.Should().Be(2);
-        passedOptions[0].Should().Contain("(Skip to next search result)"); // option should be present for first search result
-        passedOptions[^1].Should().NotContain("(Skip to next search result)"); // option should not be present for last search result (since there is no next search result to skip to)
+        passedOptions[0].Should()
+            .Contain("(Skip to next search result)"); // option should be present for first search result
+        passedOptions[^1].Should()
+            .NotContain(
+                "(Skip to next search result)"); // option should not be present for last search result (since there is no next search result to skip to)
     }
 
     [Fact]
@@ -73,12 +79,12 @@ public class FindEpisodeGroupAsync : TVProcessorTestBase
                     }
                 ]
             });
-        
+
         var mockUi = new Mock<IUserInterface>();
         mockUi.Setup(ui => ui.SelectOption(It.IsAny<string>(), It.IsAny<List<string>>()))
             .Returns((string msg, List<string> options) => msg.Contains("Show 1") ? options.Count - 1 : 0);
 
-        var instance = GetInstance(tmdb: mockTmdb.Object, ui: mockUi.Object);
+        var instance = GetInstance(mockTmdb.Object, ui: mockUi.Object);
 
         var show2 = new SearchTv { Name = "Show 2" };
 
@@ -86,7 +92,7 @@ public class FindEpisodeGroupAsync : TVProcessorTestBase
 
         result.Should().BeNull();
         newShow!.TvSearchResult.Should().Be(show2);
-        newShow!.HasEpisodeGroupMapping.Should().BeTrue();
+        newShow.HasEpisodeGroupMapping.Should().BeTrue();
     }
 
     [Fact]
@@ -100,15 +106,15 @@ public class FindEpisodeGroupAsync : TVProcessorTestBase
         var mockUi = new Mock<IUserInterface>();
         mockUi.Setup(ui => ui.SelectOption(It.IsAny<string>(), It.IsAny<List<string>>()))
             .Returns(0);
-        
-        var instance = GetInstance(tmdb: mockTmdb.Object, ui: mockUi.Object);
+
+        var instance = GetInstance(mockTmdb.Object, ui: mockUi.Object);
 
         var (result, _) = await instance.FindEpisodeGroupAsync([new SearchTv()]);
-        
+
         mockUi.Verify(ui => ui.SetStatus(It.IsAny<string>(), MessageType.Error));
         result.Should().Be(FindResult.Fail);
     }
-    
+
     [Theory]
     [InlineData("Season 1 Part 1", "Season 1 Part 2")] // duplicate season 1
     [InlineData("Part One", "Part Two")] // no numbers in name
@@ -119,11 +125,13 @@ public class FindEpisodeGroupAsync : TVProcessorTestBase
         mockTmdb.Setup(tmdb => tmdb.GetTvEpisodeGroupsAsync(It.IsAny<string>()))
             .ReturnsAsync(new TvGroupCollection
             {
-                Groups = [
+                Groups =
+                [
                     new TvGroup
                     {
                         Name = groupName1,
-                        Episodes = [
+                        Episodes =
+                        [
                             new TvGroupEpisode
                             {
                                 Order = 0,
@@ -135,7 +143,8 @@ public class FindEpisodeGroupAsync : TVProcessorTestBase
                     new TvGroup
                     {
                         Name = groupName2,
-                        Episodes = [
+                        Episodes =
+                        [
                             new TvGroupEpisode
                             {
                                 Order = 0,
@@ -150,11 +159,11 @@ public class FindEpisodeGroupAsync : TVProcessorTestBase
         var mockUi = new Mock<IUserInterface>();
         mockUi.Setup(ui => ui.SelectOption(It.IsAny<string>(), It.IsAny<List<string>>()))
             .Returns(0);
-        
-        var instance = GetInstance(tmdb: mockTmdb.Object, ui: mockUi.Object);
+
+        var instance = GetInstance(mockTmdb.Object, ui: mockUi.Object);
 
         var (result, _) = await instance.FindEpisodeGroupAsync([new SearchTv()]);
-        
+
         mockUi.Verify(ui => ui.SetStatus(It.IsAny<string>(), MessageType.Error));
         result.Should().Be(FindResult.Fail);
     }
@@ -168,8 +177,8 @@ public class FindEpisodeGroupAsync : TVProcessorTestBase
         var mockUi = new Mock<IUserInterface>();
         mockUi.Setup(ui => ui.SelectOption(It.IsAny<string>(), It.IsAny<List<string>>()))
             .Returns((int?)null);
-        
-        var instance = GetInstance(tmdb: mockTmdb.Object, ui: mockUi.Object);
+
+        var instance = GetInstance(mockTmdb.Object, ui: mockUi.Object);
 
         var (result, _) = await instance.FindEpisodeGroupAsync([new SearchTv { Name = "Show 1" }]);
 
@@ -191,14 +200,15 @@ public class FindEpisodeGroupAsync : TVProcessorTestBase
             });
 
         var mockUi = new Mock<IUserInterface>();
-        
-        var instance = GetInstance(tmdb: mockTmdb.Object, ui: mockUi.Object);
+
+        var instance = GetInstance(mockTmdb.Object, ui: mockUi.Object);
 
         await instance.FindEpisodeGroupAsync([new SearchTv()]);
-        
-        mockUi.Verify(ui => ui.SetStatus(@"No episode groups found for show ""Show""", MessageType.Warning | MessageType.Log));
+
+        mockUi.Verify(ui =>
+            ui.SetStatus(@"No episode groups found for show ""Show""", MessageType.Warning | MessageType.Log));
     }
-    
+
     [Fact]
     public async Task Should_ReportWarning_When_NoResultsHaveEpisodeGroups()
     {
@@ -214,11 +224,11 @@ public class FindEpisodeGroupAsync : TVProcessorTestBase
             });
 
         var mockUi = new Mock<IUserInterface>();
-        
-        var instance = GetInstance(tmdb: mockTmdb.Object, ui: mockUi.Object);
+
+        var instance = GetInstance(mockTmdb.Object, ui: mockUi.Object);
 
         await instance.FindEpisodeGroupAsync([new SearchTv(), new SearchTv()]);
-        
+
         mockUi.Verify(ui => ui.SetStatus("No episode groups found", MessageType.Warning));
     }
 }

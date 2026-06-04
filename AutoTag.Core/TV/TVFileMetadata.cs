@@ -1,24 +1,37 @@
 using AutoTag.Core.Config;
+using AutoTag.Core.Files;
+using TagLib;
+using TagLib.Mpeg4;
+using File = TagLib.File;
+using Tag = TagLib.Matroska.Tag;
 
 namespace AutoTag.Core.TV;
 
 public class TVFileMetadata : FileMetadata
 {
-    public string SeriesName { get; set; } = null!;
-    
-    public int Season { get; set; }
-    
-    public int Episode { get; set; }
-    
-    public int SeasonEpisodes { get; set; }
+    private const byte StikTVShow = 10;
 
-    public override void WriteToFile(TagLib.File file, AutoTagConfig config, IUserInterface ui)
+    public required string SeriesName { get; init; }
+
+    public int? Year { get; init; }
+
+    public int Season { get; init; }
+
+    public int Episode { get; init; }
+
+    public int? EndEpisode { get; init; }
+
+    public int SeasonEpisodes { get; init; }
+
+    public int? Part { get; init; }
+
+    public override void WriteToFile(File file, AutoTagConfig config, IUserInterface ui)
     {
         base.WriteToFile(file, config, ui);
 
-        if ((file.TagTypes & TagLib.TagTypes.Matroska) == TagLib.TagTypes.Matroska)
+        if ((file.TagTypes & TagTypes.Matroska) == TagTypes.Matroska)
         {
-            var custom = (TagLib.Matroska.Tag)file.GetTag(TagLib.TagTypes.Matroska);
+            var custom = (Tag)file.GetTag(TagTypes.Matroska);
             // workaround for https://github.com/mono/taglib-sharp/issues/263 - Tag.Album property writes to TITLE tag instead of ALBUM
             // how has this still not been fixed??
             custom.Set("ALBUM", null, SeriesName);
@@ -33,41 +46,43 @@ public class TVFileMetadata : FileMetadata
             file.Tag.Album = SeriesName;
         }
 
-        file.Tag.Disc = (uint) Season;
-        file.Tag.Track = (uint) Episode;
-        file.Tag.TrackCount = (uint) SeasonEpisodes;
+        file.Tag.Disc = (uint)Season;
+        file.Tag.Track = (uint)Episode;
+        file.Tag.TrackCount = (uint)SeasonEpisodes;
 
         // set extra tags because Apple is stupid and uses different tags for some reason
         // for a list of tags see https://kdenlive.org/en/project/adding-meta-data-to-mp4-video/
-        if (config.AppleTagging && (file.TagTypes & TagLib.TagTypes.Apple) == TagLib.TagTypes.Apple)
+        if (config.AppleTagging && (file.TagTypes & TagTypes.Apple) == TagTypes.Apple)
         {
-            var appleTags = (TagLib.Mpeg4.AppleTag) file.GetTag(TagLib.TagTypes.Apple);
+            var appleTags = (AppleTag)file.GetTag(TagTypes.Apple);
 
             // Media Type - allows Apple software to recognise as a TV show
             // for a list of values see http://www.zoyinc.com/?p=1004
-            appleTags.SetData("stik", new TagLib.ByteVector(StikTVShow), (uint) TagLib.Mpeg4.AppleDataBox.FlagType.ContainsData);
+            appleTags.SetData("stik", new ByteVector(StikTVShow), (uint)AppleDataBox.FlagType.ContainsData);
 
             // Series
             appleTags.SetText("tvsh", SeriesName);
 
-            if (Season >= byte.MinValue && Season <= byte.MaxValue)
+            if (Season is >= byte.MinValue and <= byte.MaxValue)
             {
                 // Season number
-                appleTags.SetData("tvsn", new TagLib.ByteVector((byte) Season), (uint) TagLib.Mpeg4.AppleDataBox.FlagType.ContainsData);
+                appleTags.SetData("tvsn", new ByteVector((byte)Season), (uint)AppleDataBox.FlagType.ContainsData);
             }
             else
             {
-                ui.SetStatus($"Warning: cannot add Apple tag for season number - value out of range", MessageType.Warning);
+                ui.SetStatus("Warning: cannot add Apple tag for season number - value out of range",
+                    MessageType.Warning);
             }
 
-            if (Episode >= byte.MinValue && Episode <= byte.MaxValue)
+            if (Episode is >= byte.MinValue and <= byte.MaxValue)
             {
                 // Episode number
-                appleTags.SetData("tves", new TagLib.ByteVector((byte) Episode), (uint) TagLib.Mpeg4.AppleDataBox.FlagType.ContainsData);
+                appleTags.SetData("tves", new ByteVector((byte)Episode), (uint)AppleDataBox.FlagType.ContainsData);
             }
             else
             {
-                ui.SetStatus($"Warning: cannot add Apple tag for episode number - value out of range", MessageType.Warning);
+                ui.SetStatus("Warning: cannot add Apple tag for episode number - value out of range",
+                    MessageType.Warning);
             }
 
             // Sort name - allows older Apple software to sort correctly (sorts by title instead of season and episode on older devices)
@@ -75,32 +90,19 @@ public class TVFileMetadata : FileMetadata
         }
     }
 
-    private const byte StikTVShow = 10;
+    public override string GetRenamePattern(AutoTagConfig config) => config.TVRenamePattern;
 
-    public override string GetFileName(AutoTagConfig config)
+    public override IEnumerable<IFileNameField> GetRenameFields()
     {
-        return RenameRegex.Replace(config.TVRenamePattern, (m) =>
-        {
-            return m.Groups["num"].Value switch
-            {
-                "1" => SeriesName,
-                "2" => FormatRenameNumber(m, Season),
-                "3" => FormatRenameNumber(m, Episode),
-                "4" => Title!,
-                _ => m.Value
-            };
-        });
+        yield return new StringFileNameField("Series", "1", SeriesName);
+        yield return new IntegerFileNameField("Season", "2", Season);
+        yield return new IntegerFileNameField("Episode", "3", Episode);
+        yield return new StringFileNameField("Title", "4", Title);
+        yield return new IntegerFileNameField("Year", null, Year);
+        yield return new IntegerFileNameField("EndEpisode", null, EndEpisode);
+        yield return new IntegerFileNameField("Part", null, Part);
     }
 
     public override string ToString()
-    {
-        if (!string.IsNullOrEmpty(Title))
-        {
-            return $"{SeriesName} S{Season:00}E{Episode:00} ({Title})";
-        }
-        else
-        {
-            return $"{SeriesName} S{Season:00}E{Episode:00}";
-        }
-    }
+        => $"{SeriesName} S{Season:00}E{Episode:00} ({Title})";
 }

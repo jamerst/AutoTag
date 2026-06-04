@@ -1,6 +1,7 @@
-using System.Diagnostics.CodeAnalysis;
+using System.Text.RegularExpressions;
 using AutoTag.Core.Config;
 using AutoTag.Core.Files;
+using AutoTag.Core.Files.Parsing;
 using AutoTag.Core.Movie;
 using AutoTag.Core.TMDB;
 using AutoTag.Core.TV;
@@ -21,25 +22,32 @@ public static class Extensions
 
         services.AddSingleton<IFileSystem, FileSystem>();
         services.AddSingleton<IFileFinder, FileFinder>();
-        
+
+        services.AddSingleton<IFileNameParser, FileNameParser>();
+        services.AddSingleton<TVFileNameParser>();
+        services.AddSingleton<MovieFileNameParser>();
+
         services.AddSingleton<IFileWriter, FileWriter>();
-        
+        services.AddSingleton<IFileNamer, FileNamer>();
+
         services.AddScoped<ICoverArtFetcher, CoverArtFetcher>();
 
         services.AddKeyedScoped<IProcessor, TVProcessor>(Mode.TV);
         services.AddKeyedScoped<IProcessor, MovieProcessor>(Mode.Movie);
 
         services.AddMemoryCache();
-        
+
         services.AddHttpClient();
-        services.RemoveAll<IHttpMessageHandlerBuilderFilter>(); // disable HttpClient logging - prints unwanted output to console
-        
+        services
+            .RemoveAll<
+                IHttpMessageHandlerBuilderFilter>(); // disable HttpClient logging - prints unwanted output to console
+
         services.AddScoped<TMDbClient>(serviceProvider =>
         {
             var configService = serviceProvider.GetRequiredService<IAutoTagConfigService>();
             var config = configService.GetConfig();
-            
-            return new(apiKey)
+
+            return new TMDbClient(apiKey)
             {
                 DefaultLanguage = config.Language,
                 DefaultImageLanguage = config.Language
@@ -50,22 +58,32 @@ public static class Extensions
         services.AddScoped<ITVCache, TVCache>();
     }
 
-    public static bool IsError(this MessageType type)
-        => (type & MessageType.Error) == MessageType.Error;
-
-    public static bool IsWarning(this MessageType type)
-        => (type & MessageType.Warning) == MessageType.Warning;
-
-    public static bool IsInformation(this MessageType type)
-        => (type & MessageType.Information) == MessageType.Information;
-
-    public static bool IsLog(this MessageType type)
-        => (type & MessageType.Log) == MessageType.Log;
-
     public static bool TryFind<T>(this List<T> list, Predicate<T> match, [NotNullWhen(true)] out T? item)
     {
         item = list.Find(match);
 
         return item != null;
+    }
+
+    public static bool IsSuccess(this ProcessResult result) => result is ProcessResult.Success or ProcessResult.Skipped;
+
+    public static int? GetNullableIntValue(this GroupCollection groups, string groupName)
+        => groups.TryGetValue(groupName, out var match) && int.TryParse(match.Value, out var value)
+            ? value
+            : null;
+
+    extension(MessageType type)
+    {
+        public bool IsError()
+            => (type & MessageType.Error) == MessageType.Error;
+
+        public bool IsWarning()
+            => (type & MessageType.Warning) == MessageType.Warning;
+
+        public bool IsInformation()
+            => (type & MessageType.Information) == MessageType.Information;
+
+        public bool IsLog()
+            => (type & MessageType.Log) == MessageType.Log;
     }
 }

@@ -1,4 +1,5 @@
 using AutoTag.Core.Config;
+using AutoTag.Core.Files;
 
 namespace AutoTag.CLI.Settings;
 

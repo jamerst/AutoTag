@@ -1,0 +1,39 @@
+name: publish
+on:
+  release:
+    types:
+      - created
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        dotnet-runtime: [ 'linux-x64', 'osx-arm64', 'osx-x64', 'win-x64' ]
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore dependencies
+        # need to set /p:PublishTrimmed here as well because --no-restore on the publish step causes trimming to silently fail
+        # https://github.com/dotnet/sdk/issues/37049
+        run: dotnet restore -p:PublishTrimmed=true
+
+      - name: Publish
+        env:
+          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+        run: dotnet publish AutoTag.CLI -r ${{ matrix.dotnet-runtime }} -c Release --no-restore
+          
+      - name: Upload
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          outputName="autotag-${{ github.ref_name }}_${{ matrix.dotnet-runtime }}.zip"
+          finalOutputName="${outputName/osx/macos}"
+          zip -j $finalOutputName AutoTag.CLI/bin/Release/net*/${{ matrix.dotnet-runtime }}/publish/autotag*
+          gh release upload ${{ github.ref_name }} $finalOutputName

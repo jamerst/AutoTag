@@ -1,14 +1,17 @@
+using AutoTag.Core.Files.Parsing;
+
 namespace AutoTag.Core.Files;
-public class TaggingFile
+
+public record TaggingFile
 {
-    public string Path { get; set; } = null!;
-    public string? SubtitlePath { get; set; }
-    public bool Taggable { get; set; } = true;
+    public required string Path { get; init; }
+    public List<string> SubtitlePaths { get; init; } = [];
+    public bool Taggable { get; init; } = true;
     public string Status { get; set; } = "";
     public bool Success { get; set; } = true;
 
-    public override string ToString()
-    {
-        return $"{System.IO.Path.GetFileName(Path)}: {Status}";
-    }
+    public ParsedTVFileName? TVDetails { get; init; }
+    public ParsedMovieFileName? MovieDetails { get; init; }
+
+    public override string ToString() => $"{System.IO.Path.GetFileName(Path)}: {Status}";
 }

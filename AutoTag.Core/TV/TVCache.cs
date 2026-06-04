@@ -1,18 +1,15 @@
-using System.Diagnostics.CodeAnalysis;
 using TMDbLib.Objects.TvShows;
 
 namespace AutoTag.Core.TV;
 
 public interface ITVCache
 {
-    bool ShowIsCached(string seriesName);
-    
-    void AddShow(string seriesName, List<ShowResults> show);
-    
-    List<ShowResults> GetShow(string seriesName);
+    void AddShow(string seriesName, int? year, List<ShowResults> show);
+
+    bool TryGetShow(string seriesName, int? year, [NotNullWhen(true)] out List<ShowResults>? results);
 
     bool TryGetSeason(int showId, int seasonNumber, [NotNullWhen(true)] out TvSeason? season);
-    
+
     void AddSeason(int showId, int seasonNumber, TvSeason season);
 
     bool TryGetSeasonPoster(int showId, int seasonNumber, [NotNullWhen(true)] out string? url);
@@ -22,18 +19,17 @@ public interface ITVCache
 
 public class TVCache : ITVCache
 {
-    private readonly Dictionary<string, List<ShowResults>> CachedShows = new(StringComparer.OrdinalIgnoreCase);
-    private readonly Dictionary<(int, int), TvSeason> CachedSeasons = new();
     private readonly Dictionary<(int, int), string> CachedSeasonPosters = new();
+    private readonly Dictionary<(int, int), TvSeason> CachedSeasons = new();
 
-    public bool ShowIsCached(string seriesName)
-        => CachedShows.ContainsKey(seriesName);
+    private readonly Dictionary<(string ShowName, int? Year), List<ShowResults>> CachedShows =
+        new(new ShowYearComparer());
 
-    public void AddShow(string seriesName, List<ShowResults> show)
-        => CachedShows.Add(seriesName, show);
+    public void AddShow(string seriesName, int? year, List<ShowResults> show)
+        => CachedShows.Add((seriesName, year), show);
 
-    public List<ShowResults> GetShow(string seriesName)
-        => CachedShows[seriesName];
+    public bool TryGetShow(string seriesName, int? year, [NotNullWhen(true)] out List<ShowResults>? results)
+        => CachedShows.TryGetValue((seriesName, year), out results);
 
     public bool TryGetSeason(int showId, int seasonNumber, [NotNullWhen(true)] out TvSeason? season)
         => CachedSeasons.TryGetValue((showId, seasonNumber), out season);
@@ -46,4 +42,12 @@ public class TVCache : ITVCache
 
     public void AddSeasonPoster(int showId, int seasonNumber, string url)
         => CachedSeasonPosters.Add((showId, seasonNumber), url);
+}
+
+internal class ShowYearComparer : IEqualityComparer<(string ShowName, int? Year)>
+{
+    public bool Equals((string ShowName, int? Year) x, (string ShowName, int? Year) y)
+        => StringComparer.OrdinalIgnoreCase.Equals(x.ShowName, y.ShowName) && x.Year == y.Year;
+
+    public int GetHashCode((string ShowName, int? Year) obj) => HashCode.Combine(obj.ShowName, obj.Year);
 }

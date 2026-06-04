@@ -1,4 +1,5 @@
 using AutoTag.Core.Config;
+using AutoTag.Core.Files.Parsing;
 using AutoTag.Core.TMDB;
 using AutoTag.Core.TV;
 using TMDbLib.Objects.General;
@@ -9,6 +10,9 @@ namespace AutoTag.Core.Test.TV.TVProcessor;
 
 public class FindEpisodeAsync : TVProcessorTestBase
 {
+    private static ParsedTVFileName GetParsedFileName(int? season, int episode) =>
+        new("", null, season, episode, null, null);
+
     [Fact]
     public async Task Should_SetEpisodeDetails_OnResult()
     {
@@ -46,26 +50,27 @@ public class FindEpisodeAsync : TVProcessorTestBase
             Name = "Show Name",
             GenreIds = [1]
         });
-        
-        var metadata = new TVFileMetadata
-        {
-            Season = 1,
-            Episode = 2
-        };
 
-        var instance = GetInstance(tmdb: mockTmdb.Object, cache: mockCache.Object);
 
-        var (result, _) = await instance.FindEpisodeAsync(metadata, show, true);
+        var instance = GetInstance(mockTmdb.Object, cache: mockCache.Object);
+
+        var (result, metadata, _) =
+            await instance.FindEpisodeAsync(GetParsedFileName(1, 2) with { EndEpisode = 3, Part = 2 }, show, true);
 
         result.Should().Be(FindResult.Success);
 
+        metadata.Should().NotBeNull();
         metadata.Id.Should().Be(1);
         metadata.SeriesName.Should().Be("Show Name");
+        metadata.Season.Should().Be(1);
+        metadata.Episode.Should().Be(2);
+        metadata.EndEpisode.Should().Be(3);
         metadata.SeasonEpisodes.Should().Be(2);
         metadata.CoverURL.Should().Be("https://image.tmdb.org/t/p/original/poster");
         metadata.Title.Should().Be("S01E02");
         metadata.Overview.Should().Be("Episode two");
         metadata.Genres.Should().BeEquivalentTo("Genre 1");
+        metadata.Part.Should().Be(2);
     }
 
     [Fact]
@@ -75,7 +80,7 @@ public class FindEpisodeAsync : TVProcessorTestBase
         {
             ExtendedTagging = true
         };
-        
+
         var mockCache = new Mock<ITVCache>();
 
         var season = new TvSeason
@@ -87,7 +92,8 @@ public class FindEpisodeAsync : TVProcessorTestBase
                     Name = "S01E01",
                     EpisodeNumber = 1,
                     Overview = "Episode one",
-                    Crew = [
+                    Crew =
+                    [
                         new Crew
                         {
                             Name = "Director Person",
@@ -119,24 +125,18 @@ public class FindEpisodeAsync : TVProcessorTestBase
                     }
                 ]
             });
-        
 
-        var metadata = new TVFileMetadata
-        {
-            Season = 1,
-            Episode = 1
-        };
-        
         var show = new ShowResults(new SearchTv
         {
             Id = 1,
             Name = "Show Name"
         });
 
-        var instance = GetInstance(tmdb: mockTmdb.Object, cache: mockCache.Object, config: config);
+        var instance = GetInstance(mockTmdb.Object, cache: mockCache.Object, config: config);
 
-        await instance.FindEpisodeAsync(metadata, show, true);
+        var (_, metadata, _) = await instance.FindEpisodeAsync(GetParsedFileName(1, 1), show, true);
 
+        metadata.Should().NotBeNull();
         metadata.Director.Should().Be("Director Person");
         metadata.Actors.Should().BeEquivalentTo("Actor Person", "Second Actor Person");
         metadata.Characters.Should().BeEquivalentTo("Character Person", "Second Character Person");
@@ -151,7 +151,7 @@ public class FindEpisodeAsync : TVProcessorTestBase
         {
             ExtendedTagging = extendedTagging
         };
-        
+
         var mockCache = new Mock<ITVCache>();
 
         var season = new TvSeason
@@ -163,7 +163,8 @@ public class FindEpisodeAsync : TVProcessorTestBase
                     Name = "S01E01",
                     EpisodeNumber = 1,
                     Overview = "Episode one",
-                    Crew = [
+                    Crew =
+                    [
                         new Crew
                         {
                             Name = "A Person",
@@ -177,18 +178,13 @@ public class FindEpisodeAsync : TVProcessorTestBase
         mockCache.Setup(c => c.TryGetSeason(It.IsAny<int>(), It.IsAny<int>(), out season))
             .Returns(true);
 
-        var metadata = new TVFileMetadata
-        {
-            Season = 1,
-            Episode = 1
-        };
-        
         var show = new ShowResults(new SearchTv());
 
         var instance = GetInstance(cache: mockCache.Object, config: config);
 
-        await instance.FindEpisodeAsync(metadata, show, taggable);
+        var (_, metadata, _) = await instance.FindEpisodeAsync(GetParsedFileName(1, 1), show, taggable);
 
+        metadata.Should().NotBeNull();
         metadata.Director.Should().BeNull();
         metadata.Actors.Should().BeNull();
         metadata.Characters.Should().BeNull();
@@ -205,30 +201,96 @@ public class FindEpisodeAsync : TVProcessorTestBase
         var mockTmdb = new Mock<ITMDBService>();
         var seasonResult = new TvSeason
         {
-            Episodes = [new TvSeasonEpisode
-            {
-                EpisodeNumber = 1
-            }]
+            Episodes =
+            [
+                new TvSeasonEpisode
+                {
+                    EpisodeNumber = 1
+                }
+            ]
         };
         mockTmdb.Setup(tmdb => tmdb.GetTvSeasonAsync(It.IsAny<int>(), It.IsAny<int>()))
             .ReturnsAsync(seasonResult);
-        
-        var metadata = new TVFileMetadata
-        {
-            Season = 1,
-            Episode = 1
-        };
+
         var show = new ShowResults(new SearchTv
         {
             Id = 1
         });
 
-        var instance = GetInstance(tmdb: mockTmdb.Object, cache: mockCache.Object);
+        var instance = GetInstance(mockTmdb.Object, cache: mockCache.Object);
 
-        var (result, _) = await instance.FindEpisodeAsync(metadata, show, true);
+        var (result, _, _) = await instance.FindEpisodeAsync(GetParsedFileName(1, 1), show, true);
 
         result.Should().Be(FindResult.Success);
         mockCache.Verify(c => c.AddSeason(1, 1, seasonResult));
+    }
+
+    [Fact]
+    public async Task Should_MapAbsoluteEpisodeToSeasonAndEpisode()
+    {
+        var mockCache = new Mock<ITVCache>();
+        var cachedSeasons = new Dictionary<(int ShowId, int SeasonNumber), TvSeason>();
+        mockCache.Setup(c => c.TryGetSeason(It.IsAny<int>(), It.IsAny<int>(), out It.Ref<TvSeason?>.IsAny))
+            .Returns((int showId, int seasonNumber, out TvSeason? season) =>
+            {
+                var found = cachedSeasons.TryGetValue((showId, seasonNumber), out var cachedSeason);
+                season = cachedSeason;
+                return found;
+            });
+        mockCache.Setup(c => c.AddSeason(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<TvSeason>()))
+            .Callback<int, int, TvSeason>((showId, seasonNumber, season) =>
+            {
+                cachedSeasons[(showId, seasonNumber)] = season;
+            });
+
+        var mockTmdb = new Mock<ITMDBService>();
+        mockTmdb.Setup(tmdb => tmdb.GetTvSeasonAsync(1, 1))
+            .ReturnsAsync(new TvSeason
+            {
+                SeasonNumber = 1,
+                Episodes =
+                [
+                    new TvSeasonEpisode { EpisodeNumber = 1 },
+                    new TvSeasonEpisode { EpisodeNumber = 2 },
+                    new TvSeasonEpisode { EpisodeNumber = 3 }
+                ]
+            });
+        mockTmdb.Setup(tmdb => tmdb.GetTvSeasonAsync(1, 2))
+            .ReturnsAsync(new TvSeason
+            {
+                SeasonNumber = 2,
+                Episodes =
+                [
+                    new TvSeasonEpisode
+                    {
+                        EpisodeNumber = 1,
+                        Name = "Episode 4",
+                        Overview = "Fourth episode"
+                    },
+                    new TvSeasonEpisode { EpisodeNumber = 2 }
+                ]
+            });
+        mockTmdb.Setup(tmdb => tmdb.GetTvGenreNamesAsync(It.IsAny<IEnumerable<int>>()))
+            .ReturnsAsync([]);
+        mockTmdb.Setup(tmdb => tmdb.GetTvShowAsync(It.IsAny<int>()))
+            .ReturnsAsync(new TvShow { Id = 1, NumberOfSeasons = 4 });
+
+        var show = new ShowResults(new SearchTv
+        {
+            Id = 1,
+            Name = "Series"
+        });
+
+        var instance = GetInstance(mockTmdb.Object, cache: mockCache.Object);
+
+        var (result, metadata, _) =
+            await instance.FindEpisodeAsync(GetParsedFileName(null, 4) with { SeriesName = "Series" }, show, true);
+
+        result.Should().Be(FindResult.Success);
+        metadata.Should().NotBeNull();
+        metadata.Season.Should().Be(2);
+        metadata.Episode.Should().Be(1);
+        metadata.Title.Should().Be("Episode 4");
     }
 
     [Fact]
@@ -241,21 +303,18 @@ public class FindEpisodeAsync : TVProcessorTestBase
 
         var mockTmdb = new Mock<ITMDBService>();
         mockTmdb.Setup(tmdb => tmdb.GetTvSeasonAsync(It.IsAny<int>(), It.IsAny<int>()))
-            .ReturnsAsync((TvSeason?) null);
-        
-        var metadata = new TVFileMetadata
-        {
-            Season = 1,
-            Episode = 1
-        };
+            .ReturnsAsync((TvSeason?)null);
+
+        var parsedDetails = GetParsedFileName(1, 1);
+
         var show = new ShowResults(new SearchTv());
 
-        var instance = GetInstance(tmdb: mockTmdb.Object, cache: mockCache.Object);
+        var instance = GetInstance(mockTmdb.Object, cache: mockCache.Object);
 
-        var (result, msg) = await instance.FindEpisodeAsync(metadata, show, true);
+        var (result, _, msg) = await instance.FindEpisodeAsync(parsedDetails, show, true);
 
         result.Should().Be(FindResult.Skip);
-        msg.Should().Be($"Error: Cannot find {metadata} on TheMovieDB");
+        msg.Should().Be($"Error: Cannot find {parsedDetails} on TheMovieDB");
     }
 
     [Fact]
@@ -264,29 +323,29 @@ public class FindEpisodeAsync : TVProcessorTestBase
         var mockCache = new Mock<ITVCache>();
         var cachedSeason = new TvSeason
         {
-            Episodes = [new TvSeasonEpisode
-            {
-                EpisodeNumber = 20
-            }]
+            Episodes =
+            [
+                new TvSeasonEpisode
+                {
+                    EpisodeNumber = 20
+                }
+            ]
         };
         mockCache.Setup(c => c.TryGetSeason(It.IsAny<int>(), It.IsAny<int>(), out cachedSeason))
             .Returns(true);
-        
-        var metadata = new TVFileMetadata
-        {
-            Season = 1,
-            Episode = 1
-        };
+
+        var parsedDetails = GetParsedFileName(1, 1);
+
         var show = new ShowResults(new SearchTv());
 
         var instance = GetInstance(cache: mockCache.Object);
 
-        var (result, msg) = await instance.FindEpisodeAsync(metadata, show, true);
-        
+        var (result, _, msg) = await instance.FindEpisodeAsync(parsedDetails, show, true);
+
         result.Should().Be(FindResult.Skip);
-        msg.Should().Be($"Error: Cannot find {metadata} on TheMovieDB");
+        msg.Should().Be($"Error: Cannot find {parsedDetails} on TheMovieDB");
     }
-    
+
     [Fact]
     public async Task Should_UseEpisodeGroupMapping_WhenAvailable()
     {
@@ -305,7 +364,7 @@ public class FindEpisodeAsync : TVProcessorTestBase
         };
         mockCache.Setup(c => c.TryGetSeason(It.IsAny<int>(), It.IsAny<int>(), out season))
             .Returns(true);
-        
+
         var show = new ShowResults(new SearchTv());
         show.AddEpisodeGroup(
             new TvGroupCollection
@@ -330,17 +389,13 @@ public class FindEpisodeAsync : TVProcessorTestBase
             out _
         );
 
-        var metadata = new TVFileMetadata
-        {
-            Season = 1,
-            Episode = 1
-        };
 
         var instance = GetInstance(cache: mockCache.Object);
 
-        var (result, _) = await instance.FindEpisodeAsync(metadata, show, true);
+        var (result, metadata, _) = await instance.FindEpisodeAsync(GetParsedFileName(1, 1), show, true);
 
         result.Should().Be(FindResult.Success);
+        metadata.Should().NotBeNull();
         metadata.Season.Should().Be(1);
         metadata.Episode.Should().Be(1);
         metadata.Title.Should().Be("S01E02");
@@ -350,7 +405,7 @@ public class FindEpisodeAsync : TVProcessorTestBase
     public async Task Should_ReportError_When_EpisodeNotFoundInMapping()
     {
         var mockUi = new Mock<IUserInterface>();
-        
+
         var show = new ShowResults(new SearchTv());
         show.AddEpisodeGroup(
             new TvGroupCollection
@@ -374,20 +429,16 @@ public class FindEpisodeAsync : TVProcessorTestBase
             },
             out _
         );
-        
-        var metadata = new TVFileMetadata
-        {
-            SeriesName = "Show",
-            Season = 10,
-            Episode = 1
-        };
+
+        var parsedDetails = GetParsedFileName(10, 1) with { SeriesName = "Show" };
 
         var instance = GetInstance(ui: mockUi.Object);
 
-        var (result, _) = await instance.FindEpisodeAsync(metadata, show, true);
+        var (result, _, _) = await instance.FindEpisodeAsync(parsedDetails, show, true);
 
         result.Should().Be(FindResult.Fail);
-        
-        mockUi.Verify(ui => ui.SetStatus($"Error: Cannot find {metadata} in episode group on TheMovieDB", MessageType.Error));
+
+        mockUi.Verify(ui =>
+            ui.SetStatus($"Error: Cannot find {parsedDetails} in episode group on TheMovieDB", MessageType.Error));
     }
 }

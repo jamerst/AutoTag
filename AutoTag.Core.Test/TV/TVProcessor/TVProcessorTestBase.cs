@@ -8,7 +8,7 @@ namespace AutoTag.Core.Test.TV.TVProcessor;
 
 public abstract class TVProcessorTestBase
 {
-    protected Core.TV.TVProcessor GetInstance(ITMDBService? tmdb = null,
+    protected static Core.TV.TVProcessor GetInstance(ITMDBService? tmdb = null,
         IFileWriter? writer = null,
         ITVCache? cache = null,
         IUserInterface? ui = null,

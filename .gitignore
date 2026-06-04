@@ -363,3 +363,5 @@ FodyWeavers.xsd
 
 # Ignore JetBrains config files
 .idea/
+
+.env
