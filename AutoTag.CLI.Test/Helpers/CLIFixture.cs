@@ -44,6 +44,7 @@ public partial class CLIFixture(ITestContextAccessor context) : IAsyncLifetime
                 }
             }))
             .WithStandardErrorPipe(PipeTarget.ToDelegate(context.Current.SendDiagnosticMessage))
+            .WithEnvironmentVariables(b => b.Set("TMDB_API_KEY", Environment.GetEnvironmentVariable("TMDB_API_KEY")))
             .WithValidation(CommandResultValidation.None)
             .ExecuteAsync();
 

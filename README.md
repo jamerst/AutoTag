@@ -287,7 +287,9 @@ Linux/macOS:
 export TMDB_API_KEY="your_tmdb_api_key"
 ```
 
-You should also set the environment variable within your IDE to allow debugging.
+You should also set the environment variable within your IDE to allow debugging. If using Jetbrains Rider you will need
+to set it in the run configuration for each project and also as an MSBuild Global Property under Settings > Build,
+Execution, Deployment > Toolset and Build.
 
 Note that the API key only needs to be set at build-time, it is inlined into the output so doesn't need to be set at
 runtime.
