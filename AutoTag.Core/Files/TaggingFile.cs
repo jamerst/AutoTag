@@ -9,6 +9,7 @@ public record TaggingFile
     public bool Taggable { get; init; } = true;
     public string Status { get; set; } = "";
     public bool Success { get; set; } = true;
+    public bool HasWarnings { get; set; }
 
     public ParsedTVFileName? TVDetails { get; init; }
     public ParsedMovieFileName? MovieDetails { get; init; }

@@ -9,10 +9,6 @@ public class CLIInterface(IServiceProvider serviceProvider, IAnsiConsole console
 {
     private AutoTagConfig Config = null!;
     private TaggingFile CurrentFile = null!;
-    private List<TaggingFile> Files = null!;
-
-    private bool Success = true;
-    private int Warnings;
 
     public void DisplayMessage(string message, MessageType type)
     {
@@ -46,19 +42,13 @@ public class CLIInterface(IServiceProvider serviceProvider, IAnsiConsole console
             {
                 CurrentFile.Status = status;
             }
-
-            Success = false;
-            CurrentFile.Success = false;
         }
         else if (CurrentFile.Success)
         {
             CurrentFile.Status = status;
         }
 
-        if (type.IsWarning())
-        {
-            Warnings++;
-        }
+        CurrentFile.HasWarnings |= type.IsWarning();
 
         DisplayMessage($"    {status}", type);
     }
@@ -76,19 +66,19 @@ public class CLIInterface(IServiceProvider serviceProvider, IAnsiConsole console
     public int? SelectOption(string message, List<string> options)
     {
         var choice = console.Prompt(
-            new SelectionPrompt<(int?, string)>()
+            new SelectionPrompt<(int? Index, string Value)>()
                 .Title($"    [yellow]{Markup.Escape(message)}[/]")
                 .PageSize(10)
                 .AddChoices([
                     ..options.Select((o, i) => (i, Markup.Escape(o))),
                     (null, "(Skip file)")
                 ])
-                .UseConverter(o => $"  {o.Item2}")
+                .UseConverter(o => $"  {o.Value}")
                 .WrapAround()
                 .HighlightStyle(new Style(Color.Aqua))
         );
 
-        return choice.Item1;
+        return choice.Index;
     }
 
     public void SetFilePath(string path)
@@ -105,67 +95,64 @@ public class CLIInterface(IServiceProvider serviceProvider, IAnsiConsole console
         console.WriteLine($"AutoTag v{GetVersion()}");
         console.MarkupLine("[link]https://jtattersall.net[/]");
 
-        Files = fileFinder.FindFilesToProcess(entries);
+        var files = fileFinder.FindFilesToProcess(entries);
 
-        if (Files.Count == 0)
+        if (files.Count == 0)
         {
             DisplayMessage("No files found", MessageType.Error);
             return 1;
         }
 
-        foreach (var file in Files)
+        foreach (var file in files)
         {
             CurrentFile = file;
             console.MarkupLineInterpolated($"[fuchsia]\n{file.Path}:[/]");
 
-            Success &= (await ProcessWithFallbackAsync(file, movieProcessor, tvProcessor)).IsSuccess();
+            file.Success = (await ProcessWithFallbackAsync(file, movieProcessor, tvProcessor)).IsSuccess();
         }
 
-        return ReportResults(Files.Count);
+        return ReportResults(files);
     }
 
-    private int ReportResults(int fileCount)
+    private int ReportResults(List<TaggingFile> files)
     {
-        if (Success)
-        {
-            if (Warnings == 0)
-            {
-                console.MarkupLineInterpolated(
-                    $"\n\n[green]{(fileCount > 1 ? $"All {fileCount} files" : "File")} successfully processed.[/]");
-            }
-            else
-            {
-                console.MarkupLineInterpolated(
-                    $"[yellow]\n\n{(fileCount > 1 ? $"All {fileCount} files" : "File")} successfully processed with {Warnings} warning{(Warnings > 1 ? "s" : "")}.[/]");
-            }
+        var succeeded = files.Count(f => f.Success);
+        var warnings = files.Count(f => f.HasWarnings);
+        var failed = files.Count - succeeded;
 
-            return 0;
-        }
-
-        var failedFiles = Files.Count(f => !f.Success);
-
-        if (failedFiles < fileCount)
-        {
-            if (Warnings == 0)
-            {
-                console.MarkupLineInterpolated(
-                    $"[green]\n\n{fileCount - failedFiles} file{(fileCount - failedFiles > 1 ? "s" : "")} successfully processed.[/]");
-            }
-            else
-            {
-                console.MarkupLineInterpolated(
-                    $"[yellow]\n\n{fileCount - failedFiles} file{(fileCount - failedFiles > 1 ? "s" : "")} successfully processed with {Warnings} warning{(Warnings > 1 ? "s" : "")}.[/]");
-            }
-
-            console.MarkupLineInterpolated(
-                $"[maroon]Errors encountered for {failedFiles} file{(failedFiles > 1 ? "s" : "")}:[/]");
-        }
-        else
+        if (succeeded == 0)
         {
             console.MarkupLine("[maroon]\n\nErrors encountered for all files:[/]");
         }
+        else
+        {
+            var succeededFiles = $"{succeeded} files";
+            if (failed == 0)
+            {
+                succeededFiles = files.Count == 1 ? "File" : "All files";
+            }
 
-        foreach (var file in Files.Where(f => !f.Success))
+            if (warnings == 0)
+            {
+                console.MarkupLineInterpolated(
+                    $"[green]\n\n{succeededFiles} successfully processed.[/]");
+            }
+            else
+            {
+                console.MarkupLineInterpolated(
+                    $"[yellow]\n\n{succeededFiles} successfully processed with {warnings} warning{(warnings > 1 ? "s" : "")}.[/]");
+            }
+
+            if (failed == 0)
+            {
+                return 0;
+            }
+
+            console.MarkupLineInterpolated(
+                $"[maroon]Errors encountered for {failed} file{(failed > 1 ? "s" : "")}:[/]");
+        }
+
+        foreach (var file in files.Where(f => !f.Success))
         {
             console.MarkupLineInterpolated($"[magenta]{file.Path}:[/]");
             console.MarkupLineInterpolated($"[red]    {file.Status}\n[/]");
@@ -181,7 +168,7 @@ public class CLIInterface(IServiceProvider serviceProvider, IAnsiConsole console
     {
         if (file is { TVDetails: null, MovieDetails: null })
         {
-            DisplayMessage("Error: Unable to parse required information from filename", MessageType.Error);
+            SetStatus("Error: Unable to parse required information from filename", MessageType.Error);
             return ProcessResult.ParseFailure;
         }
 
