@@ -32,13 +32,18 @@ public class FileWriter(
             var isDirectoryPath = fs.PathContainsDirectory(targetPath);
             var fullTargetPath = GetFullOutputPath(taggingFile.Path, targetPath);
 
-            var subtitlePaths = taggingFile.SubtitlePaths
-                .Select((s, i) => (Path: s,
-                    NewPath: GetFullOutputPath(s,
-                        GetSubtitleTargetFileName(targetPath, i, taggingFile.SubtitlePaths.Count))))
+            var additionalFiles = taggingFile.AdditionalPaths
+                .GroupBy(f => Path.GetExtension(f.Path).ToLower())
+                .SelectMany(g => g.Select((f, i) =>
+                    (
+                        f.Path,
+                        f.Subtitle,
+                        NewPath: GetFullOutputPath(f.Path, g.Count() == 1 ? targetPath : $"{targetPath}.{i + 1}")
+                    )
+                ))
                 .ToList();
 
-            if (IsAlreadyNamedCorrectly(taggingFile, fullTargetPath, subtitlePaths))
+            if (IsAlreadyNamedCorrectly(taggingFile, fullTargetPath, additionalFiles))
             {
                 ui.SetStatus("Rename skipped - already named correctly", MessageType.Information);
             }
@@ -53,9 +58,10 @@ public class FileWriter(
                 var renameSuccess = true;
                 renameSuccess &= RenameFile(taggingFile.Path, fullTargetPath, isDirectoryPath, null);
 
-                foreach (var subtitle in subtitlePaths)
+                foreach (var file in additionalFiles)
                 {
-                    renameSuccess &= RenameFile(subtitle.Path, subtitle.NewPath, isDirectoryPath, " subtitle");
+                    renameSuccess &= RenameFile(file.Path, file.NewPath, isDirectoryPath,
+                        file.Subtitle ? " subtitle" : null);
                 }
 
                 if (renameSuccess && isDirectoryPath && config.RemoveEmptyFolders)
@@ -190,12 +196,7 @@ public class FileWriter(
     }
 
     private static bool IsAlreadyNamedCorrectly(TaggingFile taggingFile, string newPath,
-        IEnumerable<(string Path, string NewPath)> subtitlePaths)
+        IEnumerable<(string Path, bool Subtitle, string NewPath)> additionalPaths)
         => taggingFile.Path == Path.GetFullPath(newPath) &&
-            subtitlePaths.All(p => p.Path == Path.GetFullPath(p.NewPath));
-
-    private static string GetSubtitleTargetFileName(string targetFileName, int index, int subtitleCount)
-        => subtitleCount == 1
-            ? targetFileName
-            : $"{targetFileName}.{index + 1}";
+            additionalPaths.All(p => p.Path == Path.GetFullPath(p.NewPath));
 }

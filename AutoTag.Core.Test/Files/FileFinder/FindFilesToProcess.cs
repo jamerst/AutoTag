@@ -34,15 +34,18 @@ public class FindFilesToProcess
     }
 
     [Fact]
-    public void Should_GroupVideoAndSubtitlesWithSameParsedDetails()
+    public void Should_GroupVideoAndAdditionalFilesWithSameParsedDetails()
     {
         var (fs, root) = new MockFileSystemBuilder()
             .WithFile("Title S01E02.mkv")
             .WithFile("Title S01E02 ENG.ass")
             .WithFile("Title S01E02.ass")
+            .WithFile("Title S01E02.nfo")
             .WithDirectory("Movie", d => d.WithFile("Title.mp4").WithFile("Title.srt"))
             .WithFile("Unknown1.mp4")
             .WithFile("Unknown2.srt")
+            .WithFile("Unknown.JPG")
+            .WithFile("Unknown.png")
             .Build();
 
         var mockParser = new Mock<IFileNameParser>();
@@ -56,7 +59,7 @@ public class FindFilesToProcess
             .Returns((null, null));
 
         var finder = new Core.Files.FileFinder(
-            new AutoTagConfig { RenameSubtitles = true },
+            new AutoTagConfig { RenameSubtitles = true, RenameExtensions = [".nfo", ".jpg"] },
             fs,
             new Mock<IUserInterface>().Object,
             mockParser.Object
@@ -65,13 +68,18 @@ public class FindFilesToProcess
         var result = finder.FindFilesToProcess([root]);
 
         result.Should().ContainSingle(f => f.Path.EndsWith("Title S01E02.mkv")
-            && f.SubtitlePaths.Any(s => s.EndsWith("Title S01E02 ENG.ass"))
-            && f.SubtitlePaths.Any(s => s.EndsWith("Title S01E02.ass")));
+            && f.AdditionalPaths.Any(s => s.Path.EndsWith("Title S01E02 ENG.ass") && s.Subtitle)
+            && f.AdditionalPaths.Any(s => s.Path.EndsWith("Title S01E02.ass") && s.Subtitle)
+            && f.AdditionalPaths.Any(s => s.Path.EndsWith("Title S01E02.nfo") && !s.Subtitle)
+        );
 
         result.Should().ContainSingle(f => f.Path.EndsWith("Title.mp4")
-            && f.SubtitlePaths.Any(s => s.EndsWith("Title.srt")));
+            && f.AdditionalPaths.Any(s => s.Path.EndsWith("Title.srt") && s.Subtitle));
 
-        result.Should().ContainSingle(f => f.Path.EndsWith("Unknown1.mp4") && f.SubtitlePaths.Count == 0);
-        result.Should().ContainSingle(f => f.Path.EndsWith("Unknown2.srt") && f.SubtitlePaths.Count == 0);
+        result.Should().ContainSingle(f => f.Path.EndsWith("Unknown1.mp4") && f.AdditionalPaths.Count == 0);
+        result.Should().ContainSingle(f => f.Path.EndsWith("Unknown2.srt") && f.AdditionalPaths.Count == 0);
+        result.Should().ContainSingle(f => f.Path.EndsWith("Unknown.JPG") && f.AdditionalPaths.Count == 0);
+
+        result.Should().NotContain(f => f.Path.EndsWith("Unknown.png"));
     }
 }

@@ -126,7 +126,8 @@ public class ProcessTests(CLIFixture cli) : CLITestBase
                         d2 => d2.CreateFile("Doctor.Who.2005.S00E02.mkv")
                             .CreateFile("Doctor.Who.2005.S01E01.pt1.mkv")
                             .CreateFile("Doctor.Who.2005.S01E02-03.mkv")
-                            .CreateFile("Doctor.Who.2005.S01.scene.nfo")
+                            .CreateFile("Doctor.Who.2005.S01E01.scene.nfo")
+                            .CreateFile("Doctor.Who.2005.S01.txt")
                     )
                     .CreateDirectory("lotr",
                         d2 => d2.CreateFile("The Lord of the Rings The Fellowship of the Ring.mp4"))
@@ -151,7 +152,8 @@ public class ProcessTests(CLIFixture cli) : CLITestBase
             "--movie-pattern", FileSystem.GetPath("Movies", "{Title} ({Year})"),
             "--rename-subs",
             "--remove-empty-folders",
-            "--windows-safe"
+            "--windows-safe",
+            "--rename-ext", ".nfo"
         );
 
         exitCode.Should().Be(0);
@@ -256,6 +258,11 @@ public class ProcessTests(CLIFixture cli) : CLITestBase
                 f.Track.Should().Be(2);
                 f.TrackCount.Should().Be(13);
             }
+        );
+
+        AssertFile(
+            FileSystem.GetPath("Downloads", "Doctor Who", "Doctor.Who.2005.S01E01.scene.nfo"),
+            FileSystem.GetPath("TV", "Doctor Who (2005)", "Season 1", "Doctor Who (2005) S01E01.nfo")
         );
 
         AssertFile(

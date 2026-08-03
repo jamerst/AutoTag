@@ -59,10 +59,10 @@ public class FileFinder(AutoTagConfig config, IFileSystem fs, IUserInterface ui,
             })
             .ToList();
 
-        if (config.RenameSubtitles)
+        if (config.RenameSubtitles || config.RenameExtensions.Count > 0)
         {
             files = files.GroupBy(f => (f.TVDetails, f.MovieDetails))
-                .SelectMany(GroupSubtitles)
+                .SelectMany(GroupFiles)
                 .ToList();
         }
 
@@ -113,7 +113,7 @@ public class FileFinder(AutoTagConfig config, IFileSystem fs, IUserInterface ui,
     }
 
 
-    private IEnumerable<TaggingFile> GroupSubtitles(
+    private IEnumerable<TaggingFile> GroupFiles(
         IGrouping<(ParsedTVFileName? TVResult, ParsedMovieFileName? MovieResult), TaggingFile> files)
     {
         if (files.Key is { TVResult: null, MovieResult: null })
@@ -122,12 +122,45 @@ public class FileFinder(AutoTagConfig config, IFileSystem fs, IUserInterface ui,
             {
                 yield return file;
             }
+
+            yield break;
         }
-        else if (files.Count() == 1)
+
+        if (files.Count() == 1)
         {
             yield return files.First();
+
+            yield break;
         }
-        else if (files.Count(f => IsVideoFile(Path.GetExtension(f.Path))) > 1)
+
+        var grouped = files.Aggregate(
+            new
+            {
+                Videos = new List<TaggingFile>(),
+                Subtitles = new List<TaggingFile>(),
+                Other = new List<TaggingFile>()
+            },
+            (grouped, file) =>
+            {
+                var extension = Path.GetExtension(file.Path);
+                if (IsVideoFile(extension))
+                {
+                    grouped.Videos.Add(file);
+                }
+                else if (IsSubtitleFile(extension))
+                {
+                    grouped.Subtitles.Add(file);
+                }
+                else
+                {
+                    grouped.Other.Add(file);
+                }
+
+                return grouped;
+            }
+        );
+
+        if (grouped.Videos.Count > 1)
         {
             ui.DisplayMessage(
                 "Warning, detected possible duplicate video files, files will be processed separately",
@@ -141,21 +174,25 @@ public class FileFinder(AutoTagConfig config, IFileSystem fs, IUserInterface ui,
         }
         else
         {
-            var video = files.FirstOrDefault(f => IsVideoFile(Path.GetExtension(f.Path)));
-            var subs = files.Where(f => IsSubtitleFile(Path.GetExtension(f.Path))).ToList();
+            var video = grouped.Videos.FirstOrDefault();
+            var additionalFiles = grouped.Subtitles.Select(s => new AdditionalFile(s.Path, true))
+                .Union(grouped.Other.Select(o => new AdditionalFile(o.Path, false)))
+                .ToList();
 
             if (video != null)
             {
                 yield return video with
                 {
-                    SubtitlePaths = subs.Select(s => s.Path).ToList()
+                    AdditionalPaths = additionalFiles
                 };
             }
-            else if (subs.Count > 0)
+            else
             {
-                yield return subs[0] with
+                var first = files.First(f => f.Path == additionalFiles[0].Path);
+
+                yield return first with
                 {
-                    SubtitlePaths = subs.Skip(1).Select(s => s.Path).ToList()
+                    AdditionalPaths = additionalFiles.Skip(1).ToList()
                 };
             }
         }
@@ -164,12 +201,16 @@ public class FileFinder(AutoTagConfig config, IFileSystem fs, IUserInterface ui,
 
     private bool IsSupportedFile(FileInfo info) =>
         IsVideoFile(info.Extension)
-        || (config.RenameSubtitles && IsSubtitleFile(info.Extension));
+        || IsSubtitleFile(info.Extension)
+        || IsAdditionalFile(info.Extension);
 
 
     private static bool IsVideoFile(string extension) => ProcessableVideoExtensions.Contains(extension);
 
     private static bool IsTaggableVideoFile(string extension) => TaggableVideoExtensions.Contains(extension);
 
-    private static bool IsSubtitleFile(string extension) => SubtitleExtensions.Contains(extension);
+    private bool IsSubtitleFile(string extension) =>
+        config.RenameSubtitles && SubtitleExtensions.Contains(extension);
+
+    private bool IsAdditionalFile(string extension) => config.RenameExtensions.Contains(extension.ToLower());
 }

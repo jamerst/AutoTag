@@ -26,32 +26,33 @@ ARGUMENTS:
     [paths]    Files or directories to process
 
 OPTIONS:
-    -h, --help                             Prints help information                                            
-    -c, --config <PATH>                    Config file path                                                   
-    -p, --pattern <PATTERN>                Custom regex to parse TV episode information                       
-    -v, --verbose                          Enable verbose output mode                                         
-        --set-default                      Set the current arguments as the default                           
-        --print-config                     Print loaded configuration and exit                                
-        --version                          Print version and exit                                             
-        --no-rename                        Disable file and subtitle renaming                                 
-        --tv-pattern <PATTERN>             Rename pattern for TV episodes                                     
-        --movie-pattern <PATTERN>          Rename pattern for movies                                          
-        --windows-safe                     Remove invalid Windows file name characters when renaming          
-        --rename-subs                      Rename subtitle files                                              
-        --replace <REPLACE=REPLACEMENT>    Replace <REPLACE> with <REPLACEMENT> in file names                 
-    -a, --auto                             Auto tagging mode                                                  
-    -t, --tv                               TV tagging mode                                                    
-    -m, --movie                            Movie tagging mode                                                 
-        --no-tag                           Disable file tagging                                               
-        --no-cover                         Disable cover art tagging                                          
-        --manual                           Manually choose the TV series/movie for a file from search results 
-        --extended-tagging                 Add more information to Matroska file tags. Reduces tagging speed  
+    -h, --help                             Prints help information
+    -c, --config <PATH>                    Config file path
+    -p, --pattern <PATTERN>                Custom regex to parse TV episode information
+    -v, --verbose                          Enable verbose output mode
+        --set-default                      Set the current arguments as the default
+        --print-config                     Print loaded configuration and exit
+        --version                          Print version and exit
+        --no-rename                        Disable file and subtitle renaming
+        --tv-pattern <PATTERN>             Rename pattern for TV episodes
+        --movie-pattern <PATTERN>          Rename pattern for movies
+        --windows-safe                     Remove invalid Windows file name characters when renaming
+        --rename-subs                      Rename subtitle files
+        --rename-ext <EXTENSION>           Additional file extensions to include in renaming
+        --replace <REPLACE=REPLACEMENT>    Replace <REPLACE> with <REPLACEMENT> in file names
+    -a, --auto                             Auto tagging mode
+    -t, --tv                               TV tagging mode
+    -m, --movie                            Movie tagging mode
+        --no-tag                           Disable file tagging
+        --no-cover                         Disable cover art tagging
+        --manual                           Manually choose the TV series/movie for a file from search results
+        --extended-tagging                 Add more information to Matroska file tags. Reduces tagging speed
         --apple-tagging                    Add extra tags to mp4 files for use with Apple devices and software
-    -l, --language <LANGUAGE>              Metadata language (default: en)                                    
-        --search-language <LANGUAGE>       Additional languages to use when searching TMDB                    
-    -g, --episode-group                    Manually choose alternate episode orderings for a TV show          
-        --include-adult                    Include adult titles in TMDB searches                              
-        --remove-empty-folders             Remove source folders after moving files if they are empty  
+    -l, --language <LANGUAGE>              Metadata language (default: en)
+        --search-language <LANGUAGE>       Additional languages to use when searching TMDB
+    -g, --episode-group                    Manually choose alternate episode orderings for a TV show
+        --include-adult                    Include adult titles in TMDB searches
+        --remove-empty-folders             Remove source folders after moving files if they are empty
 ```
 
 ## Parsing
@@ -158,10 +159,17 @@ the new specifiers.
 <sup>2</sup>Directory separators in Windows paths (`\`) will need to be escaped as `\\` if editing the config file
 manually.
 
-### Subtitles
+### Additional Files
 
-The `--rename-subs` option can be enabled to rename separate subtitle files. These will be renamed alongside video files
-using the same rename pattern. If there are multiple subtitle files for the same episode/movie they will have a number
+Additional files (e.g. subtitles) can also be renamed alongside video files using the same rename pattern.
+
+To enable this use the `--rename-subs` option to enable renaming for common subtitle formats, or pass specific file
+extensions to rename using the `--rename-ext` option.
+
+For example, to rename .jpg and .nfo files pass `--rename-ext .nfo` and `--rename-ext .jpg`. File extensions are not
+case sensitive and can be provided with or without the dot.
+
+If there are multiple files for the same episode/movie that will have the same output file name they will have a number
 appended to each file name.
 
 ### Windows Safe
@@ -185,8 +193,8 @@ such values you can add them to the config file manually using a text editor.
 
 AutoTag may not always select the correct TV series or movie, especially if there are multiple search results with the
 same title. To work around this you can enable manual mode with the `--manual` option. This will display an interactive
-menu for you to select the correct search result when searching for a match. Once manually selected that result will
-be used for all subsequent files parsed with the same series name/movie title.
+menu for you to select the correct search result when searching for a match. Once manually selected that result will be
+used for all subsequent files parsed with the same series name/movie title.
 
 ### Extended Tagging
 
@@ -203,9 +211,9 @@ to get metadata in German use `-l de`, or for Brazilian Portuguese use `-l pt-BR
 languages is probably less complete than it is for English. If data in a given language is not available it will fall
 back to some alternative, likely English.
 
-Additional fallback languages for searching can be specified via the `--search-languages` option. For example,
-with `-l pt-BR` and `--search-languages en-US` AutoTag will write metadata in Brazilian Portuguese,
-but will retry searches in English if the Portuguese search fails.
+Additional fallback languages for searching can be specified via the `--search-languages` option. For example, with
+`-l pt-BR` and `--search-languages en-US` AutoTag will write metadata in Brazilian Portuguese, but will retry searches
+in English if the Portuguese search fails.
 
 ### Alternate Episode Orderings (Episode Groups)
 
@@ -217,12 +225,12 @@ Enabling this option will prompt you to select the episode ordering for each sho
 
 | Group Name      | Valid |
 |-----------------|-------|
-| Season 01       | ✅     |
-| Staffel 02      | ✅     |
-| Volume 9        | ✅     |
-| Special         | ✅     |
-| Season 3 Part 1 | ❌     |
-| Volume Part 1   | ❌     |
+| Season 01       | ✅    |
+| Staffel 02      | ✅    |
+| Volume 9        | ✅    |
+| Special         | ✅    |
+| Season 3 Part 1 | ❌    |
+| Volume Part 1   | ❌    |
 
 ## Config
 
@@ -247,6 +255,7 @@ not exist, a file will be created with the default settings:
 "extendedTagging": false,                 // Add more information to Matroska file tags
 "appleTagging": false,                    // Add extra tags to mp4 files for use with Apple devices and software
 "renameSubtitles": false,                 // Rename subtitle files
+"renameExtensions": [],                   // Additional file extensions to include in renaming
 "language": "en",                         // Metadata language,
 "searchLanguages": [],                    // Additional fallback languages to use when searching movies on TMDB
 "includeAdult": false,                    // Include adult titles in TMDB searches

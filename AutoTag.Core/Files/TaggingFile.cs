@@ -5,7 +5,7 @@ namespace AutoTag.Core.Files;
 public record TaggingFile
 {
     public required string Path { get; init; }
-    public List<string> SubtitlePaths { get; init; } = [];
+    public List<AdditionalFile> AdditionalPaths { get; init; } = [];
     public bool Taggable { get; init; } = true;
     public string Status { get; set; } = "";
     public bool Success { get; set; } = true;

@@ -19,7 +19,7 @@ public class WriteAsync
         );
 
     private static string GetPath(params string[] segments) =>
-        Path.Combine([OperatingSystem.IsWindows() ? @"C:\" : "/", ..segments]);
+        Path.Combine([OperatingSystem.IsWindows() ? @"C:\" : "/", .. segments]);
 
     [Fact]
     public async Task Should_SkipRename_WhenVideoAndSubtitleAreAlreadyCorrectlyNamed()
@@ -40,7 +40,7 @@ public class WriteAsync
         var taggingFile = new TaggingFile
         {
             Path = GetPath("Movie (2020).mkv"),
-            SubtitlePaths = [GetPath("Movie (2020).srt")]
+            AdditionalPaths = [new AdditionalFile(GetPath("Movie (2020).srt"), true)]
         };
 
         var metadata = new MovieFileMetadata
@@ -82,7 +82,7 @@ public class WriteAsync
         var taggingFile = new TaggingFile
         {
             Path = GetPath("Movie (2020).mkv"),
-            SubtitlePaths = [GetPath(inPath)]
+            AdditionalPaths = [new AdditionalFile(GetPath(inPath), true)]
         };
 
         var metadata = new MovieFileMetadata
@@ -206,7 +206,7 @@ public class WriteAsync
     }
 
     [Fact]
-    public async Task Should_RenameMultipleSubtitlesWithNumberedSuffixes()
+    public async Task Should_RenameMultipleAdditionalFilesWithNumberedSuffixesByExtension()
     {
         var config = new AutoTagConfig
         {
@@ -222,10 +222,21 @@ public class WriteAsync
 
         var sub1Path = GetPath("sub-one.ass");
         var sub2Path = GetPath("sub-two.ass");
+        var srtSubPath = GetPath("sub-one.srt");
+        var jpg1Path = GetPath("1.jpg");
+        var jpg2Path = GetPath("2.jpg");
+
         var taggingFile = new TaggingFile
         {
             Path = GetPath("raw.mkv"),
-            SubtitlePaths = [sub1Path, sub2Path]
+            AdditionalPaths =
+            [
+                new AdditionalFile(sub1Path, true),
+                new AdditionalFile(sub2Path, true),
+                new AdditionalFile(srtSubPath, true),
+                new AdditionalFile(jpg1Path, false),
+                new AdditionalFile(jpg2Path, false)
+            ]
         };
         var metadata = new TVFileMetadata
         {
@@ -237,17 +248,36 @@ public class WriteAsync
 
         var result = await writer.WriteAsync(taggingFile, metadata);
 
-        var sub1OutPath = GetPath("Series - 1x01 - Pilot.1.ass");
-        var sub2OutPath = GetPath("Series - 1x01 - Pilot.2.ass");
-
         result.Should().BeTrue();
+
+        var sub1OutPath = GetPath("Series - 1x01 - Pilot.1.ass");
         mockFs.Verify(fs => fs.Move(
             sub1Path,
             sub1OutPath
         ), Times.Once);
+
+        var sub2OutPath = GetPath("Series - 1x01 - Pilot.2.ass");
         mockFs.Verify(fs => fs.Move(
             sub2Path,
             sub2OutPath
+        ), Times.Once);
+
+        var srtSubOutPath = GetPath("Series - 1x01 - Pilot.srt");
+        mockFs.Verify(fs => fs.Move(
+            srtSubPath,
+            srtSubOutPath
+        ), Times.Once);
+
+        var jpg1OutPath = GetPath("Series - 1x01 - Pilot.1.jpg");
+        mockFs.Verify(fs => fs.Move(
+            jpg1Path,
+            jpg1OutPath
+        ), Times.Once);
+
+        var jpg2OutPath = GetPath("Series - 1x01 - Pilot.2.jpg");
+        mockFs.Verify(fs => fs.Move(
+            jpg2Path,
+            jpg2OutPath
         ), Times.Once);
     }
 }

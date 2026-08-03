@@ -4,7 +4,7 @@ namespace AutoTag.Core.Config;
 
 public class AutoTagConfig
 {
-    public const int CurrentVer = 15;
+    public const int CurrentVer = 16;
 
     public int ConfigVer { get; set; } = CurrentVer;
 
@@ -37,6 +37,8 @@ public class AutoTagConfig
 
     public bool RenameSubtitles { get; set; }
 
+    public List<string> RenameExtensions { get; set; } = [];
+
     public string Language { get; set; } = "en";
 
     public List<string> SearchLanguages { get; set; } = [];
@@ -45,5 +47,5 @@ public class AutoTagConfig
 
     public bool EpisodeGroup { get; set; }
 
-    public IEnumerable<FileNameReplace> FileNameReplaces { get; set; } = [];
+    public List<FileNameReplace> FileNameReplaces { get; set; } = [];
 }

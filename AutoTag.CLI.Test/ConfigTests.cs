@@ -41,7 +41,9 @@ public class ConfigTests(CLIFixture cli, ITestContextAccessor context) : CLITest
             "--search-language", "en-US",
             "-g",
             "--include-adult",
-            "--remove-empty-folders"
+            "--remove-empty-folders",
+            "--rename-ext", "nfo",
+            "--rename-ext", ".jpg"
         );
 
         var config = JsonSerializer.Deserialize<AutoTagConfig>(
@@ -70,6 +72,7 @@ public class ConfigTests(CLIFixture cli, ITestContextAccessor context) : CLITest
             config.EpisodeGroup.Should().BeTrue();
             config.IncludeAdult.Should().BeTrue();
             config.RemoveEmptyFolders.Should().BeTrue();
+            config.RenameExtensions.Should().BeEquivalentTo(".nfo", ".jpg");
         }
     }
 

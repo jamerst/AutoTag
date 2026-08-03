@@ -25,6 +25,10 @@ public partial class RootCommandSettings
     [Description("Rename subtitle files")]
     public bool? RenameSubs { get; init; }
 
+    [CommandOption("--rename-ext <extension>")]
+    [Description("Additional file extensions to include in renaming")]
+    public string[]? RenameExtensions { get; init; }
+
     [CommandOption("--replace <replace=replacement>")]
     [Description("Replace <REPLACE> with <REPLACEMENT> in file names")]
     public IDictionary<string, string>? FileNameReplaces { get; init; }
@@ -54,6 +58,13 @@ public partial class RootCommandSettings
         if (RenameSubs.HasValue)
         {
             config.RenameSubtitles = RenameSubs.Value;
+        }
+
+        if (RenameExtensions?.Length > 0)
+        {
+            config.RenameExtensions = RenameExtensions
+                .Select(e => (e.StartsWith('.') ? e : $".{e}").ToLower())
+                .ToList();
         }
 
         if (FileNameReplaces != null && FileNameReplaces.Any())

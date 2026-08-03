@@ -12,8 +12,8 @@ public class FileNameReplace(string replace, string replacement)
 
     public string Apply(string str) => str.Replace(Replace, Replacement);
 
-    public static IEnumerable<FileNameReplace> FromDictionary(IDictionary<string, string> dict)
-        => dict.Select(x => new FileNameReplace(x.Key, x.Value));
+    public static List<FileNameReplace> FromDictionary(IDictionary<string, string> dict)
+        => dict.Select(x => new FileNameReplace(x.Key, x.Value)).ToList();
 
     public override bool Equals(object? obj) =>
         obj is FileNameReplace r && r.Replace == Replace && r.Replacement == Replacement;
