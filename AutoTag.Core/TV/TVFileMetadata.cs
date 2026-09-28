@@ -63,10 +63,11 @@ public class TVFileMetadata : FileMetadata
             // Series
             appleTags.SetText("tvsh", SeriesName);
 
-            if (Season is >= byte.MinValue and <= byte.MaxValue)
+            if (Season >= 0)
             {
-                // Season number
-                appleTags.SetData("tvsn", new ByteVector((byte)Season), (uint)AppleDataBox.FlagType.ContainsData);
+                // Season number - Apple tvsn is a 32-bit big-endian integer.
+                appleTags.SetData("tvsn", ByteVector.FromUInt((uint)Season),
+                    (uint)AppleDataBox.FlagType.ContainsData);
             }
             else
             {
@@ -74,10 +75,11 @@ public class TVFileMetadata : FileMetadata
                     MessageType.Warning);
             }
 
-            if (Episode is >= byte.MinValue and <= byte.MaxValue)
+            if (Episode >= 0)
             {
-                // Episode number
-                appleTags.SetData("tves", new ByteVector((byte)Episode), (uint)AppleDataBox.FlagType.ContainsData);
+                // Episode number - Apple tves is a 32-bit big-endian integer.
+                appleTags.SetData("tves", ByteVector.FromUInt((uint)Episode),
+                    (uint)AppleDataBox.FlagType.ContainsData);
             }
             else
             {
