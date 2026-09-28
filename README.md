@@ -274,8 +274,9 @@ not exist, a file will be created with the default settings:
 
 Downloads for Linux, macOS and Windows can be found [here](https://github.com/jamerst/AutoTag/releases).
 
-The macOS build is untested, I don't own any Apple devices so I can't easily test it. Please report any issues and I'll
-try to investigate them.
+A Windows build is also available on Winget and can be installed by running `winget install jamerst.autotag`.
+
+**I don't recommend using the Winget build as it may be outdated due to the frankly insane process for releasing new versions on Winget.**
 
 Build file sizes are quite large due to bundled .NET runtimes.
 
