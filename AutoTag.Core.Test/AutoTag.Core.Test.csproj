@@ -3,24 +3,24 @@
         <TargetFramework>net10.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
-
         <IsPackable>false</IsPackable>
         <IsTestProject>true</IsTestProject>
+        <OutputType>Exe</OutputType>
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="AwesomeAssertions" Version="9.5.0" />
-        <PackageReference Include="coverlet.collector" Version="10.0.1">
+        <PackageReference Include="AwesomeAssertions" Version="9.6.0"/>
+        <PackageReference Include="coverlet.collector" Version="10.1.0">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
-        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.8.1" />
-        <PackageReference Include="Moq" Version="4.20.72"/>
-        <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5">
+        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.10.1"/>
+        <PackageReference Include="Moq" Version="4.21.0"/>
+        <PackageReference Include="xunit.runner.visualstudio" Version="4.0.0">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
-        <PackageReference Include="xunit.v3" Version="3.2.2"/>
+        <PackageReference Include="xunit.v3" Version="4.0.1"/>
     </ItemGroup>
 
     <PropertyGroup Condition="'$(Configuration)' == 'Release'">
