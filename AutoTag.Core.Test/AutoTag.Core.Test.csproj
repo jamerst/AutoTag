@@ -31,11 +31,7 @@
     <ItemGroup>
         <Using Include="Xunit"/>
     </ItemGroup>
-
-    <ItemGroup>
-        <None Include="TestData\*.mkv;TestData\*.jpg" CopyToOutputDirectory="PreserveNewest"/>
-    </ItemGroup>
-
+    
     <ItemGroup>
         <ProjectReference Include="..\AutoTag.Core\AutoTag.Core.csproj"/>
     </ItemGroup>
