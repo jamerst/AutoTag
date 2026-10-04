@@ -8,12 +8,17 @@ public class FileSystemBuilder(string basePath)
         var extension = Path.GetExtension(name);
         if (extension is ".mkv" or ".mp4")
         {
-            File.Copy(Path.Combine("..", "..", "..", "TestFiles", $"test{extension}"), filePath);
+            return CreateFile(name, $"test{extension}");
         }
-        else
-        {
-            using var _ = File.Create(filePath);
-        }
+
+        using var _ = File.Create(filePath);
+
+        return this;
+    }
+
+    public FileSystemBuilder CreateFile(string name, string testFileName)
+    {
+        File.Copy(Path.Combine("..", "..", "..", "TestFiles", testFileName), Path.Combine(basePath, name));
 
         return this;
     }
@@ -29,5 +34,5 @@ public class FileSystemBuilder(string basePath)
         return this;
     }
 
-    public string GetPath(params string[] segments) => Path.Combine([basePath, ..segments]);
+    public string GetPath(params string[] segments) => Path.Combine([basePath, .. segments]);
 }

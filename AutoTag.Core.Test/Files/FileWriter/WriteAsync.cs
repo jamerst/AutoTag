@@ -21,9 +21,6 @@ public class WriteAsync
     private static string GetPath(params string[] segments) =>
         Path.Combine([OperatingSystem.IsWindows() ? @"C:\" : "/", .. segments]);
 
-    private static string GetTestDataPath(string fileName) =>
-        Path.Combine(AppContext.BaseDirectory, "TestData", fileName);
-
     [Fact]
     public async Task Should_SkipRename_WhenVideoAndSubtitleAreAlreadyCorrectlyNamed()
     {
@@ -124,49 +121,6 @@ public class WriteAsync
         mockUi.Verify(
             ui => ui.SetStatus("Error: Failed to write tags to file", MessageType.Error, It.IsAny<Exception>()),
             Times.Once);
-    }
-
-    [Fact]
-    public async Task Should_KeepNonImageAttachments_WhenAddingCoverArtToMatroska()
-    {
-        var directory = Directory.CreateTempSubdirectory("autotag-test-");
-        try
-        {
-            var path = Path.Combine(directory.FullName, "Movie (2020).mkv");
-            System.IO.File.Copy(GetTestDataPath("attachments.mkv"), path);
-            var cover = await System.IO.File.ReadAllBytesAsync(GetTestDataPath("cover.jpg"),
-                TestContext.Current.CancellationToken);
-            var mockFetcher = new Mock<ICoverArtFetcher>();
-            mockFetcher.Setup(f => f.GetCoverArtAsync("https://example.org/cover.jpg")).ReturnsAsync(cover);
-            var config = new AutoTagConfig
-            {
-                RenameFiles = false,
-                TagFiles = true,
-                AddCoverArt = true
-            };
-            var writer = GetInstance(fetcher: mockFetcher.Object, config: config);
-            var metadata = new MovieFileMetadata
-            {
-                Title = "Movie",
-                Date = new DateTime(2020, 1, 1),
-                CoverURL = "https://example.org/cover.jpg"
-            };
-
-            var result = await writer.WriteAsync(new TaggingFile { Path = path }, metadata);
-
-            result.Should().BeTrue();
-            using var file = TagLib.File.Create(path);
-            file.Tag.Pictures.Select(p => (p.MimeType, p.Filename)).Should().BeEquivalentTo(new[]
-            {
-                ("image/jpeg", "cover.jpg"),
-                ("application/x-truetype-font", "Font.ttf")
-            });
-            file.Tag.Pictures.Single(p => p.MimeType == "image/jpeg").Data.Data.Should().Equal(cover);
-        }
-        finally
-        {
-            directory.Delete(recursive: true);
-        }
     }
 
     [Fact]

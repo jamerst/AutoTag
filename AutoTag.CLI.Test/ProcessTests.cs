@@ -295,6 +295,31 @@ public class ProcessTests(CLIFixture cli) : CLITestBase
         );
     }
 
+    [Fact]
+    public async Task Should_KeepNonImageAttachments_WhenAddingCoverArtToMatroska()
+    {
+        FileSystem.CreateDirectory("Downloads", d => d.CreateFile("Silo S03E02.mkv", "attachments.mkv"));
+
+        var (_, exitCode) = await cli.ExecuteAsync(
+            FileSystem.GetPath("Downloads", "Silo S03E02.mkv"),
+            "--tv-pattern", "{Series} {Season:S00}{Episode:E00}"
+        );
+
+        exitCode.Should().Be(0);
+
+        AssertFile(
+            FileSystem.GetPath("Downloads", "Silo S03E02.mkv"),
+            FileSystem.GetPath("Downloads", "Silo S03E02.mkv"),
+            f =>
+            {
+                f.File.Tag.Pictures.Select(p => (p.MimeType, p.Filename)).Should().BeEquivalentTo([
+                    ("image/jpeg", "cover.jpg"),
+                    ("application/x-truetype-font", "Font.ttf")
+                ]);
+            }
+        );
+    }
+
     private static void AssertFile(string originalPath, string newPath, Action<FileTags>? assertTags = null)
     {
         if (originalPath != newPath)
@@ -318,7 +343,8 @@ public class ProcessTests(CLIFixture cli) : CLITestBase
                 file.Tag.Disc,
                 file.Tag.Track,
                 file.Tag.TrackCount,
-                file.Tag.Year
+                file.Tag.Year,
+                file
             );
 
             using (new AssertionScope())
@@ -336,6 +362,7 @@ public class ProcessTests(CLIFixture cli) : CLITestBase
         uint Disc,
         uint Track,
         uint TrackCount,
-        uint Year
+        uint Year,
+        TagLibFile File
     );
 }
