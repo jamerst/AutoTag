@@ -14,7 +14,7 @@ public class RootCommand(IAnsiConsole console) : AsyncCommand<RootCommandSetting
         WriteIndented = true
     };
 
-    protected override async Task<int> ExecuteAsync(CommandContext context, RootCommandSettings cmdSettings,
+    public override async Task<int> ExecuteAsync(CommandContext context, RootCommandSettings cmdSettings,
         CancellationToken cancellationToken)
     {
         if (cmdSettings.PrintVersion)
