@@ -103,7 +103,7 @@ public class FileWriter(
                     }
                     else
                     {
-                        file.Tag.Pictures = [new Picture(imgBytes) { Filename = "cover.jpg" }];
+                        file.Tag.Pictures = GetPicturesWithCover(file, new Picture(imgBytes) { Filename = "cover.jpg" });
                     }
                 }
                 else if (string.IsNullOrEmpty(metadata.CoverURL) && config.AddCoverArt)
@@ -194,6 +194,15 @@ public class FileWriter(
 
         return (isDirectoryPath ? newPath : Path.Combine(fs.GetDirectoryPath(path)!, newPath)) + extension;
     }
+
+    /// <summary>
+    /// Matroska stores every attachment as a picture, including the fonts that ASS/SSA subtitles need.
+    /// Replacing all pictures with the cover would delete them, so only image attachments are replaced there.
+    /// </summary>
+    private static IPicture[] GetPicturesWithCover(File file, IPicture cover)
+        => (file.TagTypes & TagTypes.Matroska) == TagTypes.Matroska
+            ? [cover, .. (file.Tag.Pictures ?? []).Where(p => p.MimeType?.StartsWith("image/") != true)]
+            : [cover];
 
     private static bool IsAlreadyNamedCorrectly(TaggingFile taggingFile, string newPath,
         IEnumerable<(string Path, bool Subtitle, string NewPath)> additionalPaths)
