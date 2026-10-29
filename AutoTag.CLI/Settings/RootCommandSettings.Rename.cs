@@ -33,6 +33,10 @@ public partial class RootCommandSettings
     [Description("Replace <REPLACE> with <REPLACEMENT> in file names")]
     public IDictionary<string, string>? FileNameReplaces { get; init; }
 
+    [CommandOption("--year")]
+    [Description("Include year when renaming TV episodes")]
+    public bool? Year { get; init; }
+
     private void SetRenameOptions(AutoTagConfig config)
     {
         if (NoRename.HasValue)
@@ -70,6 +74,11 @@ public partial class RootCommandSettings
         if (FileNameReplaces != null && FileNameReplaces.Any())
         {
             config.FileNameReplaces = FileNameReplace.FromDictionary(FileNameReplaces);
+        }
+
+        if (Year.HasValue)
+        {
+            config.Year = Year.Value;
         }
     }
 }

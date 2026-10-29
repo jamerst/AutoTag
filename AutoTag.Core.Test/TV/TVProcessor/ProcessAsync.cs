@@ -214,4 +214,76 @@ public class ProcessAsync : TVProcessorTestBase
         result.Should().Be(ProcessResult.Success);
         mockWriter.Verify(w => w.WriteAsync(It.IsAny<TaggingFile>(), It.IsAny<FileMetadata>()));
     }
+
+    [Fact]
+    public async Task Should_RenameWithYear_When_YearOptionEnabled()
+    {
+        var config = new AutoTagConfig { AddCoverArt = false, Year = true };
+
+        var mockCache = new Mock<ITVCache>();
+
+        List<ShowResults>? showResults =
+            [new ShowResults(new SearchTv { Name = "Show", FirstAirDate = new DateTime(2026, 01, 01) })];
+        mockCache.Setup(c => c.TryGetShow(It.IsAny<string>(), It.IsAny<int?>(), out showResults))
+            .Returns(true);
+
+        var season = new TvSeason
+        {
+            Episodes = [new TvSeasonEpisode { EpisodeNumber = 2 }]
+        };
+        mockCache.Setup(c => c.TryGetSeason(It.IsAny<int>(), It.IsAny<int>(), out season))
+            .Returns(true);
+
+        var mockWriter = new Mock<IFileWriter>();
+        mockWriter.Setup(w => w.WriteAsync(It.IsAny<TaggingFile>(), It.IsAny<FileMetadata>()))
+            .ReturnsAsync(true);
+
+        var instance = GetInstance(cache: mockCache.Object, writer: mockWriter.Object, config: config);
+
+        var result = await instance.ProcessAsync(new TaggingFile
+        {
+            Path = "/Show/Show S01E02.mp4",
+            TVDetails = new ParsedTVFileName("Show", null, 1, 2, null, null)
+        });
+
+        result.Should().Be(ProcessResult.Success);
+        mockWriter.Verify(w => w.WriteAsync(It.IsAny<TaggingFile>(), It.Is<TVFileMetadata>(f => f.Year == 2026)));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData(2026)]
+    public async Task Should_RenameWithYearOnlyIfInFileName_When_YearOptionNotEnabled(int? year)
+    {
+        var config = new AutoTagConfig { AddCoverArt = false, Year = false };
+
+        var mockCache = new Mock<ITVCache>();
+
+        List<ShowResults>? showResults =
+            [new ShowResults(new SearchTv { Name = "Show", FirstAirDate = new DateTime(year ?? 2025, 01, 01) })];
+        mockCache.Setup(c => c.TryGetShow(It.IsAny<string>(), It.IsAny<int?>(), out showResults))
+            .Returns(true);
+
+        var season = new TvSeason
+        {
+            Episodes = [new TvSeasonEpisode { EpisodeNumber = 2 }]
+        };
+        mockCache.Setup(c => c.TryGetSeason(It.IsAny<int>(), It.IsAny<int>(), out season))
+            .Returns(true);
+
+        var mockWriter = new Mock<IFileWriter>();
+        mockWriter.Setup(w => w.WriteAsync(It.IsAny<TaggingFile>(), It.IsAny<FileMetadata>()))
+            .ReturnsAsync(true);
+
+        var instance = GetInstance(cache: mockCache.Object, writer: mockWriter.Object, config: config);
+
+        var result = await instance.ProcessAsync(new TaggingFile
+        {
+            Path = "/Show/Show S01E02.mp4",
+            TVDetails = new ParsedTVFileName("Show", year, 1, 2, null, null)
+        });
+
+        result.Should().Be(ProcessResult.Success);
+        mockWriter.Verify(w => w.WriteAsync(It.IsAny<TaggingFile>(), It.Is<TVFileMetadata>(f => f.Year == year)));
+    }
 }

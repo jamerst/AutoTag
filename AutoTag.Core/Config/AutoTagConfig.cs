@@ -25,6 +25,8 @@ public class AutoTagConfig
     public string TVRenamePattern { get; set; } =
         "{Series} - {Season}x{Episode:00}{EndEpisode:-00|} - {Title}{Part:pt-0|}";
 
+    public bool Year { get; set; }
+
     public string MovieRenamePattern { get; set; } = "{Title} ({Year})";
 
     public string? ParsePattern { get; set; }

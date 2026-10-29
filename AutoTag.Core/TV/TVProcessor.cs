@@ -252,11 +252,13 @@ public class TVProcessor(ITMDBService tmdb, IFileWriter writer, ITVCache cache, 
             return (FindResult.Skip, null, $"Error: Cannot find {parsedDetails} on TheMovieDB");
         }
 
+        var year = parsedDetails.Year ?? (config.Year ? showData.FirstAirDate?.Year : null);
+
         var metadata = new TVFileMetadata
         {
             Id = showData.Id,
             SeriesName = showData.Name!,
-            Year = parsedDetails.Year,
+            Year = year,
             Season = parsedDetails.Season ?? result.Value.Season.SeasonNumber,
             Episode = parsedDetails.Season.HasValue
                 ? parsedDetails.Episode
