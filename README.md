@@ -40,6 +40,7 @@ OPTIONS:
         --rename-subs                      Rename subtitle files
         --rename-ext <EXTENSION>           Additional file extensions to include in renaming
         --replace <REPLACE=REPLACEMENT>    Replace <REPLACE> with <REPLACEMENT> in file names
+        --year                             Include year when renaming TV episodes  
     -a, --auto                             Auto tagging mode
     -t, --tv                               TV tagging mode
     -m, --movie                            Movie tagging mode
@@ -116,7 +117,7 @@ legacy specifiers can be mixed in the same rename pattern.
 | `{Part}`       | -                | TV episode part (for episodes split into multiple files)<sup>1</sup> |
 
 <sup>1</sup>**The `Year`, `EndEpisode` and `Part` fields will only be present if the original file had them in the
-name.**
+name (or if the `--year` option is enabled).**
 These fields are provided so you can persist this information and avoid the files being renamed back every time AutoTag
 is run on them.
 
@@ -276,7 +277,8 @@ Downloads for Linux, macOS and Windows can be found [here](https://github.com/ja
 
 A Windows build is also available on Winget and can be installed by running `winget install jamerst.autotag`.
 
-**I don't recommend using the Winget build as it may be outdated due to the frankly insane process for releasing new versions on Winget.**
+**I don't recommend using the Winget build as it may be outdated due to the frankly insane process for releasing new
+versions on Winget.**
 
 Build file sizes are quite large due to bundled .NET runtimes.
 
