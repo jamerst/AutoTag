@@ -35,7 +35,7 @@ public static class Extensions
 
         services.AddScoped<ICoverArtFetcher, CoverArtFetcher>();
 
-        services.AddScoped<ITagger, TagLibTagger>();
+        services.AddScoped<ITagger, TagLib2Tagger>();
 
         services.AddKeyedScoped<IProcessor, TVProcessor>(Mode.TV);
         services.AddKeyedScoped<IProcessor, MovieProcessor>(Mode.Movie);

@@ -1,0 +1,3 @@
+[submodule "TagLibSharp2"]
+	path = TagLibSharp2
+	url = git@github.com:decriptor/TagLibSharp2.git

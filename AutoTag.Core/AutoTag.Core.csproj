@@ -12,4 +12,8 @@
         <PackageReference Include="TagLibSharp" Version="2.3.0"/>
         <PackageReference Include="TMDbLib" Version="3.0.0"/>
     </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\TagLibSharp2\src\TagLibSharp2\TagLibSharp2.csproj"/>
+    </ItemGroup>
 </Project>

@@ -27,6 +27,8 @@ public interface IFileSystem
     Stream OpenReadStream(string path);
 
     Stream OpenWriteStream(string path);
+
+    Task<byte[]> ReadAllBytesAsync(string path);
 }
 
 public class FileSystem : IFileSystem
@@ -57,4 +59,6 @@ public class FileSystem : IFileSystem
     public Stream OpenReadStream(string path) => new FileStream(path, FileMode.Open, FileAccess.Read);
 
     public Stream OpenWriteStream(string path) => new FileStream(path, FileMode.Create, FileAccess.Write);
+
+    public Task<byte[]> ReadAllBytesAsync(string path) => File.ReadAllBytesAsync(path);
 }
