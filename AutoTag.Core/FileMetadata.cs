@@ -1,7 +1,6 @@
 ﻿using AutoTag.Core.Config;
 using AutoTag.Core.Files;
-using TagLib;
-using File = TagLib.File;
+using AutoTag.Core.Tagging;
 
 namespace AutoTag.Core;
 
@@ -17,22 +16,27 @@ public abstract class FileMetadata
     public IEnumerable<string>? Characters { get; set; }
     public IEnumerable<string>? Genres { get; init; }
 
-    public virtual void WriteToFile(File file, AutoTagConfig config, IUserInterface ui)
+    public virtual Tags GetTags(AutoTagConfig config)
     {
-        file.Tag.Title = Title;
-        file.Tag.Description = Overview;
+        var tags = new Tags
+        {
+            Title = Title,
+            Description = Overview
+        };
 
         if (Genres != null && Genres.Any())
         {
-            file.Tag.Genres = Genres.ToArray();
+            tags.Genres = Genres.ToArray();
         }
 
-        if (config.ExtendedTagging && (file.TagTypes & TagTypes.Matroska) == TagTypes.Matroska)
+        if (config.ExtendedTagging)
         {
-            file.Tag.Conductor = Director;
-            file.Tag.Performers = Actors?.ToArray();
-            file.Tag.PerformersRole = Characters?.ToArray();
+            tags.Conductor = Director;
+            tags.Performers = Actors;
+            tags.PerformerRoles = Characters;
         }
+
+        return tags;
     }
 
     public abstract string GetRenamePattern(AutoTagConfig config);

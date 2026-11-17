@@ -1,9 +1,6 @@
 using AutoTag.Core.Config;
 using AutoTag.Core.Files;
-using TagLib;
-using TagLib.Mpeg4;
-using File = TagLib.File;
-using Tag = TagLib.Matroska.Tag;
+using AutoTag.Core.Tagging;
 
 namespace AutoTag.Core.TV;
 
@@ -25,71 +22,23 @@ public class TVFileMetadata : FileMetadata
 
     public int? Part { get; init; }
 
-    public override void WriteToFile(File file, AutoTagConfig config, IUserInterface ui)
+    public override Tags GetTags(AutoTagConfig config)
     {
-        base.WriteToFile(file, config, ui);
+        var tags = base.GetTags(config);
 
-        if ((file.TagTypes & TagTypes.Matroska) == TagTypes.Matroska)
-        {
-            var custom = (Tag)file.GetTag(TagTypes.Matroska);
-            // workaround for https://github.com/mono/taglib-sharp/issues/263 - Tag.Album property writes to TITLE tag instead of ALBUM
-            // how has this still not been fixed??
-            custom.Set("ALBUM", null, SeriesName);
+        tags.Album = SeriesName;
+        tags.Disc = Season;
+        tags.Track = Episode;
+        tags.TrackCount = SeasonEpisodes;
 
-            if (config.ExtendedTagging)
-            {
-                custom.Set("TMDB", null, $"tv/{Id}");
-            }
-        }
-        else
+        if (config.ExtendedTagging)
         {
-            file.Tag.Album = SeriesName;
+            tags.Custom = [("TMDB", $"tv/{Id}")];
         }
 
-        file.Tag.Disc = (uint)Season;
-        file.Tag.Track = (uint)Episode;
-        file.Tag.TrackCount = (uint)SeasonEpisodes;
+        tags.AppleMediaType = StikTVShow;
 
-        // set extra tags because Apple is stupid and uses different tags for some reason
-        // for a list of tags see https://kdenlive.org/en/project/adding-meta-data-to-mp4-video/
-        if (config.AppleTagging && (file.TagTypes & TagTypes.Apple) == TagTypes.Apple)
-        {
-            var appleTags = (AppleTag)file.GetTag(TagTypes.Apple);
-
-            // Media Type - allows Apple software to recognise as a TV show
-            // for a list of values see http://www.zoyinc.com/?p=1004
-            appleTags.SetData("stik", new ByteVector(StikTVShow), (uint)AppleDataBox.FlagType.ContainsData);
-
-            // Series
-            appleTags.SetText("tvsh", SeriesName);
-
-            if (Season >= 0)
-            {
-                // Season number - Apple tvsn is a 32-bit big-endian integer.
-                appleTags.SetData("tvsn", ByteVector.FromUInt((uint)Season),
-                    (uint)AppleDataBox.FlagType.ContainsData);
-            }
-            else
-            {
-                ui.SetStatus("Warning: cannot add Apple tag for season number - value out of range",
-                    MessageType.Warning);
-            }
-
-            if (Episode >= 0)
-            {
-                // Episode number - Apple tves is a 32-bit big-endian integer.
-                appleTags.SetData("tves", ByteVector.FromUInt((uint)Episode),
-                    (uint)AppleDataBox.FlagType.ContainsData);
-            }
-            else
-            {
-                ui.SetStatus("Warning: cannot add Apple tag for episode number - value out of range",
-                    MessageType.Warning);
-            }
-
-            // Sort name - allows older Apple software to sort correctly (sorts by title instead of season and episode on older devices)
-            appleTags.SetText("sonm", $"S{Season:00}E{Episode:00}");
-        }
+        return tags;
     }
 
     public override string GetRenamePattern(AutoTagConfig config) => config.TVRenamePattern;

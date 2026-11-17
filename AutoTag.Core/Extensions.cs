@@ -3,12 +3,15 @@ using AutoTag.Core.Config;
 using AutoTag.Core.Files;
 using AutoTag.Core.Files.Parsing;
 using AutoTag.Core.Movie;
+using AutoTag.Core.Tagging;
 using AutoTag.Core.TMDB;
 using AutoTag.Core.TV;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Http;
+using TagLib;
 using TMDbLib.Client;
+using File = TagLib.File;
 
 namespace AutoTag.Core;
 
@@ -32,15 +35,16 @@ public static class Extensions
 
         services.AddScoped<ICoverArtFetcher, CoverArtFetcher>();
 
+        services.AddScoped<ITagger, TagLibTagger>();
+
         services.AddKeyedScoped<IProcessor, TVProcessor>(Mode.TV);
         services.AddKeyedScoped<IProcessor, MovieProcessor>(Mode.Movie);
 
         services.AddMemoryCache();
 
         services.AddHttpClient();
-        services
-            .RemoveAll<
-                IHttpMessageHandlerBuilderFilter>(); // disable HttpClient logging - prints unwanted output to console
+        // disable HttpClient logging - prints unwanted output to console
+        services.RemoveAll<IHttpMessageHandlerBuilderFilter>();
 
         services.AddScoped<TMDbClient>(serviceProvider =>
         {
@@ -85,5 +89,14 @@ public static class Extensions
 
         public bool IsLog()
             => (type & MessageType.Log) == MessageType.Log;
+    }
+
+    extension(File file)
+    {
+        public bool IsMatroska()
+            => (file.TagTypes & TagTypes.Matroska) == TagTypes.Matroska;
+
+        public bool IsApple()
+            => (file.TagTypes & TagTypes.Apple) == TagTypes.Apple;
     }
 }

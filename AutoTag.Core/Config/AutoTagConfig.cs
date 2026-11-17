@@ -50,4 +50,6 @@ public class AutoTagConfig
     public bool EpisodeGroup { get; set; }
 
     public List<FileNameReplace> FileNameReplaces { get; set; } = [];
+
+    public bool ExperimentalTagging { get; set; }
 }

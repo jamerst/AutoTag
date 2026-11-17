@@ -1,6 +1,7 @@
 using AutoTag.Core.Config;
 using AutoTag.Core.Files;
 using AutoTag.Core.Movie;
+using AutoTag.Core.Tagging;
 using AutoTag.Core.Test.Helpers;
 using AutoTag.Core.TV;
 
@@ -9,14 +10,22 @@ namespace AutoTag.Core.Test.Files.FileWriter;
 public class WriteAsync
 {
     private static Core.Files.FileWriter GetInstance(ICoverArtFetcher? fetcher = null, AutoTagConfig? config = null,
-        IFileSystem? fs = null, IUserInterface? ui = null, IFileNamer? namer = null)
-        => new(
+        IFileSystem? fs = null, IUserInterface? ui = null, IFileNamer? namer = null, ITagger? tagger = null)
+    {
+        var mockTagger = new Mock<ITagger>();
+        mockTagger
+            .Setup(t => t.TagFileAsync(It.IsAny<TaggingFile>(), It.IsAny<FileMetadata>()))
+            .ReturnsAsync(true);
+
+        return new Core.Files.FileWriter(
             fetcher.OrDefaultMock(),
             config.OrDefaultMock(),
             fs.OrDefaultMock(),
             ui.OrDefaultMock(),
-            namer ?? new Core.Files.FileNamer(config.OrDefaultMock())
+            namer ?? new Core.Files.FileNamer(config.OrDefaultMock()),
+            tagger ?? mockTagger.Object
         );
+    }
 
     private static string GetPath(params string[] segments) =>
         Path.Combine([OperatingSystem.IsWindows() ? @"C:\" : "/", .. segments]);
@@ -107,8 +116,11 @@ public class WriteAsync
             RenameFiles = false,
             TagFiles = true
         };
-        var mockUi = new Mock<IUserInterface>();
-        var writer = GetInstance(config: config, ui: mockUi.Object);
+        var mockTagger = new Mock<ITagger>();
+        mockTagger
+            .Setup(t => t.TagFileAsync(It.IsAny<TaggingFile>(), It.IsAny<FileMetadata>()))
+            .ReturnsAsync(true);
+        var writer = GetInstance(config: config, tagger: mockTagger.Object);
         var metadata = new MovieFileMetadata
         {
             Title = "Movie",
@@ -117,10 +129,8 @@ public class WriteAsync
 
         var result = await writer.WriteAsync(new TaggingFile { Path = GetPath("Movie (2020).mkv") }, metadata);
 
-        result.Should().BeFalse();
-        mockUi.Verify(
-            ui => ui.SetStatus("Error: Failed to write tags to file", MessageType.Error, It.IsAny<Exception>()),
-            Times.Once);
+        result.Should().BeTrue();
+        mockTagger.Verify(t => t.TagFileAsync(It.IsAny<TaggingFile>(), It.IsAny<FileMetadata>()));
     }
 
     [Fact]

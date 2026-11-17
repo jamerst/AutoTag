@@ -1,8 +1,6 @@
 using AutoTag.Core.Config;
 using AutoTag.Core.Files;
-using TagLib;
-using TagLib.Mpeg4;
-using File = TagLib.File;
+using AutoTag.Core.Tagging;
 
 namespace AutoTag.Core.Movie;
 
@@ -11,22 +9,14 @@ public class MovieFileMetadata : FileMetadata
     private const byte StikMovie = 9;
     public DateTime? Date { get; init; }
 
-    public override void WriteToFile(File file, AutoTagConfig config, IUserInterface ui)
+    public override Tags GetTags(AutoTagConfig config)
     {
-        base.WriteToFile(file, config, ui);
+        var tags = base.GetTags(config);
 
-        if (Date.HasValue)
-        {
-            file.Tag.Year = (uint)Date.Value.Year;
-        }
+        tags.Year = Date?.Year;
+        tags.AppleMediaType = StikMovie;
 
-        if (config.AppleTagging && (file.TagTypes & TagTypes.Apple) == TagTypes.Apple)
-        {
-            var appleTags = (AppleTag)file.GetTag(TagTypes.Apple);
-
-            // Media Type - allows Apple software to recognise as a movie
-            appleTags.SetData("stik", new ByteVector(StikMovie), (uint)AppleDataBox.FlagType.ContainsData);
-        }
+        return tags;
     }
 
     public override string GetRenamePattern(AutoTagConfig config) => config.MovieRenamePattern;

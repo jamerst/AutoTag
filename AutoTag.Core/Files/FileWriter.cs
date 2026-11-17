@@ -1,6 +1,5 @@
 using AutoTag.Core.Config;
-using TagLib;
-using File = TagLib.File;
+using AutoTag.Core.Tagging;
 
 namespace AutoTag.Core.Files;
 
@@ -14,7 +13,8 @@ public class FileWriter(
     AutoTagConfig config,
     IFileSystem fs,
     IUserInterface ui,
-    IFileNamer namer) : IFileWriter
+    IFileNamer namer,
+    ITagger tagger) : IFileWriter
 {
     public async Task<bool> WriteAsync(TaggingFile taggingFile, FileMetadata metadata)
     {
@@ -22,7 +22,7 @@ public class FileWriter(
 
         if (config.TagFiles && taggingFile.Taggable)
         {
-            fileSuccess &= await TagFileAsync(taggingFile, metadata);
+            fileSuccess &= await tagger.TagFileAsync(taggingFile, metadata);
         }
 
         if (config.RenameFiles)
@@ -72,68 +72,6 @@ public class FileWriter(
 
                 fileSuccess &= renameSuccess;
             }
-        }
-
-        return fileSuccess;
-    }
-
-    private async Task<bool> TagFileAsync(TaggingFile taggingFile, FileMetadata metadata)
-    {
-        var fileSuccess = true;
-
-        File? file = null;
-        try
-        {
-            using (file = File.Create(taggingFile.Path))
-            {
-                metadata.WriteToFile(file, config, ui);
-
-                // if there is an image available and cover art is enabled
-                if (!string.IsNullOrEmpty(metadata.CoverURL) && config.AddCoverArt)
-                {
-                    var imgBytes = await coverArtFetcher.GetCoverArtAsync(metadata.CoverURL);
-                    if (imgBytes == null)
-                    {
-                        ui.SetStatus(
-                            $"Error: failed to download cover art{(config.Verbose ? $"({metadata.CoverURL})" : "")}",
-                            MessageType.Error
-                        );
-
-                        fileSuccess = false;
-                    }
-                    else
-                    {
-                        file.Tag.Pictures = GetPicturesWithCover(file, new Picture(imgBytes) { Filename = "cover.jpg" });
-                    }
-                }
-                else if (string.IsNullOrEmpty(metadata.CoverURL) && config.AddCoverArt)
-                {
-                    fileSuccess = false;
-                }
-
-                file.Save();
-
-                if (fileSuccess)
-                {
-                    ui.SetStatus($"Successfully tagged file as {metadata}", MessageType.Information);
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            ui.SetStatus("Error: Failed to write tags to file", MessageType.Error, ex);
-            if (file?.CorruptionReasons?.Any() == true)
-            {
-                ui.SetStatus($"File corruption reasons: {string.Join(", ", file.CorruptionReasons)})",
-                    MessageType.Error | MessageType.Log
-                );
-            }
-
-            fileSuccess = false;
-        }
-        finally
-        {
-            file?.Dispose();
         }
 
         return fileSuccess;
@@ -194,15 +132,6 @@ public class FileWriter(
 
         return (isDirectoryPath ? newPath : Path.Combine(fs.GetDirectoryPath(path)!, newPath)) + extension;
     }
-
-    /// <summary>
-    /// Matroska stores every attachment as a picture, including the fonts that ASS/SSA subtitles need.
-    /// Replacing all pictures with the cover would delete them, so only image attachments are replaced there.
-    /// </summary>
-    private static IPicture[] GetPicturesWithCover(File file, IPicture cover)
-        => (file.TagTypes & TagTypes.Matroska) == TagTypes.Matroska
-            ? [cover, .. (file.Tag.Pictures ?? []).Where(p => p.MimeType?.StartsWith("image/") != true)]
-            : [cover];
 
     private static bool IsAlreadyNamedCorrectly(TaggingFile taggingFile, string newPath,
         IEnumerable<(string Path, bool Subtitle, string NewPath)> additionalPaths)
