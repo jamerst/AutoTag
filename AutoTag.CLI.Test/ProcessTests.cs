@@ -1,9 +1,12 @@
 using AutoTag.CLI.Test.Helpers;
 using AwesomeAssertions.Execution;
-using TagLib;
+using TagLibSharp2.Core;
+using TagLibSharp2.Matroska;
+using TagLibSharp2.Mp4;
 using File = System.IO.File;
 using TagLibFile = TagLib.File;
 using Tag = TagLib.Matroska.Tag;
+using TagTypes = TagLib.TagTypes;
 
 namespace AutoTag.CLI.Test;
 
@@ -103,7 +106,7 @@ public class ProcessTests(CLIFixture cli) : CLITestBase
                 f.Title.Should().Be("Star Wars");
                 f.Description.Should().NotBeEmpty();
                 f.Genres.Should().NotBeEmpty();
-                f.Year.Should().Be(1977);
+                f.Year.Should().Be("1977");
             }
         );
     }
@@ -273,7 +276,7 @@ public class ProcessTests(CLIFixture cli) : CLITestBase
                 f.Title.Should().Be("The Lord of the Rings: The Fellowship of the Ring");
                 f.Description.Should().NotBeEmpty();
                 f.Genres.Should().NotBeEmpty();
-                f.Year.Should().Be(2001);
+                f.Year.Should().Be("2001");
             }
         );
 
@@ -290,7 +293,7 @@ public class ProcessTests(CLIFixture cli) : CLITestBase
                 f.Title.Should().Be("Star Wars");
                 f.Description.Should().NotBeEmpty();
                 f.Genres.Should().NotBeEmpty();
-                f.Year.Should().Be(1977);
+                f.Year.Should().Be("1977");
             }
         );
     }
@@ -312,10 +315,41 @@ public class ProcessTests(CLIFixture cli) : CLITestBase
             FileSystem.GetPath("Downloads", "Silo S03E02.mkv"),
             f =>
             {
-                f.File.Tag.Pictures.Select(p => (p.MimeType, p.Filename)).Should().BeEquivalentTo([
+                f.Attachments.Should().BeEquivalentTo([
                     ("image/jpeg", "cover.jpg"),
                     ("application/x-truetype-font", "Font.ttf")
                 ]);
+            }
+        );
+    }
+
+    [Theory]
+    [InlineData("mkv")]
+    [InlineData("mp4")]
+    public async Task Should_TagWithExperimentalTagger(string extension)
+    {
+        FileSystem.CreateDirectory("Downloads", d => d.CreateFile($"Silo S03E02.{extension}"));
+
+        var (_, exitCode) = await cli.ExecuteAsync(
+            FileSystem.GetPath("Downloads", $"Silo S03E02.{extension}"),
+            "--tv-pattern", "{Series} {Season:S00}{Episode:E00}",
+            "--experimental-tagger"
+        );
+
+        exitCode.Should().Be(0);
+
+        AssertFileExperimental(
+            FileSystem.GetPath("Downloads", $"Silo S03E02.{extension}"),
+            FileSystem.GetPath("Downloads", $"Silo S03E02.{extension}"),
+            f =>
+            {
+                f.Title.Should().Be("It's All Good");
+                f.Description.Should().NotBeEmpty();
+                f.Genres.Should().NotBeEmpty();
+                f.Album.Should().Be("Silo");
+                f.Disc.Should().Be(3);
+                f.Track.Should().Be(2);
+                f.TrackCount.Should().Be(10);
             }
         );
     }
@@ -343,8 +377,48 @@ public class ProcessTests(CLIFixture cli) : CLITestBase
                 file.Tag.Disc,
                 file.Tag.Track,
                 file.Tag.TrackCount,
+                file.Tag.Year.ToString(),
+                file.Tag.Pictures.Select(p => (p.MimeType, p.Filename))
+            );
+
+            using (new AssertionScope())
+            {
+                assertTags(tags);
+            }
+        }
+    }
+
+    private static void AssertFileExperimental(string originalPath, string newPath, Action<FileTags>? assertTags = null)
+    {
+        if (originalPath != newPath)
+        {
+            File.Exists(originalPath).Should().BeFalse();
+        }
+
+        File.Exists(newPath).Should().BeTrue();
+
+        var extension = Path.GetExtension(newPath);
+        if (assertTags != null && extension is ".mkv" or ".mp4")
+        {
+            using IMediaFile? file = extension is ".mkv"
+                ? MatroskaFile.ReadFromFile(newPath).File
+                : Mp4File.ReadFromFile(newPath).File;
+
+            if (file?.Tag is null)
+            {
+                throw new InvalidOperationException($"Failed to read file {newPath}");
+            }
+
+            var tags = new FileTags(
+                file.Tag.Title,
+                file.Tag.Description,
+                file.Tag.Genres,
+                file.Tag.Album,
+                file.Tag.DiscNumber,
+                file.Tag.Track,
+                file.Tag.TotalTracks,
                 file.Tag.Year,
-                file
+                null
             );
 
             using (new AssertionScope())
@@ -355,14 +429,14 @@ public class ProcessTests(CLIFixture cli) : CLITestBase
     }
 
     private record FileTags(
-        string Title,
-        string Description,
+        string? Title,
+        string? Description,
         string[] Genres,
-        string Album,
-        uint Disc,
-        uint Track,
-        uint TrackCount,
-        uint Year,
-        TagLibFile File
+        string? Album,
+        uint? Disc,
+        uint? Track,
+        uint? TrackCount,
+        string? Year,
+        IEnumerable<(string MimeType, string Name)>? Attachments
     );
 }

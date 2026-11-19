@@ -37,6 +37,10 @@ public partial class RootCommandSettings
     [Description("Include year when renaming TV episodes")]
     public bool? Year { get; init; }
 
+    [CommandOption("--remove-empty-folders")]
+    [Description("Remove source folders after moving files if they are empty")]
+    public bool? RemoveEmptyFolders { get; init; }
+
     private void SetRenameOptions(AutoTagConfig config)
     {
         if (NoRename.HasValue)
@@ -79,6 +83,11 @@ public partial class RootCommandSettings
         if (Year.HasValue)
         {
             config.Year = Year.Value;
+        }
+
+        if (RemoveEmptyFolders.HasValue)
+        {
+            config.RemoveEmptyFolders = RemoveEmptyFolders.Value;
         }
     }
 }

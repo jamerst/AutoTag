@@ -9,7 +9,7 @@ namespace AutoTag.Core.Test.Files.FileWriter;
 
 public class WriteAsync
 {
-    private static Core.Files.FileWriter GetInstance(ICoverArtFetcher? fetcher = null, AutoTagConfig? config = null,
+    private static Core.Files.FileWriter GetInstance(AutoTagConfig? config = null,
         IFileSystem? fs = null, IUserInterface? ui = null, IFileNamer? namer = null, ITagger? tagger = null)
     {
         var mockTagger = new Mock<ITagger>();
@@ -18,11 +18,11 @@ public class WriteAsync
             .ReturnsAsync(true);
 
         return new Core.Files.FileWriter(
-            fetcher.OrDefaultMock(),
             config.OrDefaultMock(),
             fs.OrDefaultMock(),
             ui.OrDefaultMock(),
             namer ?? new Core.Files.FileNamer(config.OrDefaultMock()),
+            tagger ?? mockTagger.Object,
             tagger ?? mockTagger.Object
         );
     }
@@ -45,7 +45,7 @@ public class WriteAsync
 
         var mockUi = new Mock<IUserInterface>();
 
-        var writer = GetInstance(config: config, fs: mockFs.Object, ui: mockUi.Object);
+        var writer = GetInstance(config, mockFs.Object, mockUi.Object);
         var taggingFile = new TaggingFile
         {
             Path = GetPath("Movie (2020).mkv"),
@@ -87,7 +87,7 @@ public class WriteAsync
 
         var mockUi = new Mock<IUserInterface>();
 
-        var writer = GetInstance(config: config, fs: mockFs.Object, ui: mockUi.Object);
+        var writer = GetInstance(config, mockFs.Object, mockUi.Object);
         var taggingFile = new TaggingFile
         {
             Path = GetPath("Movie (2020).mkv"),
@@ -120,7 +120,7 @@ public class WriteAsync
         mockTagger
             .Setup(t => t.TagFileAsync(It.IsAny<TaggingFile>(), It.IsAny<FileMetadata>()))
             .ReturnsAsync(true);
-        var writer = GetInstance(config: config, tagger: mockTagger.Object);
+        var writer = GetInstance(config, tagger: mockTagger.Object);
         var metadata = new MovieFileMetadata
         {
             Title = "Movie",
@@ -159,7 +159,7 @@ public class WriteAsync
 
         var downloads = GetPath("Downloads");
 
-        var writer = GetInstance(config: config, fs: mockFs.Object);
+        var writer = GetInstance(config, mockFs.Object);
         var taggingFile = new TaggingFile
         {
             Path = GetPath("Downloads", "raw.mkv")
@@ -198,7 +198,7 @@ public class WriteAsync
             .Returns(GetPath());
         mockFs.Setup(fs => fs.PathContainsDirectory(It.IsAny<string>())).Returns(true);
 
-        var writer = GetInstance(config: config, fs: mockFs.Object);
+        var writer = GetInstance(config, mockFs.Object);
         var taggingFile = new TaggingFile
         {
             Path = GetPath("Downloads", "raw.mkv")
@@ -228,7 +228,7 @@ public class WriteAsync
         mockFs.Setup(fs => fs.GetDirectoryPath(It.IsAny<string>()))
             .Returns(GetPath());
 
-        var writer = GetInstance(config: config, fs: mockFs.Object);
+        var writer = GetInstance(config, mockFs.Object);
 
         var sub1Path = GetPath("sub-one.ass");
         var sub2Path = GetPath("sub-two.ass");

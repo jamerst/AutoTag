@@ -1,5 +1,6 @@
 using AutoTag.Core.Config;
 using AutoTag.Core.Tagging;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace AutoTag.Core.Files;
 
@@ -9,12 +10,15 @@ public interface IFileWriter
 }
 
 public class FileWriter(
-    ICoverArtFetcher coverArtFetcher,
     AutoTagConfig config,
     IFileSystem fs,
     IUserInterface ui,
     IFileNamer namer,
-    ITagger tagger) : IFileWriter
+    [FromKeyedServices(Tagger.TagLib)]
+    ITagger taglib,
+    [FromKeyedServices(Tagger.TagLib2)]
+    ITagger taglib2
+) : IFileWriter
 {
     public async Task<bool> WriteAsync(TaggingFile taggingFile, FileMetadata metadata)
     {
@@ -22,6 +26,8 @@ public class FileWriter(
 
         if (config.TagFiles && taggingFile.Taggable)
         {
+            var tagger = config.ExperimentalTagger ? taglib2 : taglib;
+
             fileSuccess &= await tagger.TagFileAsync(taggingFile, metadata);
         }
 

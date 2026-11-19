@@ -24,88 +24,90 @@ public class TagLib2Tagger(
             return false;
         }
 
-        var fileTags = file.Tag!;
-
-        var tags = metadata.GetTags(config);
-
-        fileTags.Title = tags.Title;
-        fileTags.Description = tags.Description;
-
-        fileTags.Album = tags.Album;
-        fileTags.DiscNumber = (uint?)tags.Disc;
-        fileTags.Track = (uint?)tags.Track;
-        fileTags.TotalTracks = (uint?)tags.TrackCount;
-
-        var test = fileTags.Title;
-
-        fileTags.Year = tags.Year?.ToString();
-
-        if (tags.Genres?.Any() == true)
+        using (file)
         {
-            fileTags.Genres = tags.Genres.ToArray();
-        }
+            var fileTags = file.Tag!;
 
-        if (config.ExtendedTagging)
-        {
-            fileTags.Conductor = tags.Conductor;
-            fileTags.Performers = tags.Performers?.ToArray() ?? [];
-            fileTags.PerformersRole = tags.PerformerRoles?.ToArray();
-        }
+            var tags = metadata.GetTags(config);
 
-        // TODO: custom matroska tags
+            fileTags.Title = tags.Title;
+            fileTags.Description = tags.Description;
 
-        if (config.AppleTagging)
-        {
-            ui.SetStatus("Warning: Apple tagging not supported with experimental tagger", MessageType.Warning);
-        }
+            fileTags.Album = tags.Album;
+            fileTags.DiscNumber = (uint?)tags.Disc;
+            fileTags.Track = (uint?)tags.Track;
+            fileTags.TotalTracks = (uint?)tags.TrackCount;
 
-        // if there is an image available and cover art is enabled
-        if (!string.IsNullOrEmpty(metadata.CoverURL) && config.AddCoverArt)
-        {
-            var imgBytes = await coverArtFetcher.GetCoverArtAsync(metadata.CoverURL);
-            if (imgBytes == null)
+            fileTags.Year = tags.Year?.ToString();
+
+            if (tags.Genres?.Any() == true)
             {
-                ui.SetStatus(
-                    $"Error: Failed to download cover art{(config.Verbose ? $"({metadata.CoverURL})" : "")}",
-                    MessageType.Error
-                );
-
-                fileSuccess = false;
+                fileTags.Genres = tags.Genres.ToArray();
             }
-            else
+
+            if (config.ExtendedTagging)
             {
-                if (fileTags is MatroskaTag)
+                fileTags.Conductor = tags.Conductor;
+                fileTags.Performers = tags.Performers?.ToArray() ?? [];
+                fileTags.PerformersRole = tags.PerformerRoles?.ToArray();
+            }
+
+            // TODO: custom matroska tags
+
+            if (config.AppleTagging)
+            {
+                ui.SetStatus("Warning: Apple tagging not supported with experimental tagger", MessageType.Warning);
+            }
+
+            // if there is an image available and cover art is enabled
+            if (!string.IsNullOrEmpty(metadata.CoverURL) && config.AddCoverArt)
+            {
+                var imgBytes = await coverArtFetcher.GetCoverArtAsync(metadata.CoverURL);
+                if (imgBytes == null)
                 {
-                    ui.SetStatus("Warning: Cover art not supported with experimental tagger", MessageType.Warning);
+                    ui.SetStatus(
+                        $"Error: Failed to download cover art{(config.Verbose ? $"({metadata.CoverURL})" : "")}",
+                        MessageType.Error
+                    );
+
+                    fileSuccess = false;
                 }
                 else
                 {
-                    fileTags.Pictures = [new Mp4Picture(imgBytes, true)];
+                    if (fileTags is MatroskaTag)
+                    {
+                        ui.SetStatus("Warning: Cover art not supported for mkv files with experimental tagger",
+                            MessageType.Warning);
+                    }
+                    else
+                    {
+                        fileTags.Pictures = [new Mp4Picture(imgBytes, true)];
+                    }
                 }
             }
-        }
-        else if (string.IsNullOrEmpty(metadata.CoverURL) && config.AddCoverArt)
-        {
-            fileSuccess = false;
-        }
+            else if (string.IsNullOrEmpty(metadata.CoverURL) && config.AddCoverArt)
+            {
+                fileSuccess = false;
+            }
 
-        FileWriteResult? result = null;
-        if (file is MatroskaFile mkv)
-        {
-            result = await mkv.SaveToFileAsync(taggingFile.Path, data);
-        }
-        else if (file is Mp4File mp4)
-        {
-            result = await mp4.SaveToFileAsync(taggingFile.Path, data);
-        }
+            FileWriteResult? result = null;
+            if (file is MatroskaFile mkv)
+            {
+                result = await mkv.SaveToFileAsync(taggingFile.Path, data);
+            }
+            else if (file is Mp4File mp4)
+            {
+                result = await mp4.SaveToFileAsync(taggingFile.Path, data);
+            }
 
-        if (result?.IsSuccess == true)
-        {
-            return fileSuccess;
-        }
+            if (result?.IsSuccess == true)
+            {
+                return fileSuccess;
+            }
 
-        ui.SetStatus($"Error: Failed to save file ({result?.Error})", MessageType.Error);
-        return false;
+            ui.SetStatus($"Error: Failed to save file ({result?.Error})", MessageType.Error);
+            return false;
+        }
     }
 
     private bool TryReadFile(TaggingFile taggingFile, byte[] data, [NotNullWhen(true)] out IMediaFile? file)

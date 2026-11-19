@@ -52,9 +52,9 @@ public partial class RootCommandSettings
     [Description("Include adult titles in TMDB searches")]
     public bool? IncludeAdult { get; init; }
 
-    [CommandOption("--remove-empty-folders")]
-    [Description("Remove source folders after moving files if they are empty")]
-    public bool? RemoveEmptyFolders { get; init; }
+    [CommandOption("--experimental-tagger")]
+    [Description("Use experimental tagger to write tags to files")]
+    public bool? ExperimentalTagger { get; init; }
 
     private void SetTaggingOptions(AutoTagConfig config)
     {
@@ -118,9 +118,9 @@ public partial class RootCommandSettings
             config.IncludeAdult = IncludeAdult.Value;
         }
 
-        if (RemoveEmptyFolders.HasValue)
+        if (ExperimentalTagger.HasValue)
         {
-            config.RemoveEmptyFolders = RemoveEmptyFolders.Value;
+            config.ExperimentalTagger = ExperimentalTagger.Value;
         }
     }
 }

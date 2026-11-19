@@ -51,5 +51,5 @@ public class AutoTagConfig
 
     public List<FileNameReplace> FileNameReplaces { get; set; } = [];
 
-    public bool ExperimentalTagging { get; set; }
+    public bool ExperimentalTagger { get; set; }
 }
