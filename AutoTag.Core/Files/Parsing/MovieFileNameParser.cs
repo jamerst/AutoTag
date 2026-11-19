@@ -167,7 +167,13 @@ public class MovieFileNameParser
             return false;
         }
 
-        year = int.Parse(match.Groups["Year"].Value);
+        var parsedYear = int.Parse(match.Groups["Year"].Value);
+        if (parsedYear > DateTime.Now.Year)
+        {
+            return false;
+        }
+
+        year = parsedYear;
         updatedTitle = candidateTitle;
         return true;
     }
@@ -197,7 +203,13 @@ public class MovieFileNameParser
             return false;
         }
 
-        year = int.Parse(match.Groups["Year"].Value);
+        var parsedYear = int.Parse(match.Groups["Year"].Value);
+        if (parsedYear > DateTime.Now.Year)
+        {
+            return false;
+        }
+
+        year = parsedYear;
         updatedTitle = candidateTitle;
         return true;
     }

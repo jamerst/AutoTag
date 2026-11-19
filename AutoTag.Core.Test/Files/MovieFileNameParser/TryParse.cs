@@ -15,6 +15,8 @@ public class TryParse
     [InlineData(
         "The.Hunger.Games.The.Ballad.of.Songbirds.and.Snakes.2023.1080p.AMZN.WEB-DL.DDP5.1.Atmos.H.264-FLUX.mkv",
         "The Hunger Games The Ballad of Songbirds and Snakes", 2023)]
+    [InlineData("Bladerunner 2049 (2017).avi", "Bladerunner 2049", 2017)]
+    [InlineData("Bladerunner 2049.mp4", "Bladerunner 2049", null)] // future year, so cannot be release year
     public void Should_ParseCommonNamingFormats(string fileName, string title, int? year)
     {
         var parser = GetInstance();

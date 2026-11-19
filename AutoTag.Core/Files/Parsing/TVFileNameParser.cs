@@ -12,7 +12,7 @@ public record ParsedTVFileName(string SeriesName, int? Year, int? Season, int Ep
 public partial class TVFileNameParser(AutoTagConfig config)
 {
     [GeneratedRegex(
-        @"^(?<SeriesName>(?!s\d).{2,}?)[._ -]*(?:\(?(?<Year>(?:19|20)\d{2})\)?)?[._ -]*(?:(?:s?(?<Season>\d+)[ex._ ](?<Episode>\d+\b))|(?:[e(]?(?<AbsoluteEpisode>\d+\b(?!.*s?\d+[ex]\d+))))(?:-e?(?<EndEpisode>\d+))?(?:.*p(?:ar)?t(?<Part>\d+))?.*$",
+        @"^(?<SeriesName>(?!s\d).{2,}?)[._ -]*(?:\(?(?<Year>(?:19|20)\d{2})\)?)?[._ -]*(?:(?:s?(?<Season>\d+)[ex](?<Episode>\d+\b))|(?:[e(]?(?<AbsoluteEpisode>\d+\b(?!.*s?\d+[ex]\d+))))(?:-e?(?<EndEpisode>\d+))?(?:.*p(?:ar)?t(?<Part>\d+))?.*$",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant
     )]
     private static partial Regex TVRegex { get; }

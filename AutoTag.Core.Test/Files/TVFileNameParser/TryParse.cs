@@ -33,6 +33,8 @@ public class TryParse
     [InlineData("Absolute.Episode.Show.002-003.pt4.mkv", "Absolute Episode Show", null, null, 2, 3,
         4)] // absolute numbering with end episode and part
     [InlineData("[Group] Series Dublado (35).AVI", "Series", null, null, 35, null, null)]
+    [InlineData("12.12.12.S01E01.1080p.WEBRip.10Bit.DDP5.1.x265-NeoNoir.mp4", "12 12 12", null, 1, 1, null,
+        null)] // only numbers in series name
     public void Should_ParseCommonNamingFormats(string fileName, string seriesName, int? year, int? season, int episode,
         int? endEpisode, int? part)
     {
