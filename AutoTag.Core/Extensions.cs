@@ -11,7 +11,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Http;
 using TagLib;
 using TMDbLib.Client;
-using File = TagLib.File;
+using TagLibFile = TagLib.File;
 
 namespace AutoTag.Core;
 
@@ -92,7 +92,7 @@ public static class Extensions
             => (type & MessageType.Log) == MessageType.Log;
     }
 
-    extension(File file)
+    extension(TagLibFile file)
     {
         public bool IsMatroska()
             => (file.TagTypes & TagTypes.Matroska) == TagTypes.Matroska;

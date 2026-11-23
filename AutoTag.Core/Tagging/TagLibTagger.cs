@@ -25,16 +25,16 @@ public class TagLibTagger(IUserInterface ui, ICoverArtFetcher coverArtFetcher, A
 
                 if (file.IsMatroska())
                 {
-                    var custom = (MatroskaTag)file.GetTag(TagTypes.Matroska);
+                    var matroskaTag = (MatroskaTag)file.GetTag(TagTypes.Matroska);
                     // workaround for https://github.com/mono/taglib-sharp/issues/263 - Tag.Album property writes to TITLE tag instead of ALBUM
                     // how has this still not been fixed??
-                    custom.Set("ALBUM", null, tags.Album);
+                    matroskaTag.Set("ALBUM", null, tags.Album);
 
                     if (tags.Custom is not null)
                     {
                         foreach (var (key, value) in tags.Custom)
                         {
-                            custom.Set(key, null, value);
+                            matroskaTag.Set(key, null, value);
                         }
                     }
                 }

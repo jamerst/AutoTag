@@ -52,10 +52,17 @@ public class TagLib2Tagger(
                 fileTags.PerformersRole = tags.PerformerRoles?.ToArray();
             }
 
-            // TODO: custom matroska tags
-
-            if (config.AppleTagging)
+            if (tags.Custom is not null && fileTags.SupportsCustomFields)
             {
+                foreach (var (key, value) in tags.Custom)
+                {
+                    fileTags.SetCustomField(key, value);
+                }
+            }
+
+            if (config.AppleTagging && file is Mp4File)
+            {
+                // TODO: apple tags - can't do currently as only string custom tags supported
                 ui.SetStatus("Warning: Apple tagging not supported with experimental tagger", MessageType.Warning);
             }
 
