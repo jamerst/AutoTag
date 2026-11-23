@@ -55,6 +55,7 @@ public class ProcessTests(CLIFixture cli) : CLITestBase
                 f.Disc.Should().Be(2);
                 f.Track.Should().Be(1);
                 f.TrackCount.Should().Be(8);
+                f.Attachments.Should().HaveCount(1);
             }
         );
 
@@ -70,6 +71,7 @@ public class ProcessTests(CLIFixture cli) : CLITestBase
                 f.Disc.Should().Be(2);
                 f.Track.Should().Be(2);
                 f.TrackCount.Should().Be(8);
+                f.Attachments.Should().HaveCount(1);
             }
         );
 
@@ -85,6 +87,7 @@ public class ProcessTests(CLIFixture cli) : CLITestBase
                 f.Disc.Should().Be(1);
                 f.Track.Should().Be(10);
                 f.TrackCount.Should().Be(10);
+                f.Attachments.Should().HaveCount(1);
             }
         );
 
@@ -107,6 +110,7 @@ public class ProcessTests(CLIFixture cli) : CLITestBase
                 f.Description.Should().NotBeEmpty();
                 f.Genres.Should().NotBeEmpty();
                 f.Year.Should().Be("1977");
+                f.Attachments.Should().HaveCount(1);
             }
         );
     }
@@ -180,6 +184,7 @@ public class ProcessTests(CLIFixture cli) : CLITestBase
                 f.Disc.Should().Be(2);
                 f.Track.Should().Be(1);
                 f.TrackCount.Should().Be(8);
+                f.Attachments.Should().HaveCount(1);
             }
         );
 
@@ -195,6 +200,7 @@ public class ProcessTests(CLIFixture cli) : CLITestBase
                 f.Disc.Should().Be(2);
                 f.Track.Should().Be(2);
                 f.TrackCount.Should().Be(8);
+                f.Attachments.Should().HaveCount(1);
             }
         );
 
@@ -210,6 +216,7 @@ public class ProcessTests(CLIFixture cli) : CLITestBase
                 f.Disc.Should().Be(1);
                 f.Track.Should().Be(10);
                 f.TrackCount.Should().Be(10);
+                f.Attachments.Should().HaveCount(1);
             }
         );
 
@@ -230,6 +237,7 @@ public class ProcessTests(CLIFixture cli) : CLITestBase
                 f.Disc.Should().Be(0);
                 f.Track.Should().Be(2);
                 f.TrackCount.Should().Be(199);
+                f.Attachments.Should().HaveCount(1);
             }
         );
 
@@ -245,6 +253,7 @@ public class ProcessTests(CLIFixture cli) : CLITestBase
                 f.Disc.Should().Be(1);
                 f.Track.Should().Be(1);
                 f.TrackCount.Should().Be(13);
+                f.Attachments.Should().HaveCount(1);
             }
         );
 
@@ -260,6 +269,7 @@ public class ProcessTests(CLIFixture cli) : CLITestBase
                 f.Disc.Should().Be(1);
                 f.Track.Should().Be(2);
                 f.TrackCount.Should().Be(13);
+                f.Attachments.Should().HaveCount(1);
             }
         );
 
@@ -277,6 +287,7 @@ public class ProcessTests(CLIFixture cli) : CLITestBase
                 f.Description.Should().NotBeEmpty();
                 f.Genres.Should().NotBeEmpty();
                 f.Year.Should().Be("2001");
+                f.Attachments.Should().HaveCount(1);
             }
         );
 
@@ -294,18 +305,26 @@ public class ProcessTests(CLIFixture cli) : CLITestBase
                 f.Description.Should().NotBeEmpty();
                 f.Genres.Should().NotBeEmpty();
                 f.Year.Should().Be("1977");
+                f.Attachments.Should().HaveCount(1);
             }
         );
     }
 
-    [Fact]
-    public async Task Should_KeepNonImageAttachments_WhenAddingCoverArtToMatroska()
+    [Theory]
+    // [InlineData(false)]
+    [InlineData(true)]
+    public async Task Should_KeepNonImageAttachments_WhenAddingCoverArtToMatroska(bool experimental)
     {
         FileSystem.CreateDirectory("Downloads", d => d.CreateFile("Silo S03E02.mkv", "attachments.mkv"));
 
-        var (_, exitCode) = await cli.ExecuteAsync(
+        string[] args =
+        [
             FileSystem.GetPath("Downloads", "Silo S03E02.mkv"),
             "--tv-pattern", "{Series} {Season:S00}{Episode:E00}"
+        ];
+
+        var (_, exitCode) = await cli.ExecuteAsync(
+            experimental ? [.. args, "--experimental-tagger"] : args
         );
 
         exitCode.Should().Be(0);
@@ -350,6 +369,7 @@ public class ProcessTests(CLIFixture cli) : CLITestBase
                 f.Disc.Should().Be(3);
                 f.Track.Should().Be(2);
                 f.TrackCount.Should().Be(10);
+                f.Attachments.Should().HaveCount(1);
             }
         );
     }
@@ -372,7 +392,7 @@ public class ProcessTests(CLIFixture cli) : CLITestBase
                 file.Tag.Description,
                 file.Tag.Genres,
                 file.TagTypes.HasFlag(TagTypes.Matroska)
-                    ? ((Tag)file.GetTag(TagTypes.Matroska)).Get("ALBUM")?.FirstOrDefault() ?? ""
+                    ? ((Tag)file.GetTag(TagTypes.Matroska)).Get("ALBUM")?.FirstOrDefault()
                     : file.Tag.Album,
                 file.Tag.Disc,
                 file.Tag.Track,
@@ -418,7 +438,7 @@ public class ProcessTests(CLIFixture cli) : CLITestBase
                 file.Tag.Track,
                 file.Tag.TotalTracks,
                 file.Tag.Year,
-                null
+                file.Tag.Pictures.Select(p => (p.MimeType, p.Description))
             );
 
             using (new AssertionScope())

@@ -74,15 +74,7 @@ public class TagLib2Tagger(
                 }
                 else
                 {
-                    if (fileTags is MatroskaTag)
-                    {
-                        ui.SetStatus("Warning: Cover art not supported for mkv files with experimental tagger",
-                            MessageType.Warning);
-                    }
-                    else
-                    {
-                        fileTags.Pictures = [new Mp4Picture(imgBytes, true)];
-                    }
+                    fileTags.Pictures = [new Mp4Picture(imgBytes, true)];
                 }
             }
             else if (string.IsNullOrEmpty(metadata.CoverURL) && config.AddCoverArt)
