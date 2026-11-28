@@ -70,7 +70,8 @@ public class MovieFileNameParser
         @"\bProper\b",
         @"\bExtended\b",
         @"\bUnrated\b",
-        @"\bInternal\b"
+        @"\bInternal\b",
+        @"\b10bit\b"
     ];
 
     private static readonly string[] LanguageTermPatterns =
